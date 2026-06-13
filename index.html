@@ -1,0 +1,95 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>CPF ธารเกษม — Dashboard ค่าใช้จ่าย & สวัสดิการ</title>
+  <meta name="description" content="แดชบอร์ดสรุปค่าใช้จ่าย OE และสวัสดิการพนักงาน โรงงานผลิตอาหารสัตว์ธารเกษม โคราช (CPF)" />
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Sarabun:wght@300;400;600;700;800&display=swap" rel="stylesheet" />
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      font-family: 'Sarabun', system-ui, sans-serif;
+      background: linear-gradient(160deg, #1B5E20, #2E7D32 55%, #43A047);
+      min-height: 100vh; color: #fff;
+      display: flex; flex-direction: column; align-items: center;
+      padding: 32px 20px 50px;
+    }
+    .home-head { text-align: center; max-width: 760px; margin-bottom: 36px; }
+    .home-logo {
+      width: 78px; height: 78px; border-radius: 20px; margin: 0 auto 18px;
+      background: rgba(255,255,255,.16); border: 1px solid rgba(255,255,255,.3);
+      display: grid; place-items: center; font-size: 30px; font-weight: 800; letter-spacing: 1px;
+      box-shadow: 0 10px 30px rgba(0,0,0,.2);
+    }
+    .home-head h1 { font-size: 2rem; font-weight: 800; line-height: 1.2; }
+    .home-head .org { font-size: 1.05rem; font-weight: 600; opacity: .95; margin-top: 6px; }
+    .home-head p { font-size: 1rem; font-weight: 300; opacity: .9; margin-top: 12px; }
+    .cards { display: grid; grid-template-columns: repeat(2, minmax(0, 320px)); gap: 22px; width: 100%; max-width: 720px; }
+    .card {
+      background: #fff; color: #1f2937; border-radius: 20px; padding: 26px 24px;
+      text-decoration: none; box-shadow: 0 14px 40px rgba(0,0,0,.25);
+      display: flex; flex-direction: column; gap: 12px;
+      transition: transform .15s ease, box-shadow .15s ease; position: relative; overflow: hidden;
+    }
+    .card:hover { transform: translateY(-5px); box-shadow: 0 20px 50px rgba(0,0,0,.32); }
+    .card .c-top { width: 100%; height: 6px; position: absolute; left: 0; top: 0; }
+    .card.oe .c-top { background: #2E7D32; }
+    .card.welfare .c-top { background: #1565C0; }
+    .card .c-icon {
+      width: 56px; height: 56px; border-radius: 15px; display: grid; place-items: center; font-size: 28px;
+    }
+    .card.oe .c-icon { background: #E8F5E9; }
+    .card.welfare .c-icon { background: #E3F2FD; }
+    .card h2 { font-size: 1.3rem; font-weight: 800; }
+    .card.oe h2 { color: #1B5E20; }
+    .card.welfare h2 { color: #0D47A1; }
+    .card p { font-size: .92rem; color: #4b5563; line-height: 1.55; flex: 1; }
+    .card .c-go {
+      align-self: flex-start; margin-top: 4px; font-weight: 700; font-size: .92rem;
+      padding: 9px 18px; border-radius: 10px; color: #fff;
+    }
+    .card.oe .c-go { background: #2E7D32; }
+    .card.welfare .c-go { background: #1565C0; }
+    .home-foot { margin-top: 40px; text-align: center; font-size: .82rem; opacity: .82; max-width: 640px; line-height: 1.6; }
+    .home-foot code { background: rgba(255,255,255,.18); padding: 1px 7px; border-radius: 5px; }
+    @media (max-width: 640px) {
+      .cards { grid-template-columns: 1fr; max-width: 360px; }
+      .home-head h1 { font-size: 1.6rem; }
+    }
+  </style>
+</head>
+<body>
+  <div class="home-head">
+    <div class="home-logo">CPF</div>
+    <h1>Dashboard ค่าใช้จ่าย &amp; สวัสดิการ</h1>
+    <div class="org">โรงงานผลิตอาหารสัตว์ธารเกษม โคราช</div>
+    <p>เลือกแดชบอร์ดที่ต้องการดู — ข้อมูลปีงบประมาณ พ.ศ. 2569<br />รองรับการดึงข้อมูลสดจาก Google Sheets และ Export PowerPoint</p>
+  </div>
+
+  <div class="cards">
+    <a class="card oe" href="./oe/">
+      <div class="c-top"></div>
+      <div class="c-icon">💰</div>
+      <h2>Dashboard OE</h2>
+      <p>ค่าใช้จ่ายบริการสำนักงาน (Operating Expense) แยกหมวดคงที่/แปรผัน พร้อมเงินยืมทดรอง รายเดือน Top 5 และ Insights</p>
+      <span class="c-go">เปิดแดชบอร์ด →</span>
+    </a>
+
+    <a class="card welfare" href="./welfare/">
+      <div class="c-top"></div>
+      <div class="c-icon">🧑‍🤝‍🧑</div>
+      <h2>Dashboard สวัสดิการ</h2>
+      <p>สวัสดิการพนักงาน 22 คน — ค่ารักษาพยาบาล เบี้ยเลี้ยง ค่าน้ำมัน ค่าที่พัก และอื่นๆ พร้อมตารางรายคน × เดือน</p>
+      <span class="c-go">เปิดแดชบอร์ด →</span>
+    </a>
+  </div>
+
+  <div class="home-foot">
+    💡 ครั้งแรกจะแสดง <strong>ข้อมูลตัวอย่าง (Demo)</strong> ทันที — เชื่อมข้อมูลจริงได้โดยกดปุ่ม
+    <code>เชื่อม Google Sheets</code> ในแต่ละแดชบอร์ด แล้ววางลิงก์ชีตที่แชร์เป็น "ทุกคนที่มีลิงก์"
+  </div>
+</body>
+</html>
