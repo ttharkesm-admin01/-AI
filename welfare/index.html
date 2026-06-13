@@ -1,0 +1,565 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Dashboard สวัสดิการพนักงาน — CPF ธารเกษม</title>
+  <meta name="description" content="แดชบอร์ดสวัสดิการพนักงาน โรงงานธารเกษม (CPF) ปีงบประมาณ 2569" />
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Sarabun:wght@300;400;600;700;800&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="../assets/common.css" />
+</head>
+<body>
+  <header class="app-header">
+    <div class="brand">
+      <div class="logo">CPF</div>
+      <div>
+        <h1>Dashboard สวัสดิการพนักงาน</h1>
+        <div class="sub">โรงงานผลิตอาหารสัตว์ธารเกษม โคราช • ปีงบประมาณ พ.ศ. 2569</div>
+      </div>
+    </div>
+    <div class="spacer"></div>
+    <div class="header-actions">
+      <a class="btn btn-ghost btn-sm" href="../">🏠 หน้าหลัก</a>
+      <a class="btn btn-ghost btn-sm" href="../oe/">💰 OE</a>
+      <button class="btn btn-ghost btn-sm" id="btn-connect">🔗 เชื่อม Google Sheets</button>
+      <button class="btn btn-light btn-sm" id="btn-refresh">🔄 รีเฟรช</button>
+      <button class="btn btn-ppt" id="btn-export">📊 Export PowerPoint</button>
+    </div>
+  </header>
+
+  <div class="wrap">
+    <div class="source-bar">
+      <span class="status demo" id="status"><span class="dot"></span><span id="status-text">กำลังโหลด…</span></span>
+      <span class="src-info" id="src-info"></span>
+      <div style="flex:1"></div>
+      <span class="src-info" id="src-updated"></span>
+    </div>
+
+    <div class="filter-bar">
+      <div class="field">
+        <label for="f-year">ปีงบประมาณ</label>
+        <select id="f-year"></select>
+      </div>
+      <div class="field">
+        <label for="f-month">เดือน</label>
+        <select id="f-month"></select>
+      </div>
+      <div class="field">
+        <label for="f-emp">พนักงาน</label>
+        <select id="f-emp"></select>
+      </div>
+      <div class="field">
+        <label for="f-type">ประเภทสวัสดิการ</label>
+        <select id="f-type"></select>
+      </div>
+      <div class="filter-spacer"></div>
+      <div class="field" style="justify-content:flex-end">
+        <button class="btn btn-light btn-sm" id="btn-reset">ล้างตัวกรอง</button>
+      </div>
+    </div>
+
+    <div class="kpi-grid">
+      <div class="kpi">
+        <div class="k-label">🏥 ค่ารักษาพยาบาล</div>
+        <div class="k-value" id="kpi-med">–</div>
+        <div class="k-sub" id="kpi-med-sub"></div>
+      </div>
+      <div class="kpi b">
+        <div class="k-label">🚗 เบี้ยเลี้ยง + ค่าน้ำมัน</div>
+        <div class="k-value" id="kpi-allow">–</div>
+        <div class="k-sub" id="kpi-allow-sub"></div>
+      </div>
+      <div class="kpi amber">
+        <div class="k-label">📦 รวมทั้งสิ้น</div>
+        <div class="k-value" id="kpi-total">–</div>
+        <div class="k-sub" id="kpi-total-sub"></div>
+      </div>
+      <div class="kpi teal">
+        <div class="k-label">👥 พนักงานที่ได้รับ</div>
+        <div class="k-value" id="kpi-emp">–</div>
+        <div class="k-sub" id="kpi-emp-sub"></div>
+      </div>
+    </div>
+
+    <div class="panels">
+      <!-- ซ้าย: ค่ารักษาพยาบาล -->
+      <section class="panel">
+        <div class="panel-head"><div class="p-icon">🏥</div><h2>ค่ารักษาพยาบาล</h2></div>
+        <div class="panel-body">
+          <div class="mini-kpis">
+            <div class="mini"><div class="m-label">รวมค่ารักษา</div><div class="m-value" id="m-med-total">–</div></div>
+            <div class="mini"><div class="m-label">จำนวนครั้ง</div><div class="m-value" id="m-med-count">–</div></div>
+            <div class="mini"><div class="m-label">เดือนสูงสุด</div><div class="m-value" id="m-med-peak">–</div></div>
+          </div>
+          <div class="chart-block">
+            <div class="cb-title">ค่ารักษาพยาบาลรายเดือน (สัดส่วน)</div>
+            <div class="chart-wrap short"><canvas id="c-med-donut"></canvas></div>
+          </div>
+          <div class="chart-block">
+            <div class="cb-title">ค่ารักษาพยาบาลรายเดือน</div>
+            <div class="chart-wrap"><canvas id="c-med-bar"></canvas></div>
+          </div>
+          <div class="chart-block">
+            <div class="cb-title">Top พนักงาน (ค่ารักษาพยาบาล)</div>
+            <div class="tbl-wrap" style="max-height:240px;overflow:auto">
+              <table class="data"><thead><tr><th>พนักงาน</th><th>ตำแหน่ง</th><th class="num">จำนวนเงิน</th></tr></thead>
+                <tbody id="tb-med"></tbody></table>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- ขวา: เบี้ยเลี้ยง + อื่นๆ -->
+      <section class="panel blue">
+        <div class="panel-head"><div class="p-icon">🚗</div><h2>เบี้ยเลี้ยง &amp; สวัสดิการอื่นๆ</h2></div>
+        <div class="panel-body">
+          <div class="mini-kpis">
+            <div class="mini"><div class="m-label">รวมทั้งหมด</div><div class="m-value" id="m-allow-total">–</div></div>
+            <div class="mini"><div class="m-label">ประเภทสูงสุด</div><div class="m-value" id="m-allow-top">–</div></div>
+            <div class="mini"><div class="m-label">เดือนสูงสุด</div><div class="m-value" id="m-allow-peak">–</div></div>
+          </div>
+          <div class="chart-block">
+            <div class="cb-title">สัดส่วนตามประเภทสวัสดิการ</div>
+            <div class="chart-wrap short"><canvas id="c-allow-donut"></canvas></div>
+          </div>
+          <div class="chart-block">
+            <div class="cb-title">เบี้ยเลี้ยง &amp; อื่นๆ รายเดือน</div>
+            <div class="chart-wrap"><canvas id="c-allow-bar"></canvas></div>
+          </div>
+          <div class="chart-block">
+            <div class="cb-title">แยกตามประเภท</div>
+            <div class="tbl-wrap">
+              <table class="data blue"><thead><tr><th>ประเภทสวัสดิการ</th><th class="num">จำนวนเงิน</th><th class="num">สัดส่วน</th></tr></thead>
+                <tbody id="tb-type"></tbody></table>
+            </div>
+          </div>
+        </div>
+      </section>
+    </div>
+
+    <!-- Big pivot table -->
+    <div class="card-block">
+      <div class="cardb-head">
+        <h2>📋 สวัสดิการรายคน × เดือน</h2>
+        <span class="src-info" id="pivot-note"></span>
+      </div>
+      <div class="cardb-body">
+        <div class="tbl-wrap" style="max-height:480px;overflow:auto">
+          <table class="data" id="pivot"><thead id="pivot-head"></thead><tbody id="pivot-body"></tbody><tfoot id="pivot-foot"></tfoot></table>
+        </div>
+      </div>
+    </div>
+
+    <div class="section-title">ข้อสังเกตสำคัญ (Insights)</div>
+    <div class="insights" id="insights"></div>
+
+    <div class="app-foot">
+      CPF ธารเกษม • Dashboard สวัสดิการ • ข้อมูลปีงบประมาณ พ.ศ. 2569 ·
+      <a href="../">หน้าหลัก</a>
+      <br /><small>* OT แสดงเป็นจำนวนเงินเท่านั้น — หากข้อมูลต้นทางเป็น "ชั่วโมง" ต้องคูณอัตรา/ชม. ก่อนนำเข้า RAW_DATA</small>
+    </div>
+  </div>
+
+  <!-- Connect modal -->
+  <div class="modal-overlay" id="modal-connect">
+    <div class="modal">
+      <div class="modal-head"><h3>🔗 เชื่อมต่อ Google Sheets</h3><button class="x-close" data-close>&times;</button></div>
+      <div class="modal-body">
+        <div class="field" style="margin-bottom:12px">
+          <label for="in-sheet">ลิงก์ Google Sheets หรือ Sheet ID</label>
+          <input id="in-sheet" type="text" placeholder="วางลิงก์ https://docs.google.com/spreadsheets/d/..." style="min-width:100%" />
+        </div>
+        <div class="field" style="margin-bottom:14px">
+          <label for="in-tab">ชื่อแท็บ (sheet)</label>
+          <input id="in-tab" type="text" value="RAW_DATA" style="min-width:100%" />
+        </div>
+        <div class="help-block">
+          <strong>วิธีเตรียมชีต:</strong>
+          <ol>
+            <li>เปิด Google Sheets → <code>แชร์</code> → ตั้งเป็น <strong>"ทุกคนที่มีลิงก์ (ผู้อ่าน)"</strong></li>
+            <li>ต้องมีแท็บชื่อ <code>RAW_DATA</code> เรียงคอลัมน์:<br />
+              <code>เดือน | ชื่อพนักงาน | ตำแหน่ง | ประเภทสวัสดิการ | จำนวนเงิน | หมายเหตุ</code></li>
+            <li>ประเภท: <code>ค่ารักษาพยาบาล / เบี้ยเลี้ยง / ค่าน้ำมัน / ค่าที่พัก / สวัสดิการอื่นๆ</code></li>
+          </ol>
+        </div>
+        <div style="margin-top:14px;border-top:1px dashed var(--line);padding-top:14px">
+          <p style="margin-bottom:8px">หรือใช้ไฟล์ Excel แทน:</p>
+          <button class="btn btn-light btn-sm" id="btn-upload">📁 อัปโหลดไฟล์ Excel (.xlsx)</button>
+          <input type="file" id="file-input" accept=".xlsx,.xls" style="display:none" />
+        </div>
+      </div>
+      <div class="modal-foot">
+        <button class="btn btn-light" id="btn-clear-src">ใช้ข้อมูลตัวอย่าง</button>
+        <button class="btn btn-primary" id="btn-save-src">บันทึก &amp; ดึงข้อมูล</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Export modal -->
+  <div class="modal-overlay" id="modal-export">
+    <div class="modal">
+      <div class="modal-head"><h3>📊 Export PowerPoint</h3><button class="x-close" data-close>&times;</button></div>
+      <div class="modal-body">
+        <p>สร้างไฟล์ <strong>.pptx</strong> สรุป Dashboard สวัสดิการ ตามตัวกรองปัจจุบัน จำนวน 5 สไลด์:</p>
+        <ul class="slide-list">
+          <li><span class="sn">1</span> หน้าปก — CPF ธารเกษม / ช่วงเวลา</li>
+          <li><span class="sn">2</span> สรุป KPI ภาพรวม</li>
+          <li><span class="sn">3</span> ค่ารักษาพยาบาล: รายเดือน + Top พนักงาน</li>
+          <li><span class="sn">4</span> เบี้ยเลี้ยง &amp; อื่นๆ: สัดส่วนตามประเภท</li>
+          <li><span class="sn">5</span> ตารางสวัสดิการรายคน × เดือน</li>
+        </ul>
+      </div>
+      <div class="modal-foot">
+        <button class="btn btn-light" data-close>ยกเลิก</button>
+        <button class="btn btn-ppt" id="btn-do-export">⬇️ ดาวน์โหลด .pptx</button>
+      </div>
+    </div>
+  </div>
+
+  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
+  <script src="../assets/utils.js"></script>
+  <script src="../assets/data.js"></script>
+  <script src="../assets/ppt.js"></script>
+  <script>
+  (function () {
+    'use strict';
+    var KIND = 'welfare';
+    var MEDICAL = 'ค่ารักษาพยาบาล';
+    var ALL_TYPES = ['ค่ารักษาพยาบาล', 'เบี้ยเลี้ยง', 'ค่าน้ำมัน', 'ค่าที่พัก', 'สวัสดิการอื่นๆ'];
+    var raw = [], filtered = [], lastSource = 'sample', lastUpdated = null;
+    var charts = {};
+
+    function init() {
+      if (window.Chart) {
+        Chart.defaults.font.family = 'Sarabun';
+        Chart.defaults.color = '#4b5563';
+        Chart.defaults.plugins.legend.labels.boxWidth = 12;
+      }
+      bindEvents();
+      loadData(false);
+    }
+
+    function loadData(forceSheets) {
+      setStatus('loading', 'กำลังโหลดข้อมูล…');
+      var p = forceSheets ? DataSource.fromSheets(KIND) : DataSource.loadAuto(KIND);
+      p.then(onLoaded).catch(function (err) {
+        var s = DataSource.sample(KIND); s.error = err.message; s.fellBack = true; onLoaded(s);
+      });
+    }
+    function onLoaded(res) {
+      raw = res.records || [];
+      lastSource = res.source || 'sample';
+      lastUpdated = new Date();
+      if (res.error) U.toast('ดึง Google Sheets ไม่สำเร็จ: ' + res.error, 'err');
+      updateStatus(res);
+      buildFilters();
+      render();
+    }
+    function updateStatus(res) {
+      var s = U.el('status'), txt = U.el('status-text');
+      s.className = 'status ' + (lastSource === 'sheets' || lastSource === 'excel' ? 'ok' : res.fellBack ? 'err' : 'demo');
+      if (lastSource === 'sheets') txt.textContent = 'เชื่อม Google Sheets';
+      else if (lastSource === 'excel') txt.textContent = 'ไฟล์ Excel';
+      else if (res.fellBack) { s.className = 'status err'; txt.textContent = 'ต่อชีตไม่ได้ — แสดงข้อมูลตัวอย่าง'; }
+      else txt.textContent = 'ข้อมูลตัวอย่าง (Demo)';
+      U.el('src-info').textContent = '• ' + (res.count || raw.length) + ' รายการ' + (res.fileName ? ' • ' + res.fileName : '');
+      U.el('src-updated').textContent = 'อัปเดต: ' + lastUpdated.toLocaleTimeString('th-TH', { hour: '2-digit', minute: '2-digit' });
+    }
+    function setStatus(cls, text) { U.el('status').className = 'status ' + cls; U.el('status-text').textContent = text; }
+
+    /* ---------- Filters ---------- */
+    function buildFilters() {
+      var years = U.uniqSorted(raw.map(function (r) { return U.yearOf(r.month); }));
+      var cy = U.el('f-year').value;
+      U.fillSelect(U.el('f-year'), years, { allLabel: 'ทุกปี' });
+      if (years.indexOf(cy) >= 0) U.el('f-year').value = cy;
+
+      var emps = U.uniqSorted(raw.map(function (r) { return r.employee; }));
+      var ce = U.el('f-emp').value;
+      U.fillSelect(U.el('f-emp'), emps, { allLabel: 'ทุกคน' });
+      if (emps.indexOf(ce) >= 0) U.el('f-emp').value = ce;
+
+      var types = ALL_TYPES.filter(function (t) { return raw.some(function (r) { return r.wtype === t; }); });
+      var ct = U.el('f-type').value;
+      U.fillSelect(U.el('f-type'), types, { allLabel: 'ทุกประเภท' });
+      if (types.indexOf(ct) >= 0) U.el('f-type').value = ct;
+
+      buildMonthFilter();
+    }
+    function buildMonthFilter() {
+      var y = U.el('f-year').value;
+      var ms = U.uniqSorted(raw.filter(function (r) { return !y || U.yearOf(r.month) === y; }).map(function (r) { return r.month; }));
+      var cur = U.el('f-month').value;
+      U.fillSelect(U.el('f-month'), ms, { allLabel: 'ทุกเดือน', label: U.monthLabelFull });
+      if (ms.indexOf(cur) >= 0) U.el('f-month').value = cur;
+    }
+    function applyFilters() {
+      var y = U.el('f-year').value, m = U.el('f-month').value, e = U.el('f-emp').value, t = U.el('f-type').value;
+      filtered = raw.filter(function (r) {
+        if (y && U.yearOf(r.month) !== y) return false;
+        if (m && r.month !== m) return false;
+        if (e && r.employee !== e) return false;
+        if (t && r.wtype !== t) return false;
+        return true;
+      });
+    }
+
+    /* ---------- Render ---------- */
+    function render() {
+      applyFilters();
+      var med = filtered.filter(function (r) { return r.wtype === MEDICAL; });
+      var allow = filtered.filter(function (r) { return r.wtype !== MEDICAL; });
+      var totalMed = U.sumBy(med, 'amount');
+      var totalAllow = U.sumBy(allow, 'amount');
+      var allowFuel = U.sumBy(filtered.filter(function (r) { return r.wtype === 'เบี้ยเลี้ยง' || r.wtype === 'ค่าน้ำมัน'; }), 'amount');
+      var grand = totalMed + totalAllow;
+      var empCount = U.uniqSorted(filtered.map(function (r) { return r.employee; })).length;
+
+      U.el('kpi-med').innerHTML = U.fmt(totalMed) + ' <span class="unit">฿</span>';
+      U.el('kpi-med-sub').textContent = U.pct(totalMed, grand) + '% ของทั้งหมด';
+      U.el('kpi-allow').innerHTML = U.fmt(allowFuel) + ' <span class="unit">฿</span>';
+      U.el('kpi-allow-sub').textContent = 'เบี้ยเลี้ยง + ค่าน้ำมัน';
+      U.el('kpi-total').innerHTML = U.fmt(grand) + ' <span class="unit">฿</span>';
+      U.el('kpi-total-sub').textContent = U.fmtShort(grand) + ' บาท';
+      U.el('kpi-emp').textContent = empCount;
+      U.el('kpi-emp-sub').textContent = 'คนที่ได้รับสวัสดิการ';
+
+      renderMedical(med, grand);
+      renderAllowances(allow, totalAllow);
+      renderPivot(filtered);
+      renderInsights(med, allow, filtered, grand, empCount);
+    }
+
+    function renderMedical(med, grand) {
+      var byMonth = U.groupSum(med, 'month', 'amount');
+      var monthsArr = Object.keys(byMonth).sort();
+      var peak = U.toSortedPairs(byMonth)[0];
+      U.el('m-med-total').textContent = U.fmtShort(U.sumBy(med, 'amount'));
+      U.el('m-med-count').textContent = med.length;
+      U.el('m-med-peak').textContent = peak ? U.monthLabel(peak.key) : '–';
+
+      drawDoughnut('c-med-donut', monthsArr.map(U.monthLabel), monthsArr.map(function (m) { return byMonth[m]; }), U.palette('green', monthsArr.length));
+      drawBar('c-med-bar', monthsArr.map(U.monthLabel), monthsArr.map(function (m) { return byMonth[m]; }), '#2E7D32', 'ค่ารักษาพยาบาล');
+
+      var byEmp = U.toSortedPairs(U.groupSum(med, 'employee', 'amount')).slice(0, 8);
+      var posOf = {}; med.forEach(function (r) { posOf[r.employee] = r.position; });
+      U.el('tb-med').innerHTML = byEmp.length ? byEmp.map(function (p) {
+        return '<tr><td>' + esc(p.key) + '</td><td>' + esc(posOf[p.key] || '-') + '</td><td class="num">' + U.fmt(p.value) + '</td></tr>';
+      }).join('') : emptyRow(3);
+    }
+
+    function renderAllowances(allow, totalAllow) {
+      var byType = U.groupSum(allow, 'wtype', 'amount');
+      var typePairs = U.toSortedPairs(byType);
+      var byMonth = U.groupSum(allow, 'month', 'amount');
+      var monthsArr = Object.keys(byMonth).sort();
+      var peak = U.toSortedPairs(byMonth)[0];
+
+      U.el('m-allow-total').textContent = U.fmtShort(totalAllow);
+      U.el('m-allow-top').textContent = typePairs[0] ? typePairs[0].key : '–';
+      U.el('m-allow-peak').textContent = peak ? U.monthLabel(peak.key) : '–';
+
+      drawDoughnut('c-allow-donut', typePairs.map(function (p) { return p.key; }), typePairs.map(function (p) { return p.value; }), U.palette('mix', typePairs.length));
+      drawBar('c-allow-bar', monthsArr.map(U.monthLabel), monthsArr.map(function (m) { return byMonth[m]; }), '#1565C0', 'เบี้ยเลี้ยง & อื่นๆ');
+
+      U.el('tb-type').innerHTML = typePairs.length ? typePairs.map(function (p) {
+        return '<tr><td>' + esc(p.key) + '</td><td class="num">' + U.fmt(p.value) + '</td><td class="num">' + U.pct(p.value, totalAllow) + '%</td></tr>';
+      }).join('') : emptyRow(3);
+    }
+
+    function buildPivot(records) {
+      var monthsArr = U.uniqSorted(records.map(function (r) { return r.month; }));
+      var byEmp = {};
+      records.forEach(function (r) {
+        var e = byEmp[r.employee] || (byEmp[r.employee] = { position: r.position, m: {}, total: 0 });
+        e.m[r.month] = (e.m[r.month] || 0) + r.amount;
+        e.total += r.amount;
+        if (!e.position && r.position) e.position = r.position;
+      });
+      var rows = Object.keys(byEmp).map(function (k) { return { employee: k, position: byEmp[k].position, m: byEmp[k].m, total: byEmp[k].total }; })
+        .sort(function (a, b) { return b.total - a.total; });
+      return { months: monthsArr, rows: rows };
+    }
+
+    function renderPivot(records) {
+      var p = buildPivot(records);
+      U.el('pivot-note').textContent = p.rows.length + ' คน • ' + p.months.length + ' เดือน';
+      U.el('pivot-head').innerHTML = '<tr><th>พนักงาน</th><th>ตำแหน่ง</th>' +
+        p.months.map(function (m) { return '<th class="num">' + U.monthLabel(m) + '</th>'; }).join('') +
+        '<th class="num">รวม</th></tr>';
+      U.el('pivot-body').innerHTML = p.rows.length ? p.rows.map(function (r) {
+        return '<tr><td>' + esc(r.employee) + '</td><td>' + esc(r.position || '-') + '</td>' +
+          p.months.map(function (m) { return '<td class="num">' + (r.m[m] ? U.fmt(r.m[m]) : '-') + '</td>'; }).join('') +
+          '<td class="num"><strong>' + U.fmt(r.total) + '</strong></td></tr>';
+      }).join('') : emptyRow(p.months.length + 3);
+      var foot = p.months.map(function (m) { return U.sumBy(records.filter(function (r) { return r.month === m; }), 'amount'); });
+      U.el('pivot-foot').innerHTML = p.rows.length ? '<tr><td colspan="2">รวมทุกคน</td>' +
+        foot.map(function (v) { return '<td class="num">' + U.fmt(v) + '</td>'; }).join('') +
+        '<td class="num">' + U.fmt(U.sumBy(records, 'amount')) + '</td></tr>' : '';
+    }
+
+    function renderInsights(med, allow, all, grand, empCount) {
+      var topMedEmp = U.toSortedPairs(U.groupSum(med, 'employee', 'amount'))[0];
+      var topType = U.toSortedPairs(U.groupSum(all, 'wtype', 'amount'))[0];
+      var peakMonth = U.toSortedPairs(U.groupSum(all, 'month', 'amount'))[0];
+      var avg = empCount ? Math.round(grand / empCount) : 0;
+      var cards = [
+        { cls: '', icon: '🏥', title: 'พนักงานค่ารักษาสูงสุด', text: topMedEmp ? esc(topMedEmp.key) : '–', sub: topMedEmp ? U.fmt(topMedEmp.value) + ' ฿' : 'ไม่มีรายการ' },
+        { cls: 'b', icon: '💵', title: 'ประเภทสวัสดิการสูงสุด', text: topType ? esc(topType.key) : '–', sub: topType ? U.fmt(topType.value) + ' ฿' : '' },
+        { cls: 'teal', icon: '📈', title: 'เดือนจ่ายสวัสดิการสูงสุด', text: peakMonth ? U.monthLabelFull(peakMonth.key) : '–', sub: peakMonth ? U.fmt(peakMonth.value) + ' ฿' : '' },
+        { cls: 'amber', icon: '👤', title: 'เฉลี่ยต่อคน', text: U.fmt(avg) + ' ฿', sub: 'จาก ' + empCount + ' คน' }
+      ];
+      U.el('insights').innerHTML = cards.map(function (c) {
+        return '<div class="insight ' + c.cls + '"><div class="i-icon">' + c.icon + '</div>' +
+          '<div class="i-title">' + c.title + '</div><div class="i-text">' + c.text +
+          (c.sub ? ' <small>' + c.sub + '</small>' : '') + '</div></div>';
+      }).join('');
+    }
+
+    /* ---------- Charts ---------- */
+    function drawDoughnut(id, labels, data, colors) {
+      var ctx = U.el(id); if (!ctx) return;
+      if (charts[id]) charts[id].destroy();
+      charts[id] = new Chart(ctx, {
+        type: 'doughnut',
+        data: { labels: labels, datasets: [{ data: data, backgroundColor: colors, borderWidth: 2, borderColor: '#fff' }] },
+        options: {
+          responsive: true, maintainAspectRatio: false, cutout: '58%',
+          plugins: { legend: { position: 'bottom' }, tooltip: { callbacks: { label: function (c) { return c.label + ': ' + U.fmt(c.parsed) + ' ฿'; } } } }
+        }
+      });
+    }
+    function drawBar(id, labels, data, color, label) {
+      var ctx = U.el(id); if (!ctx) return;
+      if (charts[id]) charts[id].destroy();
+      charts[id] = new Chart(ctx, {
+        type: 'bar',
+        data: { labels: labels, datasets: [{ label: label, data: data, backgroundColor: color, borderRadius: 6, maxBarThickness: 46 }] },
+        options: {
+          responsive: true, maintainAspectRatio: false,
+          plugins: { legend: { display: false }, tooltip: { callbacks: { label: function (c) { return U.fmt(c.parsed.y) + ' ฿'; } } } },
+          scales: { x: { grid: { display: false } }, y: { beginAtZero: true, ticks: { callback: function (v) { return U.fmtShort(v); } } } }
+        }
+      });
+    }
+
+    /* ---------- Export ---------- */
+    function doExport() {
+      var med = filtered.filter(function (r) { return r.wtype === MEDICAL; });
+      var allow = filtered.filter(function (r) { return r.wtype !== MEDICAL; });
+      var totalMed = U.sumBy(med, 'amount'), totalAllow = U.sumBy(allow, 'amount'), grand = totalMed + totalAllow;
+      var empCount = U.uniqSorted(filtered.map(function (r) { return r.employee; })).length;
+      var typePairs = U.toSortedPairs(U.groupSum(allow, 'wtype', 'amount'));
+      var topMed = U.toSortedPairs(U.groupSum(med, 'employee', 'amount')).slice(0, 10);
+      var posOf = {}; med.forEach(function (r) { posOf[r.employee] = r.position; });
+      var pivot = buildPivot(filtered);
+      var period = periodLabel();
+
+      var deck = {
+        org: 'CPF ธารเกษม โคราช', period: period, title: 'Dashboard สวัสดิการ',
+        fileName: 'CPF_ธารเกษม_สวัสดิการ_2569.pptx',
+        slides: [
+          { layout: 'title', title: 'Dashboard สวัสดิการพนักงาน', subtitle: period, footer: 'โรงงานผลิตอาหารสัตว์ธารเกษม โคราช • สร้างเมื่อ ' + new Date().toLocaleDateString('th-TH') },
+          {
+            layout: 'kpi', title: 'สรุปภาพรวม (KPI)',
+            items: [
+              { label: 'ค่ารักษาพยาบาล', value: U.fmt(totalMed) + ' ฿', color: '2E7D32' },
+              { label: 'เบี้ยเลี้ยง & อื่นๆ', value: U.fmt(totalAllow) + ' ฿', color: '1565C0' },
+              { label: 'รวมทั้งสิ้น', value: U.fmt(grand) + ' ฿', color: 'F9A825' },
+              { label: 'พนักงานที่ได้รับ', value: String(empCount) + ' คน', color: '00897B' }
+            ],
+            note: ['ช่วงเวลา: ' + period, 'เฉลี่ยต่อคน: ' + U.fmt(empCount ? Math.round(grand / empCount) : 0) + ' บาท', 'แหล่งข้อมูล: ' + (lastSource === 'sheets' ? 'Google Sheets' : lastSource === 'excel' ? 'ไฟล์ Excel' : 'ข้อมูลตัวอย่าง')]
+          },
+          {
+            layout: 'imageTable', title: 'ค่ารักษาพยาบาล',
+            image: PPT.chartImage(charts['c-med-bar']),
+            table: { head: ['พนักงาน', 'จำนวนเงิน'], align: ['left', 'right'], widths: [4.0, 2.0], rows: topMed.map(function (p) { return [p.key, U.fmt(p.value)]; }) }
+          },
+          {
+            layout: 'imageTable', title: 'เบี้ยเลี้ยง & สวัสดิการอื่นๆ', color: '1565C0',
+            image: PPT.chartImage(charts['c-allow-donut']),
+            table: { headColor: '1565C0', head: ['ประเภท', 'จำนวนเงิน', 'สัดส่วน'], align: ['left', 'right', 'right'], widths: [2.6, 1.9, 1.5], rows: typePairs.map(function (p) { return [p.key, U.fmt(p.value), U.pct(p.value, totalAllow) + '%']; }) }
+          },
+          {
+            layout: 'table', title: 'สวัสดิการรายคน × เดือน',
+            table: {
+              fontSize: 9, head: ['พนักงาน', 'ตำแหน่ง'].concat(pivot.months.map(U.monthLabel)).concat(['รวม']),
+              align: ['left', 'left'].concat(pivot.months.map(function () { return 'right'; })).concat(['right']),
+              rows: pivot.rows.slice(0, 14).map(function (r) {
+                return [r.employee, r.position || '-'].concat(pivot.months.map(function (m) { return r.m[m] ? U.fmt(r.m[m]) : '-'; })).concat([U.fmt(r.total)]);
+              })
+            },
+            note: pivot.rows.length > 14 ? '* แสดง 14 อันดับแรกจาก ' + pivot.rows.length + ' คน' : ''
+          }
+        ]
+      };
+
+      var btn = U.el('btn-do-export'); btn.disabled = true; btn.textContent = '⏳ กำลังสร้าง…';
+      PPT.export(deck).then(function () {
+        closeModal('modal-export'); U.toast('ดาวน์โหลดไฟล์ PowerPoint สำเร็จ', 'ok');
+      }).catch(function (e) { U.toast('Export ไม่สำเร็จ: ' + e.message, 'err'); })
+        .then(function () { btn.disabled = false; btn.textContent = '⬇️ ดาวน์โหลด .pptx'; });
+    }
+
+    function periodLabel() {
+      var ms = U.uniqSorted(filtered.map(function (r) { return r.month; }));
+      if (!ms.length) return 'ปีงบประมาณ พ.ศ. 2569';
+      if (ms.length === 1) return U.monthLabelFull(ms[0]);
+      return 'ปีงบประมาณ พ.ศ. ' + U.yearOf(ms[0]) + ' (' + U.monthLabel(ms[0]) + ' – ' + U.monthLabel(ms[ms.length - 1]) + ')';
+    }
+
+    /* ---------- Events ---------- */
+    function bindEvents() {
+      U.el('f-year').addEventListener('change', function () { buildMonthFilter(); render(); });
+      ['f-month', 'f-emp', 'f-type'].forEach(function (id) { U.el(id).addEventListener('change', render); });
+      U.el('btn-reset').addEventListener('click', function () {
+        ['f-year', 'f-emp', 'f-type'].forEach(function (id) { U.el(id).value = ''; });
+        buildMonthFilter(); U.el('f-month').value = ''; render();
+      });
+      U.el('btn-refresh').addEventListener('click', function () { loadData(!!DataSource.config.get(KIND).sheetId); });
+      U.el('btn-export').addEventListener('click', function () { openModal('modal-export'); });
+      U.el('btn-do-export').addEventListener('click', doExport);
+      U.el('btn-connect').addEventListener('click', openConnect);
+      U.el('btn-save-src').addEventListener('click', function () {
+        var id = DataSource.extractSheetId(U.el('in-sheet').value);
+        var tab = U.el('in-tab').value.trim() || 'RAW_DATA';
+        if (!id) { U.toast('กรุณาวางลิงก์หรือ Sheet ID', 'err'); return; }
+        DataSource.config.set(KIND, { sheetId: id, sheetName: tab });
+        closeModal('modal-connect'); loadData(true);
+      });
+      U.el('btn-clear-src').addEventListener('click', function () {
+        DataSource.config.clear(KIND); closeModal('modal-connect'); loadData(false); U.toast('กลับไปใช้ข้อมูลตัวอย่าง', 'ok');
+      });
+      U.el('btn-upload').addEventListener('click', function () { U.el('file-input').click(); });
+      U.el('file-input').addEventListener('change', function (e) {
+        var f = e.target.files[0]; if (!f) return;
+        setStatus('loading', 'กำลังอ่านไฟล์…');
+        DataSource.fromExcel(KIND, f).then(function (res) {
+          DataSource.config.clear(KIND); closeModal('modal-connect'); onLoaded(res); U.toast('โหลดไฟล์ Excel สำเร็จ', 'ok');
+        }).catch(function (err) { U.toast(err.message, 'err'); loadData(false); });
+        e.target.value = '';
+      });
+      U.$$('[data-close]').forEach(function (b) { b.addEventListener('click', function () { closeModal(b.closest('.modal-overlay').id); }); });
+      U.$$('.modal-overlay').forEach(function (o) { o.addEventListener('click', function (e) { if (e.target === o) closeModal(o.id); }); });
+    }
+    function openConnect() {
+      var cfg = DataSource.config.get(KIND);
+      U.el('in-sheet').value = cfg.sheetId ? DataSource.buildCsvUrl(cfg.sheetId, cfg.sheetName).split('/gviz')[0] : '';
+      U.el('in-tab').value = cfg.sheetName || 'RAW_DATA';
+      openModal('modal-connect');
+    }
+    function openModal(id) { U.el(id).classList.add('open'); }
+    function closeModal(id) { U.el(id).classList.remove('open'); }
+
+    function esc(s) { return String(s == null ? '' : s).replace(/[&<>"]/g, function (c) { return ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' })[c]; }); }
+    function emptyRow(cols) { return '<tr><td colspan="' + cols + '" class="empty">ไม่มีข้อมูลตามตัวกรอง</td></tr>'; }
+
+    if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', init);
+    else init();
+  })();
+  </script>
+</body>
+</html>

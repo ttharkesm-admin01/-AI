@@ -1,0 +1,533 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Dashboard OE — CPF ธารเกษม</title>
+  <meta name="description" content="แดชบอร์ดค่าใช้จ่าย OE และเงินยืมทดรอง โรงงานธารเกษม (CPF) ปีงบประมาณ 2569" />
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Sarabun:wght@300;400;600;700;800&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="../assets/common.css" />
+</head>
+<body>
+  <header class="app-header">
+    <div class="brand">
+      <div class="logo">CPF</div>
+      <div>
+        <h1>Dashboard ค่าใช้จ่าย OE</h1>
+        <div class="sub">โรงงานผลิตอาหารสัตว์ธารเกษม โคราช • ปีงบประมาณ พ.ศ. 2569</div>
+      </div>
+    </div>
+    <div class="spacer"></div>
+    <div class="header-actions">
+      <a class="btn btn-ghost btn-sm" href="../">🏠 หน้าหลัก</a>
+      <a class="btn btn-ghost btn-sm" href="../welfare/">🧑‍🤝‍🧑 สวัสดิการ</a>
+      <button class="btn btn-ghost btn-sm" id="btn-connect">🔗 เชื่อม Google Sheets</button>
+      <button class="btn btn-light btn-sm" id="btn-refresh">🔄 รีเฟรช</button>
+      <button class="btn btn-ppt" id="btn-export">📊 Export PowerPoint</button>
+    </div>
+  </header>
+
+  <div class="wrap">
+    <!-- Source / status -->
+    <div class="source-bar">
+      <span class="status demo" id="status"><span class="dot"></span><span id="status-text">กำลังโหลด…</span></span>
+      <span class="src-info" id="src-info"></span>
+      <div class="filter-spacer" style="flex:1"></div>
+      <span class="src-info" id="src-updated"></span>
+    </div>
+
+    <!-- Filters -->
+    <div class="filter-bar">
+      <div class="field">
+        <label for="f-year">ปีงบประมาณ</label>
+        <select id="f-year"></select>
+      </div>
+      <div class="field">
+        <label for="f-month">เดือน</label>
+        <select id="f-month"></select>
+      </div>
+      <div class="field">
+        <label for="f-type">ประเภท</label>
+        <select id="f-type">
+          <option value="">ทั้งหมด</option>
+          <option value="ค่าใช้จ่าย">ค่าใช้จ่าย</option>
+          <option value="เงินยืมทดรอง">เงินยืมทดรอง</option>
+        </select>
+      </div>
+      <div class="filter-spacer"></div>
+      <div class="field" style="justify-content:flex-end">
+        <button class="btn btn-light btn-sm" id="btn-reset">ล้างตัวกรอง</button>
+      </div>
+    </div>
+
+    <!-- KPI -->
+    <div class="kpi-grid">
+      <div class="kpi">
+        <div class="k-label">💰 ค่าใช้จ่าย OE รวม</div>
+        <div class="k-value" id="kpi-exp">–</div>
+        <div class="k-sub" id="kpi-exp-sub"></div>
+      </div>
+      <div class="kpi b">
+        <div class="k-label">🤝 เงินยืมทดรอง</div>
+        <div class="k-value" id="kpi-adv">–</div>
+        <div class="k-sub" id="kpi-adv-sub"></div>
+      </div>
+      <div class="kpi amber">
+        <div class="k-label">📦 รวมทั้งสิ้น</div>
+        <div class="k-value" id="kpi-total">–</div>
+        <div class="k-sub" id="kpi-total-sub"></div>
+      </div>
+      <div class="kpi teal">
+        <div class="k-label">🗂️ จำนวนหมวดหมู่</div>
+        <div class="k-value" id="kpi-cats">–</div>
+        <div class="k-sub" id="kpi-cats-sub"></div>
+      </div>
+    </div>
+
+    <!-- Two panels -->
+    <div class="panels">
+      <!-- ซ้าย: ค่าใช้จ่าย -->
+      <section class="panel">
+        <div class="panel-head"><div class="p-icon">💰</div><h2>ค่าใช้จ่าย OE</h2></div>
+        <div class="panel-body">
+          <div class="mini-kpis">
+            <div class="mini"><div class="m-label">คงที่</div><div class="m-value" id="m-fix">–</div></div>
+            <div class="mini"><div class="m-label">แปรผัน</div><div class="m-value" id="m-var">–</div></div>
+            <div class="mini"><div class="m-label">เดือนใช้จ่ายสูงสุด</div><div class="m-value" id="m-peak">–</div></div>
+          </div>
+          <div class="chart-block">
+            <div class="cb-title">สัดส่วน คงที่ vs แปรผัน</div>
+            <div class="chart-wrap short"><canvas id="c-exp-donut"></canvas></div>
+          </div>
+          <div class="chart-block">
+            <div class="cb-title">ค่าใช้จ่ายรายเดือน</div>
+            <div class="chart-wrap"><canvas id="c-exp-bar"></canvas></div>
+          </div>
+          <div class="chart-block">
+            <div class="cb-title">Top 5 หมวดค่าใช้จ่าย</div>
+            <div class="tbl-wrap">
+              <table class="data"><thead><tr><th>หมวดหมู่</th><th class="num">จำนวนเงิน</th><th class="num">สัดส่วน</th></tr></thead>
+                <tbody id="tb-top5"></tbody></table>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- ขวา: เงินยืมทดรอง -->
+      <section class="panel blue">
+        <div class="panel-head"><div class="p-icon">🤝</div><h2>เงินยืมทดรอง</h2></div>
+        <div class="panel-body">
+          <div class="mini-kpis">
+            <div class="mini"><div class="m-label">รวมเงินยืม</div><div class="m-value" id="m-adv-total">–</div></div>
+            <div class="mini"><div class="m-label">จำนวนรายการ</div><div class="m-value" id="m-adv-count">–</div></div>
+            <div class="mini"><div class="m-label">ผู้ยืมสูงสุด</div><div class="m-value" id="m-adv-top">–</div></div>
+          </div>
+          <div class="chart-block">
+            <div class="cb-title">เงินยืมทดรองรายเดือน (สัดส่วน)</div>
+            <div class="chart-wrap short"><canvas id="c-adv-donut"></canvas></div>
+          </div>
+          <div class="chart-block">
+            <div class="cb-title">เงินยืมทดรองรายเดือน</div>
+            <div class="chart-wrap"><canvas id="c-adv-bar"></canvas></div>
+          </div>
+          <div class="chart-block">
+            <div class="cb-title">รายการเงินยืมทดรอง</div>
+            <div class="tbl-wrap" style="max-height:260px;overflow:auto">
+              <table class="data blue"><thead><tr><th>เดือน</th><th>รายการ / วัตถุประสงค์</th><th>ผู้ยืม</th><th class="num">จำนวนเงิน</th></tr></thead>
+                <tbody id="tb-adv"></tbody></table>
+            </div>
+          </div>
+        </div>
+      </section>
+    </div>
+
+    <!-- Insights -->
+    <div class="section-title">ข้อสังเกตสำคัญ (Insights)</div>
+    <div class="insights" id="insights"></div>
+
+    <div class="app-foot">
+      CPF ธารเกษม • Dashboard OE • ข้อมูลปีงบประมาณ พ.ศ. 2569 ·
+      <a href="../">หน้าหลัก</a>
+    </div>
+  </div>
+
+  <!-- Connect Google Sheets modal -->
+  <div class="modal-overlay" id="modal-connect">
+    <div class="modal">
+      <div class="modal-head"><h3>🔗 เชื่อมต่อ Google Sheets</h3><button class="x-close" data-close>&times;</button></div>
+      <div class="modal-body">
+        <div class="field" style="margin-bottom:12px">
+          <label for="in-sheet">ลิงก์ Google Sheets หรือ Sheet ID</label>
+          <input id="in-sheet" type="text" placeholder="วางลิงก์ https://docs.google.com/spreadsheets/d/..." style="min-width:100%" />
+        </div>
+        <div class="field" style="margin-bottom:14px">
+          <label for="in-tab">ชื่อแท็บ (sheet)</label>
+          <input id="in-tab" type="text" value="RAW_DATA" style="min-width:100%" />
+        </div>
+        <div class="help-block">
+          <strong>วิธีเตรียมชีต:</strong>
+          <ol>
+            <li>เปิด Google Sheets → <code>แชร์</code> → ตั้งเป็น <strong>"ทุกคนที่มีลิงก์ (ผู้อ่าน)"</strong></li>
+            <li>ต้องมีแท็บชื่อ <code>RAW_DATA</code> เรียงคอลัมน์:<br />
+              <code>เดือน | หมวดหมู่ | ประเภท | กลุ่ม | รายละเอียด | จำนวนเงิน | ผู้ยืม</code></li>
+            <li>รูปแบบเดือน <code>2569-01</code> · ประเภท = <code>ค่าใช้จ่าย</code> / <code>เงินยืมทดรอง</code></li>
+          </ol>
+        </div>
+        <div style="margin-top:14px;border-top:1px dashed var(--line);padding-top:14px">
+          <p style="margin-bottom:8px">หรือใช้ไฟล์ Excel แทน (ไม่ต้องต่อเน็ต):</p>
+          <button class="btn btn-light btn-sm" id="btn-upload">📁 อัปโหลดไฟล์ Excel (.xlsx)</button>
+          <input type="file" id="file-input" accept=".xlsx,.xls" style="display:none" />
+        </div>
+      </div>
+      <div class="modal-foot">
+        <button class="btn btn-light" id="btn-clear-src">ใช้ข้อมูลตัวอย่าง</button>
+        <button class="btn btn-primary" id="btn-save-src">บันทึก &amp; ดึงข้อมูล</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Export modal -->
+  <div class="modal-overlay" id="modal-export">
+    <div class="modal">
+      <div class="modal-head"><h3>📊 Export PowerPoint</h3><button class="x-close" data-close>&times;</button></div>
+      <div class="modal-body">
+        <p>สร้างไฟล์ <strong>.pptx</strong> สรุป Dashboard OE ตามตัวกรองปัจจุบัน จำนวน 5 สไลด์:</p>
+        <ul class="slide-list">
+          <li><span class="sn">1</span> หน้าปก — CPF ธารเกษม / ช่วงเวลา</li>
+          <li><span class="sn">2</span> สรุป KPI ภาพรวม</li>
+          <li><span class="sn">3</span> ค่าใช้จ่าย: สัดส่วนคงที่/แปรผัน + Top 5</li>
+          <li><span class="sn">4</span> ค่าใช้จ่ายรายเดือน (กราฟแท่ง)</li>
+          <li><span class="sn">5</span> เงินยืมทดรอง: รายเดือน + รายการ</li>
+        </ul>
+      </div>
+      <div class="modal-foot">
+        <button class="btn btn-light" data-close>ยกเลิก</button>
+        <button class="btn btn-ppt" id="btn-do-export">⬇️ ดาวน์โหลด .pptx</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Libs -->
+  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
+  <!-- Shared -->
+  <script src="../assets/utils.js"></script>
+  <script src="../assets/data.js"></script>
+  <script src="../assets/ppt.js"></script>
+  <script>
+  (function () {
+    'use strict';
+    var KIND = 'oe';
+    var raw = [], filtered = [], lastSource = 'sample', lastUpdated = null;
+    var charts = {};
+
+    function init() {
+      if (window.Chart) {
+        Chart.defaults.font.family = 'Sarabun';
+        Chart.defaults.color = '#4b5563';
+        Chart.defaults.plugins.legend.labels.boxWidth = 12;
+      }
+      bindEvents();
+      loadData(false);
+    }
+
+    /* ---------- Load ---------- */
+    function loadData(forceSheets) {
+      setStatus('loading', 'กำลังโหลดข้อมูล…');
+      var p = forceSheets ? DataSource.fromSheets(KIND) : DataSource.loadAuto(KIND);
+      p.then(onLoaded).catch(function (err) {
+        var s = DataSource.sample(KIND); s.error = err.message; s.fellBack = true; onLoaded(s);
+      });
+    }
+    function onLoaded(res) {
+      raw = res.records || [];
+      lastSource = res.source || 'sample';
+      lastUpdated = new Date();
+      if (res.error) U.toast('ดึง Google Sheets ไม่สำเร็จ: ' + res.error, 'err');
+      updateStatus(res);
+      buildFilters();
+      render();
+    }
+
+    function updateStatus(res) {
+      var s = U.el('status'), txt = U.el('status-text');
+      var info = U.el('src-info'), upd = U.el('src-updated');
+      s.className = 'status ' + (lastSource === 'sheets' ? 'ok' : lastSource === 'excel' ? 'ok' : res.fellBack ? 'err' : 'demo');
+      if (lastSource === 'sheets') { txt.textContent = 'เชื่อม Google Sheets'; }
+      else if (lastSource === 'excel') { txt.textContent = 'ไฟล์ Excel'; }
+      else if (res.fellBack) { s.className = 'status err'; txt.textContent = 'ต่อชีตไม่ได้ — แสดงข้อมูลตัวอย่าง'; }
+      else { txt.textContent = 'ข้อมูลตัวอย่าง (Demo)'; }
+      info.textContent = '• ' + (res.count || raw.length) + ' รายการ' + (res.fileName ? ' • ' + res.fileName : '');
+      upd.textContent = 'อัปเดต: ' + lastUpdated.toLocaleTimeString('th-TH', { hour: '2-digit', minute: '2-digit' });
+    }
+    function setStatus(cls, text) {
+      var s = U.el('status'); s.className = 'status ' + cls; U.el('status-text').textContent = text;
+    }
+
+    /* ---------- Filters ---------- */
+    function buildFilters() {
+      var years = U.uniqSorted(raw.map(function (r) { return U.yearOf(r.month); }));
+      var curYear = U.el('f-year').value;
+      U.fillSelect(U.el('f-year'), years, { allLabel: 'ทุกปี' });
+      if (years.indexOf(curYear) >= 0) U.el('f-year').value = curYear;
+      buildMonthFilter();
+    }
+    function buildMonthFilter() {
+      var y = U.el('f-year').value;
+      var ms = U.uniqSorted(raw.filter(function (r) { return !y || U.yearOf(r.month) === y; })
+        .map(function (r) { return r.month; }));
+      var cur = U.el('f-month').value;
+      U.fillSelect(U.el('f-month'), ms, { allLabel: 'ทุกเดือน', label: U.monthLabelFull });
+      if (ms.indexOf(cur) >= 0) U.el('f-month').value = cur;
+    }
+    function applyFilters() {
+      var y = U.el('f-year').value, m = U.el('f-month').value, t = U.el('f-type').value;
+      filtered = raw.filter(function (r) {
+        if (y && U.yearOf(r.month) !== y) return false;
+        if (m && r.month !== m) return false;
+        if (t && r.type !== t) return false;
+        return true;
+      });
+    }
+
+    /* ---------- Render ---------- */
+    function render() {
+      applyFilters();
+      var exp = filtered.filter(function (r) { return r.type === 'ค่าใช้จ่าย'; });
+      var adv = filtered.filter(function (r) { return r.type === 'เงินยืมทดรอง'; });
+
+      var totalExp = U.sumBy(exp, 'amount'), totalAdv = U.sumBy(adv, 'amount');
+      var grand = totalExp + totalAdv;
+      var cats = U.uniqSorted(exp.map(function (r) { return r.category; }));
+
+      // KPI
+      U.el('kpi-exp').innerHTML = U.fmt(totalExp) + ' <span class="unit">฿</span>';
+      U.el('kpi-exp-sub').textContent = U.fmtShort(totalExp) + ' บาท';
+      U.el('kpi-adv').innerHTML = U.fmt(totalAdv) + ' <span class="unit">฿</span>';
+      U.el('kpi-adv-sub').textContent = adv.length + ' รายการ';
+      U.el('kpi-total').innerHTML = U.fmt(grand) + ' <span class="unit">฿</span>';
+      U.el('kpi-total-sub').textContent = 'OE ' + U.pct(totalExp, grand) + '% • ยืม ' + U.pct(totalAdv, grand) + '%';
+      U.el('kpi-cats').textContent = cats.length;
+      U.el('kpi-cats-sub').textContent = 'หมวดค่าใช้จ่าย';
+
+      renderExpenses(exp, totalExp);
+      renderAdvances(adv, totalAdv);
+      renderInsights(exp, adv, totalExp, totalAdv);
+    }
+
+    function renderExpenses(exp, totalExp) {
+      var fixed = U.sumBy(exp.filter(function (r) { return r.group === 'คงที่'; }), 'amount');
+      var variable = U.sumBy(exp.filter(function (r) { return r.group === 'แปรผัน'; }), 'amount');
+      var byMonth = U.groupSum(exp, 'month', 'amount');
+      var monthsArr = Object.keys(byMonth).sort();
+      var peak = U.toSortedPairs(byMonth)[0];
+
+      U.el('m-fix').textContent = U.fmtShort(fixed);
+      U.el('m-var').textContent = U.fmtShort(variable);
+      U.el('m-peak').textContent = peak ? U.monthLabel(peak.key) : '–';
+
+      // donut fixed vs variable
+      drawDoughnut('c-exp-donut', ['คงที่', 'แปรผัน'], [fixed, variable], ['#2E7D32', '#F9A825']);
+      // bar by month
+      drawBar('c-exp-bar', monthsArr.map(U.monthLabel), monthsArr.map(function (m) { return byMonth[m]; }), '#2E7D32', 'ค่าใช้จ่าย');
+
+      // top5
+      var top5 = U.toSortedPairs(U.groupSum(exp, 'category', 'amount')).slice(0, 5);
+      var tb = U.el('tb-top5');
+      tb.innerHTML = top5.length ? top5.map(function (p) {
+        return '<tr><td>' + esc(p.key) + '</td><td class="num">' + U.fmt(p.value) +
+          '</td><td class="num">' + U.pct(p.value, totalExp) + '%</td></tr>';
+      }).join('') : emptyRow(3);
+    }
+
+    function renderAdvances(adv, totalAdv) {
+      var byMonth = U.groupSum(adv, 'month', 'amount');
+      var monthsArr = Object.keys(byMonth).sort();
+      var byBorrower = U.toSortedPairs(U.groupSum(adv, 'borrower', 'amount'));
+
+      U.el('m-adv-total').textContent = U.fmtShort(totalAdv);
+      U.el('m-adv-count').textContent = adv.length;
+      U.el('m-adv-top').textContent = byBorrower[0] ? byBorrower[0].key : '–';
+
+      drawDoughnut('c-adv-donut', monthsArr.map(U.monthLabel), monthsArr.map(function (m) { return byMonth[m]; }), U.palette('blue', monthsArr.length));
+      drawBar('c-adv-bar', monthsArr.map(U.monthLabel), monthsArr.map(function (m) { return byMonth[m]; }), '#1565C0', 'เงินยืมทดรอง');
+
+      var rows = adv.slice().sort(function (a, b) { return U.cmpMonth(a.month, b.month) || b.amount - a.amount; });
+      var tb = U.el('tb-adv');
+      tb.innerHTML = rows.length ? rows.map(function (r) {
+        return '<tr><td>' + U.monthLabel(r.month) + '</td><td>' + esc(r.detail || '-') +
+          '</td><td>' + esc(r.borrower || '-') + '</td><td class="num">' + U.fmt(r.amount) + '</td></tr>';
+      }).join('') : emptyRow(4);
+    }
+
+    function renderInsights(exp, adv, totalExp, totalAdv) {
+      var topCat = U.toSortedPairs(U.groupSum(exp, 'category', 'amount'))[0];
+      var fixed = U.sumBy(exp.filter(function (r) { return r.group === 'คงที่'; }), 'amount');
+      var variable = totalExp - fixed;
+      var peak = U.toSortedPairs(U.groupSum(exp, 'month', 'amount'))[0];
+      var topBorrower = U.toSortedPairs(U.groupSum(adv, 'borrower', 'amount'))[0];
+
+      var cards = [
+        { cls: '', icon: '💸', title: 'หมวดใช้จ่ายสูงสุด', text: topCat ? esc(topCat.key) : '–', sub: topCat ? U.fmt(topCat.value) + ' ฿' : '' },
+        { cls: 'amber', icon: '⚖️', title: 'สัดส่วน คงที่ : แปรผัน', text: U.pct(fixed, totalExp) + '% : ' + U.pct(variable, totalExp) + '%', sub: 'คงที่ ' + U.fmtShort(fixed) + ' / แปรผัน ' + U.fmtShort(variable) },
+        { cls: 'teal', icon: '📈', title: 'เดือนใช้จ่ายสูงสุด', text: peak ? U.monthLabelFull(peak.key) : '–', sub: peak ? U.fmt(peak.value) + ' ฿' : '' },
+        { cls: 'b', icon: '🤝', title: 'ผู้ยืมทดรองสูงสุด', text: topBorrower ? esc(topBorrower.key) : '–', sub: topBorrower ? U.fmt(topBorrower.value) + ' ฿' : 'ไม่มีรายการ' }
+      ];
+      U.el('insights').innerHTML = cards.map(function (c) {
+        return '<div class="insight ' + c.cls + '"><div class="i-icon">' + c.icon + '</div>' +
+          '<div class="i-title">' + c.title + '</div><div class="i-text">' + c.text +
+          (c.sub ? ' <small>' + c.sub + '</small>' : '') + '</div></div>';
+      }).join('');
+    }
+
+    /* ---------- Charts ---------- */
+    function drawDoughnut(id, labels, data, colors) {
+      var ctx = U.el(id); if (!ctx) return;
+      if (charts[id]) charts[id].destroy();
+      charts[id] = new Chart(ctx, {
+        type: 'doughnut',
+        data: { labels: labels, datasets: [{ data: data, backgroundColor: colors, borderWidth: 2, borderColor: '#fff' }] },
+        options: {
+          responsive: true, maintainAspectRatio: false, cutout: '58%',
+          plugins: {
+            legend: { position: 'bottom' },
+            tooltip: { callbacks: { label: function (c) { return c.label + ': ' + U.fmt(c.parsed) + ' ฿'; } } }
+          }
+        }
+      });
+    }
+    function drawBar(id, labels, data, color, label) {
+      var ctx = U.el(id); if (!ctx) return;
+      if (charts[id]) charts[id].destroy();
+      charts[id] = new Chart(ctx, {
+        type: 'bar',
+        data: { labels: labels, datasets: [{ label: label, data: data, backgroundColor: color, borderRadius: 6, maxBarThickness: 46 }] },
+        options: {
+          responsive: true, maintainAspectRatio: false,
+          plugins: {
+            legend: { display: false },
+            tooltip: { callbacks: { label: function (c) { return U.fmt(c.parsed.y) + ' ฿'; } } }
+          },
+          scales: {
+            x: { grid: { display: false } },
+            y: { beginAtZero: true, ticks: { callback: function (v) { return U.fmtShort(v); } } }
+          }
+        }
+      });
+    }
+
+    /* ---------- Export PPT ---------- */
+    function doExport() {
+      var exp = filtered.filter(function (r) { return r.type === 'ค่าใช้จ่าย'; });
+      var adv = filtered.filter(function (r) { return r.type === 'เงินยืมทดรอง'; });
+      var totalExp = U.sumBy(exp, 'amount'), totalAdv = U.sumBy(adv, 'amount'), grand = totalExp + totalAdv;
+      var fixed = U.sumBy(exp.filter(function (r) { return r.group === 'คงที่'; }), 'amount');
+      var top5 = U.toSortedPairs(U.groupSum(exp, 'category', 'amount')).slice(0, 5);
+      var advRows = adv.slice().sort(function (a, b) { return b.amount - a.amount; }).slice(0, 12);
+      var period = periodLabel();
+
+      var deck = {
+        org: 'CPF ธารเกษม โคราช', period: period, title: 'Dashboard OE',
+        fileName: 'CPF_ธารเกษม_OE_2569.pptx',
+        slides: [
+          { layout: 'title', title: 'Dashboard ค่าใช้จ่าย OE', subtitle: period, footer: 'โรงงานผลิตอาหารสัตว์ธารเกษม โคราช • สร้างเมื่อ ' + new Date().toLocaleDateString('th-TH') },
+          {
+            layout: 'kpi', title: 'สรุปภาพรวม (KPI)',
+            items: [
+              { label: 'ค่าใช้จ่าย OE รวม', value: U.fmt(totalExp) + ' ฿', color: '2E7D32' },
+              { label: 'เงินยืมทดรอง', value: U.fmt(totalAdv) + ' ฿', color: '1565C0' },
+              { label: 'รวมทั้งสิ้น', value: U.fmt(grand) + ' ฿', color: 'F9A825' },
+              { label: 'จำนวนหมวดหมู่', value: String(U.uniqSorted(exp.map(function (r) { return r.category; })).length), color: '00897B' }
+            ],
+            note: ['ช่วงเวลา: ' + period, 'สัดส่วนคงที่:แปรผัน = ' + U.pct(fixed, totalExp) + '% : ' + U.pct(totalExp - fixed, totalExp) + '%', 'แหล่งข้อมูล: ' + (lastSource === 'sheets' ? 'Google Sheets' : lastSource === 'excel' ? 'ไฟล์ Excel' : 'ข้อมูลตัวอย่าง')]
+          },
+          {
+            layout: 'imageTable', title: 'ค่าใช้จ่าย: สัดส่วน & Top 5',
+            image: PPT.chartImage(charts['c-exp-donut']),
+            table: { head: ['หมวดหมู่', 'จำนวนเงิน (฿)'], align: ['left', 'right'], widths: [3.7, 2.3], rows: top5.map(function (p) { return [p.key, U.fmt(p.value)]; }) }
+          },
+          { layout: 'image', title: 'ค่าใช้จ่าย OE รายเดือน', image: PPT.chartImage(charts['c-exp-bar']), caption: 'หน่วย: บาท • ' + period },
+          {
+            layout: 'imageTable', title: 'เงินยืมทดรอง', color: '1565C0',
+            image: PPT.chartImage(charts['c-adv-bar']),
+            table: { headColor: '1565C0', head: ['เดือน', 'ผู้ยืม', 'จำนวนเงิน'], align: ['left', 'left', 'right'], widths: [1.2, 2.9, 1.9], rows: advRows.map(function (r) { return [U.monthLabel(r.month), r.borrower || '-', U.fmt(r.amount)]; }) }
+          }
+        ]
+      };
+
+      var btn = U.el('btn-do-export'); btn.disabled = true; btn.textContent = '⏳ กำลังสร้าง…';
+      PPT.export(deck).then(function () {
+        closeModal('modal-export'); U.toast('ดาวน์โหลดไฟล์ PowerPoint สำเร็จ', 'ok');
+      }).catch(function (e) { U.toast('Export ไม่สำเร็จ: ' + e.message, 'err'); })
+        .then(function () { btn.disabled = false; btn.textContent = '⬇️ ดาวน์โหลด .pptx'; });
+    }
+
+    function periodLabel() {
+      var ms = U.uniqSorted(filtered.map(function (r) { return r.month; }));
+      if (!ms.length) return 'ปีงบประมาณ พ.ศ. 2569';
+      if (ms.length === 1) return U.monthLabelFull(ms[0]);
+      return 'ปีงบประมาณ พ.ศ. ' + U.yearOf(ms[0]) + ' (' + U.monthLabel(ms[0]) + ' – ' + U.monthLabel(ms[ms.length - 1]) + ')';
+    }
+
+    /* ---------- Events ---------- */
+    function bindEvents() {
+      U.el('f-year').addEventListener('change', function () { buildMonthFilter(); render(); });
+      U.el('f-month').addEventListener('change', render);
+      U.el('f-type').addEventListener('change', render);
+      U.el('btn-reset').addEventListener('click', function () {
+        U.el('f-year').value = ''; U.el('f-type').value = ''; buildMonthFilter(); U.el('f-month').value = ''; render();
+      });
+      U.el('btn-refresh').addEventListener('click', function () {
+        var cfg = DataSource.config.get(KIND);
+        loadData(!!cfg.sheetId);
+      });
+      U.el('btn-export').addEventListener('click', function () { openModal('modal-export'); });
+      U.el('btn-do-export').addEventListener('click', doExport);
+      U.el('btn-connect').addEventListener('click', openConnect);
+
+      U.el('btn-save-src').addEventListener('click', function () {
+        var id = DataSource.extractSheetId(U.el('in-sheet').value);
+        var tab = U.el('in-tab').value.trim() || 'RAW_DATA';
+        if (!id) { U.toast('กรุณาวางลิงก์หรือ Sheet ID', 'err'); return; }
+        DataSource.config.set(KIND, { sheetId: id, sheetName: tab });
+        closeModal('modal-connect'); loadData(true);
+      });
+      U.el('btn-clear-src').addEventListener('click', function () {
+        DataSource.config.clear(KIND); closeModal('modal-connect'); loadData(false);
+        U.toast('กลับไปใช้ข้อมูลตัวอย่าง', 'ok');
+      });
+      U.el('btn-upload').addEventListener('click', function () { U.el('file-input').click(); });
+      U.el('file-input').addEventListener('change', function (e) {
+        var f = e.target.files[0]; if (!f) return;
+        setStatus('loading', 'กำลังอ่านไฟล์…');
+        DataSource.fromExcel(KIND, f).then(function (res) {
+          DataSource.config.clear(KIND); closeModal('modal-connect'); onLoaded(res);
+          U.toast('โหลดไฟล์ Excel สำเร็จ', 'ok');
+        }).catch(function (err) { U.toast(err.message, 'err'); loadData(false); });
+        e.target.value = '';
+      });
+
+      U.$$('[data-close]').forEach(function (b) { b.addEventListener('click', function () { closeModal(b.closest('.modal-overlay').id); }); });
+      U.$$('.modal-overlay').forEach(function (o) { o.addEventListener('click', function (e) { if (e.target === o) closeModal(o.id); }); });
+    }
+    function openConnect() {
+      var cfg = DataSource.config.get(KIND);
+      U.el('in-sheet').value = cfg.sheetId ? DataSource.buildCsvUrl(cfg.sheetId, cfg.sheetName).split('/gviz')[0] : '';
+      U.el('in-tab').value = cfg.sheetName || 'RAW_DATA';
+      openModal('modal-connect');
+    }
+    function openModal(id) { U.el(id).classList.add('open'); }
+    function closeModal(id) { U.el(id).classList.remove('open'); }
+
+    /* ---------- Utils ---------- */
+    function esc(s) { return String(s == null ? '' : s).replace(/[&<>"]/g, function (c) { return ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' })[c]; }); }
+    function emptyRow(cols) { return '<tr><td colspan="' + cols + '" class="empty">ไม่มีข้อมูลตามตัวกรอง</td></tr>'; }
+
+    if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', init);
+    else init();
+  })();
+  </script>
+</body>
+</html>
