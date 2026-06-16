@@ -15,7 +15,7 @@
   function parseNumber(v) {
     if (v == null) return 0;
     if (typeof v === 'number') return isFinite(v) ? v : 0;
-    var s = String(v).replace(/[,  ฿]/g, '').replace(/บาท/g, '').trim();
+    var s = String(v).replace(/[\s,฿]/g, '').replace(/บาท/g, '').trim();
     if (s === '' || s === '-') return 0;
     var n = parseFloat(s);
     return isFinite(n) ? n : 0;
