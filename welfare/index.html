@@ -67,7 +67,7 @@
         <div class="k-sub" id="kpi-med-sub"></div>
       </div>
       <div class="kpi b">
-        <div class="k-label">🚗 เบี้ยเลี้ยง + ค่าน้ำมัน</div>
+        <div class="k-label">🚗 เบี้ยเลี้ยง & สวัสดิการอื่นๆ</div>
         <div class="k-value" id="kpi-allow">–</div>
         <div class="k-sub" id="kpi-allow-sub"></div>
       </div>
@@ -158,7 +158,6 @@
     <div class="app-foot">
       CPF ธารเกษม • Dashboard สวัสดิการ • ข้อมูลปีงบประมาณ พ.ศ. 2569 ·
       <a href="../">หน้าหลัก</a>
-      <br /><small>* OT แสดงเป็นจำนวนเงินเท่านั้น — หากข้อมูลต้นทางเป็น "ชั่วโมง" ต้องคูณอัตรา/ชม. ก่อนนำเข้า RAW_DATA</small>
     </div>
   </div>
 
@@ -314,14 +313,13 @@
       var allow = filtered.filter(function (r) { return r.wtype !== MEDICAL; });
       var totalMed = U.sumBy(med, 'amount');
       var totalAllow = U.sumBy(allow, 'amount');
-      var allowFuel = U.sumBy(filtered.filter(function (r) { return r.wtype === 'เบี้ยเลี้ยง' || r.wtype === 'ค่าน้ำมัน'; }), 'amount');
       var grand = totalMed + totalAllow;
       var empCount = U.uniqSorted(filtered.map(function (r) { return r.employee; })).length;
 
       U.el('kpi-med').innerHTML = U.fmt(totalMed) + ' <span class="unit">฿</span>';
       U.el('kpi-med-sub').textContent = U.pct(totalMed, grand) + '% ของทั้งหมด';
-      U.el('kpi-allow').innerHTML = U.fmt(allowFuel) + ' <span class="unit">฿</span>';
-      U.el('kpi-allow-sub').textContent = 'เบี้ยเลี้ยง + ค่าน้ำมัน';
+      U.el('kpi-allow').innerHTML = U.fmt(totalAllow) + ' <span class="unit">฿</span>';
+      U.el('kpi-allow-sub').textContent = U.pct(totalAllow, grand) + '% ของทั้งหมด';
       U.el('kpi-total').innerHTML = U.fmt(grand) + ' <span class="unit">฿</span>';
       U.el('kpi-total-sub').textContent = U.fmtShort(grand) + ' บาท';
       U.el('kpi-emp').textContent = empCount;
