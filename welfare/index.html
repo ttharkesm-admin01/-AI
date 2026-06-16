@@ -421,6 +421,7 @@
 
     /* ---------- Charts ---------- */
     function drawDoughnut(id, labels, data, colors) {
+      if (!window.Chart) return;
       var ctx = U.el(id); if (!ctx) return;
       if (charts[id]) charts[id].destroy();
       charts[id] = new Chart(ctx, {
@@ -433,6 +434,7 @@
       });
     }
     function drawBar(id, labels, data, color, label) {
+      if (!window.Chart) return;
       var ctx = U.el(id); if (!ctx) return;
       if (charts[id]) charts[id].destroy();
       charts[id] = new Chart(ctx, {
