@@ -108,7 +108,13 @@
         slide.addText(String(it.value), { x: x + 0.2, y: top + 0.7, w: bw - 0.35, h: 0.7, color: it.color || C.green, fontFace: F, fontSize: 26, bold: true });
         if (it.sub) slide.addText(it.sub, { x: x + 0.2, y: top + 1.45, w: bw - 0.35, h: 0.4, color: C.grey, fontFace: F, fontSize: 11 });
       });
-      if (sd.note) slide.addText(sd.note, { x: mL, y: 4.0, w: 12.4, h: 2.6, color: C.ink, fontFace: F, fontSize: 14, bullet: { code: '2022' }, lineSpacingMultiple: 1.3, valign: 'top' });
+      if (sd.note) {
+        // pptxgenjs ต้องการ array ของ object {text, options} — แปลงจาก array ของ string ก่อน
+        var noteText = Array.isArray(sd.note)
+          ? sd.note.map(function (t) { return { text: String(t), options: {} }; })
+          : String(sd.note);
+        slide.addText(noteText, { x: mL, y: 4.0, w: 12.4, h: 2.6, color: C.ink, fontFace: F, fontSize: 14, bullet: { code: '2022' }, lineSpacingMultiple: 1.3, valign: 'top' });
+      }
       return;
     }
 
