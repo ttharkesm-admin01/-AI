@@ -152,6 +152,31 @@
       </div>
     </div>
 
+    <!-- OT (ชั่วโมงล่วงเวลา) -->
+    <div class="card-block" id="ot-block" style="display:none">
+      <div class="cardb-head"><h2>⏱️ OT — ชั่วโมงล่วงเวลา</h2><span class="src-info" id="ot-note"></span></div>
+      <div class="cardb-body pad">
+        <div class="mini-kpis">
+          <div class="mini"><div class="m-label">OT รวม</div><div class="m-value" id="ot-total">–</div></div>
+          <div class="mini"><div class="m-label">พนักงานมี OT</div><div class="m-value" id="ot-emp">–</div></div>
+          <div class="mini"><div class="m-label">เดือน OT สูงสุด</div><div class="m-value" id="ot-peak">–</div></div>
+        </div>
+        <div class="panels" style="margin-top:14px">
+          <div class="chart-block">
+            <div class="cb-title">OT รายเดือน (ชม.)</div>
+            <div class="chart-wrap"><canvas id="c-ot-bar"></canvas></div>
+          </div>
+          <div class="chart-block">
+            <div class="cb-title">Top พนักงาน OT (ชม.)</div>
+            <div class="tbl-wrap" style="max-height:240px;overflow:auto">
+              <table class="data blue"><thead><tr><th>พนักงาน</th><th>ตำแหน่ง</th><th class="num">ชม.</th></tr></thead>
+                <tbody id="tb-ot"></tbody></table>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
     <div class="section-title">ข้อสังเกตสำคัญ (Insights)</div>
     <div class="insights" id="insights"></div>
 
@@ -333,7 +358,32 @@
       renderMedical(med, grand);
       renderAllowances(allow, totalAllow);
       renderPivot(money);
+      renderOT(otRecs);
       renderInsights(med, allow, money, grand, empCount, otHours, otRecs);
+    }
+
+    function renderOT(otRecs) {
+      var block = U.el('ot-block');
+      if (!otRecs || !otRecs.length) { block.style.display = 'none'; return; }
+      block.style.display = '';
+      var byMonth = U.groupSum(otRecs, 'month', 'amount');
+      var monthsArr = Object.keys(byMonth).sort();
+      var peak = U.toSortedPairs(byMonth)[0];
+      var total = U.sumBy(otRecs, 'amount');
+      var empCnt = U.uniqSorted(otRecs.map(function (r) { return r.employee; })).length;
+
+      U.el('ot-total').textContent = U.fmt(total) + ' ชม.';
+      U.el('ot-emp').textContent = empCnt;
+      U.el('ot-peak').textContent = peak ? U.monthLabel(peak.key) : '–';
+      U.el('ot-note').textContent = U.fmt(total) + ' ชม. • ' + empCnt + ' คน';
+
+      drawBar('c-ot-bar', monthsArr.map(U.monthLabel), monthsArr.map(function (m) { return byMonth[m]; }), '#6A1B9A', 'OT (ชม.)', 'ชม.');
+
+      var byEmp = U.toSortedPairs(U.groupSum(otRecs, 'employee', 'amount')).slice(0, 10);
+      var posOf = {}; otRecs.forEach(function (r) { posOf[r.employee] = r.position; });
+      U.el('tb-ot').innerHTML = byEmp.length ? byEmp.map(function (p) {
+        return '<tr><td>' + esc(p.key) + '</td><td>' + esc(posOf[p.key] || '-') + '</td><td class="num">' + U.fmt(p.value) + '</td></tr>';
+      }).join('') : emptyRow(3);
     }
 
     function renderMedical(med, grand) {
@@ -442,8 +492,9 @@
         }
       });
     }
-    function drawBar(id, labels, data, color, label) {
+    function drawBar(id, labels, data, color, label, unit) {
       if (!window.Chart) return;
+      unit = unit || '฿';
       var ctx = U.el(id); if (!ctx) return;
       if (charts[id]) charts[id].destroy();
       charts[id] = new Chart(ctx, {
@@ -451,7 +502,7 @@
         data: { labels: labels, datasets: [{ label: label, data: data, backgroundColor: color, borderRadius: 6, maxBarThickness: 46 }] },
         options: {
           responsive: true, maintainAspectRatio: false,
-          plugins: { legend: { display: false }, tooltip: { callbacks: { label: function (c) { return U.fmt(c.parsed.y) + ' ฿'; } } } },
+          plugins: { legend: { display: false }, tooltip: { callbacks: { label: function (c) { return U.fmt(c.parsed.y) + ' ' + unit; } } } },
           scales: { x: { grid: { display: false } }, y: { beginAtZero: true, ticks: { callback: function (v) { return U.fmtShort(v); } } } }
         }
       });
