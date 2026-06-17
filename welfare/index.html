@@ -164,7 +164,7 @@
   <!-- Connect modal -->
   <div class="modal-overlay" id="modal-connect">
     <div class="modal">
-      <div class="modal-head"><h3>🔗 เชื่อมต่อ Google Sheets</h3><button class="x-close" data-close>&times;</button></div>
+      <div class="modal-head"><h3>🔗 เชื่อมต่อ Google Sheets</h3><button class="x-close" data-close aria-label="ปิด">&times;</button></div>
       <div class="modal-body">
         <div class="field" style="margin-bottom:12px">
           <label for="in-sheet">ลิงก์ Google Sheets หรือ Sheet ID</label>
@@ -199,7 +199,7 @@
   <!-- Export modal -->
   <div class="modal-overlay" id="modal-export">
     <div class="modal">
-      <div class="modal-head"><h3>📊 Export PowerPoint</h3><button class="x-close" data-close>&times;</button></div>
+      <div class="modal-head"><h3>📊 Export PowerPoint</h3><button class="x-close" data-close aria-label="ปิด">&times;</button></div>
       <div class="modal-body">
         <p>สร้างไฟล์ <strong>.pptx</strong> สรุป Dashboard สวัสดิการ ตามตัวกรองปัจจุบัน จำนวน 5 สไลด์:</p>
         <ul class="slide-list">
@@ -371,15 +371,18 @@
     function buildPivot(records) {
       var monthsArr = U.uniqSorted(records.map(function (r) { return r.month; }));
       var byEmp = {};
+      var colTotals = {}, grand = 0;
       records.forEach(function (r) {
         var e = byEmp[r.employee] || (byEmp[r.employee] = { position: r.position, m: {}, total: 0 });
         e.m[r.month] = (e.m[r.month] || 0) + r.amount;
         e.total += r.amount;
         if (!e.position && r.position) e.position = r.position;
+        colTotals[r.month] = (colTotals[r.month] || 0) + r.amount;
+        grand += r.amount;
       });
       var rows = Object.keys(byEmp).map(function (k) { return { employee: k, position: byEmp[k].position, m: byEmp[k].m, total: byEmp[k].total }; })
         .sort(function (a, b) { return b.total - a.total; });
-      return { months: monthsArr, rows: rows };
+      return { months: monthsArr, rows: rows, colTotals: colTotals, grand: grand };
     }
 
     function renderPivot(records) {
@@ -393,10 +396,9 @@
           p.months.map(function (m) { return '<td class="num">' + (r.m[m] ? U.fmt(r.m[m]) : '-') + '</td>'; }).join('') +
           '<td class="num"><strong>' + U.fmt(r.total) + '</strong></td></tr>';
       }).join('') : emptyRow(p.months.length + 3);
-      var foot = p.months.map(function (m) { return U.sumBy(records.filter(function (r) { return r.month === m; }), 'amount'); });
       U.el('pivot-foot').innerHTML = p.rows.length ? '<tr><td colspan="2">รวมทุกคน</td>' +
-        foot.map(function (v) { return '<td class="num">' + U.fmt(v) + '</td>'; }).join('') +
-        '<td class="num">' + U.fmt(U.sumBy(records, 'amount')) + '</td></tr>' : '';
+        p.months.map(function (m) { return '<td class="num">' + U.fmt(p.colTotals[m] || 0) + '</td>'; }).join('') +
+        '<td class="num">' + U.fmt(p.grand) + '</td></tr>' : '';
     }
 
     function renderInsights(med, allow, all, grand, empCount) {
@@ -551,8 +553,25 @@
       U.el('in-tab').value = cfg.sheetName || 'RAW_DATA';
       openModal('modal-connect');
     }
-    function openModal(id) { U.el(id).classList.add('open'); }
+    function openModal(id) {
+      var ov = U.el(id);
+      ov.classList.add('open');
+      var f = ov.querySelector('input, button, select, textarea, [tabindex]');
+      if (f) f.focus();
+    }
     function closeModal(id) { U.el(id).classList.remove('open'); }
+    // ปิด modal ที่เปิดอยู่ด้วยปุ่ม Esc + กักโฟกัสไว้ใน modal (focus trap) ด้วย Tab
+    document.addEventListener('keydown', function (e) {
+      var ov = document.querySelector('.modal-overlay.open');
+      if (!ov) return;
+      if (e.key === 'Escape') { closeModal(ov.id); return; }
+      if (e.key !== 'Tab') return;
+      var f = U.$$('input, button, select, textarea, [tabindex]', ov).filter(function (n) { return !n.disabled && n.offsetParent !== null; });
+      if (!f.length) return;
+      var first = f[0], last = f[f.length - 1];
+      if (e.shiftKey && document.activeElement === first) { e.preventDefault(); last.focus(); }
+      else if (!e.shiftKey && document.activeElement === last) { e.preventDefault(); first.focus(); }
+    });
 
     function esc(s) { return String(s == null ? '' : s).replace(/[&<>"]/g, function (c) { return ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' })[c]; }); }
     function emptyRow(cols) { return '<tr><td colspan="' + cols + '" class="empty">ไม่มีข้อมูลตามตัวกรอง</td></tr>'; }
