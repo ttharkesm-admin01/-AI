@@ -34,9 +34,9 @@
   function cfgGet(kind) {
     try {
       var raw = localStorage.getItem(SCHEMA[kind].storageKey);
-      return raw ? JSON.parse(raw) : { sheetId: '', sheetName: SCHEMA[kind].sheetName, auto: 0 };
+      return raw ? JSON.parse(raw) : { sheetId: '', sheetName: SCHEMA[kind].sheetName };
     } catch (e) {
-      return { sheetId: '', sheetName: SCHEMA[kind].sheetName, auto: 0 };
+      return { sheetId: '', sheetName: SCHEMA[kind].sheetName };
     }
   }
   function cfgSet(kind, cfg) {
@@ -101,7 +101,8 @@
         var v = cells[idx];
         rec[name] = (v == null ? '' : String(v)).trim();
       });
-      rec.month = rec.month.replace(/\s+/g, '');
+      // ทำให้เป็นรูปแบบ YYYY-MM เสมอ (pad เลขเดือน 1 หลัก -> 2 หลัก) เพื่อให้เรียงลำดับถูกต้อง
+      rec.month = rec.month.replace(/\s+/g, '').replace(/-(\d)$/, '-0$1');
       rec.amount = U.parseNumber(cells[sc.amountIndex]);
       if (rec.amount <= 0) continue; // ตัดแถวยอด 0
       out.push(rec);
