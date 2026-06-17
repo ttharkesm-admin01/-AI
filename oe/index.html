@@ -16,7 +16,7 @@
       <div class="logo">CPF</div>
       <div>
         <h1>Dashboard ค่าใช้จ่าย OE</h1>
-        <div class="sub">โรงงานผลิตอาหารสัตว์ธารเกษม โคราช • ปีงบประมาณ พ.ศ. 2569</div>
+        <div class="sub">โรงงานผลิตอาหารสัตว์ธารเกษม • ปีงบประมาณ พ.ศ. 2569</div>
       </div>
     </div>
     <div class="spacer"></div>
@@ -156,7 +156,7 @@
   <!-- Connect Google Sheets modal -->
   <div class="modal-overlay" id="modal-connect">
     <div class="modal">
-      <div class="modal-head"><h3>🔗 เชื่อมต่อ Google Sheets</h3><button class="x-close" data-close>&times;</button></div>
+      <div class="modal-head"><h3>🔗 เชื่อมต่อ Google Sheets</h3><button class="x-close" data-close aria-label="ปิด">&times;</button></div>
       <div class="modal-body">
         <div class="field" style="margin-bottom:12px">
           <label for="in-sheet">ลิงก์ Google Sheets หรือ Sheet ID</label>
@@ -191,7 +191,7 @@
   <!-- Export modal -->
   <div class="modal-overlay" id="modal-export">
     <div class="modal">
-      <div class="modal-head"><h3>📊 Export PowerPoint</h3><button class="x-close" data-close>&times;</button></div>
+      <div class="modal-head"><h3>📊 Export PowerPoint</h3><button class="x-close" data-close aria-label="ปิด">&times;</button></div>
       <div class="modal-body">
         <p>สร้างไฟล์ <strong>.pptx</strong> สรุป Dashboard OE ตามตัวกรองปัจจุบัน จำนวน 5 สไลด์:</p>
         <ul class="slide-list">
@@ -384,6 +384,7 @@
 
     /* ---------- Charts ---------- */
     function drawDoughnut(id, labels, data, colors) {
+      if (!window.Chart) return;
       var ctx = U.el(id); if (!ctx) return;
       if (charts[id]) charts[id].destroy();
       charts[id] = new Chart(ctx, {
@@ -399,6 +400,7 @@
       });
     }
     function drawBar(id, labels, data, color, label) {
+      if (!window.Chart) return;
       var ctx = U.el(id); if (!ctx) return;
       if (charts[id]) charts[id].destroy();
       charts[id] = new Chart(ctx, {
@@ -429,10 +431,10 @@
       var period = periodLabel();
 
       var deck = {
-        org: 'CPF ธารเกษม โคราช', period: period, title: 'Dashboard OE',
+        org: 'CPF ธารเกษม', period: period, title: 'Dashboard OE',
         fileName: 'CPF_ธารเกษม_OE_2569.pptx',
         slides: [
-          { layout: 'title', title: 'Dashboard ค่าใช้จ่าย OE', subtitle: period, footer: 'โรงงานผลิตอาหารสัตว์ธารเกษม โคราช • สร้างเมื่อ ' + new Date().toLocaleDateString('th-TH') },
+          { layout: 'title', title: 'Dashboard ค่าใช้จ่าย OE', subtitle: period, footer: 'โรงงานผลิตอาหารสัตว์ธารเกษม • สร้างเมื่อ ' + new Date().toLocaleDateString('th-TH') },
           {
             layout: 'kpi', title: 'สรุปภาพรวม (KPI)',
             items: [
@@ -518,8 +520,25 @@
       U.el('in-tab').value = cfg.sheetName || 'RAW_DATA';
       openModal('modal-connect');
     }
-    function openModal(id) { U.el(id).classList.add('open'); }
+    function openModal(id) {
+      var ov = U.el(id);
+      ov.classList.add('open');
+      var f = ov.querySelector('input, button, select, textarea, [tabindex]');
+      if (f) f.focus();
+    }
     function closeModal(id) { U.el(id).classList.remove('open'); }
+    // ปิด modal ที่เปิดอยู่ด้วยปุ่ม Esc + กักโฟกัสไว้ใน modal (focus trap) ด้วย Tab
+    document.addEventListener('keydown', function (e) {
+      var ov = document.querySelector('.modal-overlay.open');
+      if (!ov) return;
+      if (e.key === 'Escape') { closeModal(ov.id); return; }
+      if (e.key !== 'Tab') return;
+      var f = U.$$('input, button, select, textarea, [tabindex]', ov).filter(function (n) { return !n.disabled && n.offsetParent !== null; });
+      if (!f.length) return;
+      var first = f[0], last = f[f.length - 1];
+      if (e.shiftKey && document.activeElement === first) { e.preventDefault(); last.focus(); }
+      else if (!e.shiftKey && document.activeElement === last) { e.preventDefault(); first.focus(); }
+    });
 
     /* ---------- Utils ---------- */
     function esc(s) { return String(s == null ? '' : s).replace(/[&<>"]/g, function (c) { return ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' })[c]; }); }
