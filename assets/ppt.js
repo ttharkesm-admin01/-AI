@@ -78,12 +78,15 @@
       });
     });
     var data = [head].concat(body);
+    // เกลี่ยความสูงแถวให้เติมพื้นที่ (ตารางแถวน้อยจะไม่ลอยอยู่บนสุด)
+    var nrows = data.length;
+    var rowH = t.rowH || Math.max(0.3, Math.min(0.5, 4.9 / nrows));
     slide.addTable(data, {
       x: box.x, y: box.y, w: box.w,
       colW: t.widths,
       fontFace: F, fontSize: t.fontSize || 11,
       border: { type: 'solid', color: C.line, pt: 0.5 },
-      valign: 'middle', rowH: t.rowH || 0.3, autoPage: false
+      valign: 'middle', rowH: rowH, autoPage: false
     });
   }
 
@@ -135,33 +138,41 @@
     }
 
     if (sd.layout === 'image') {
-      var fit = fitBox(12.0, 5.0, (sd.image && sd.image.ratio) || 1.6);
-      var ix = (13.33 - fit.w) / 2;
-      if (sd.image) slide.addImage({ data: sd.image.image, x: ix, y: 1.25, w: fit.w, h: fit.h });
-      if (sd.caption) slide.addText(sd.caption, { x: 0.45, y: 6.45, w: 12.4, h: 0.5, color: C.grey, fontFace: F, fontSize: 12, align: 'center' });
+      // การ์ดพื้นหลังเต็มพื้นที่ + กราฟจัดกึ่งกลาง (ที่ว่างดูตั้งใจออกแบบ)
+      var aw = 12.43, ah = 5.4, atop = 1.2;
+      slide.addShape('roundRect', { x: 0.45, y: atop, w: aw, h: ah, rectRadius: 0.06, fill: { color: 'F7FAF7' }, line: { color: C.line, width: 0.75 } });
+      var fit = fitBox(aw - 0.7, ah - 0.6, (sd.image && sd.image.ratio) || 1.6);
+      var ix = (13.33 - fit.w) / 2, iy = atop + (ah - fit.h) / 2;
+      if (sd.image) slide.addImage({ data: sd.image.image, x: ix, y: iy, w: fit.w, h: fit.h });
+      if (sd.caption) slide.addText(sd.caption, { x: 0.45, y: 6.55, w: 12.43, h: 0.4, color: C.grey, fontFace: F, fontSize: 12, align: 'center' });
       return;
     }
 
     if (sd.layout === 'imageTable') {
-      // ซ้าย: ภาพชาร์ต / ขวา: ตาราง
+      // ซ้าย: การ์ดกราฟ (จัดกึ่งกลาง) / ขวา: ตาราง
+      var iw = 6.05, ih = 5.4, ix0 = 0.45, iy0 = 1.2;
+      slide.addShape('roundRect', { x: ix0, y: iy0, w: iw, h: ih, rectRadius: 0.06, fill: { color: 'F7FAF7' }, line: { color: C.line, width: 0.75 } });
       if (sd.image) {
-        var f2 = fitBox(6.0, 4.8, sd.image.ratio || 1.4);
-        slide.addImage({ data: sd.image.image, x: 0.5, y: 1.4 + (4.8 - f2.h) / 2, w: f2.w, h: f2.h });
+        var f2 = fitBox(iw - 0.5, ih - 0.5, sd.image.ratio || 1.4);
+        slide.addImage({ data: sd.image.image, x: ix0 + (iw - f2.w) / 2, y: iy0 + (ih - f2.h) / 2, w: f2.w, h: f2.h });
       }
-      if (sd.table) styledTable(slide, sd.table, { x: 6.9, y: 1.4, w: 6.0 });
+      if (sd.table) styledTable(slide, sd.table, { x: 6.85, y: 1.2, w: 6.03 });
       return;
     }
 
     if (sd.layout === 'twoImage') {
+      var cw = 6.05, ch = 4.5, cy = 1.55;
       if (sd.left) {
-        var fl = fitBox(6.0, 4.6, sd.left.ratio || 1.4);
-        slide.addText(sd.leftTitle || '', { x: 0.5, y: 1.15, w: 6.0, h: 0.4, color: C.green, fontFace: F, fontSize: 14, bold: true, align: 'center' });
-        slide.addImage({ data: sd.left.image, x: 0.5 + (6.0 - fl.w) / 2, y: 1.6, w: fl.w, h: fl.h });
+        slide.addText(sd.leftTitle || '', { x: 0.45, y: 1.1, w: cw, h: 0.4, color: C.green, fontFace: F, fontSize: 14, bold: true, align: 'center' });
+        slide.addShape('roundRect', { x: 0.45, y: cy, w: cw, h: ch, rectRadius: 0.06, fill: { color: 'F7FAF7' }, line: { color: C.line, width: 0.75 } });
+        var fl = fitBox(cw - 0.5, ch - 0.5, sd.left.ratio || 1.4);
+        slide.addImage({ data: sd.left.image, x: 0.45 + (cw - fl.w) / 2, y: cy + (ch - fl.h) / 2, w: fl.w, h: fl.h });
       }
       if (sd.right) {
-        var fr = fitBox(6.0, 4.6, sd.right.ratio || 1.4);
-        slide.addText(sd.rightTitle || '', { x: 6.85, y: 1.15, w: 6.0, h: 0.4, color: C.blue, fontFace: F, fontSize: 14, bold: true, align: 'center' });
-        slide.addImage({ data: sd.right.image, x: 6.85 + (6.0 - fr.w) / 2, y: 1.6, w: fr.w, h: fr.h });
+        slide.addText(sd.rightTitle || '', { x: 6.83, y: 1.1, w: cw, h: 0.4, color: C.blue, fontFace: F, fontSize: 14, bold: true, align: 'center' });
+        slide.addShape('roundRect', { x: 6.83, y: cy, w: cw, h: ch, rectRadius: 0.06, fill: { color: 'F7FAF7' }, line: { color: C.line, width: 0.75 } });
+        var fr = fitBox(cw - 0.5, ch - 0.5, sd.right.ratio || 1.4);
+        slide.addImage({ data: sd.right.image, x: 6.83 + (cw - fr.w) / 2, y: cy + (ch - fr.h) / 2, w: fr.w, h: fr.h });
       }
       return;
     }
