@@ -533,6 +533,7 @@
 
     /* ---------- Export ---------- */
     function doExport() {
+      var otRecs = filtered.filter(function (r) { return r.wtype === OTTYPE; });
       var money = filtered.filter(function (r) { return r.wtype !== OTTYPE; });
       var med = money.filter(function (r) { return r.wtype === MEDICAL; });
       var allow = money.filter(function (r) { return r.wtype !== MEDICAL; });
@@ -582,6 +583,21 @@
           }
         ]
       };
+
+      // สไลด์ OT (เฉพาะเมื่อมีข้อมูล OT) — แสดงเป็นชั่วโมง
+      if (otRecs.length) {
+        var topOT = U.toSortedPairs(U.groupSum(otRecs, 'employee', 'amount')).slice(0, 10);
+        var otTotal = U.sumBy(otRecs, 'amount');
+        deck.slides.push({
+          layout: 'imageTable', title: 'OT — ชั่วโมงล่วงเวลา', color: '6A1B9A',
+          image: PPT.chartImage(charts['c-ot-bar']),
+          table: {
+            headColor: '6A1B9A', head: ['พนักงาน', 'ชม.'], align: ['left', 'right'], widths: [4.0, 2.0],
+            rows: topOT.map(function (p) { return [p.key, U.fmt(p.value)]; })
+          },
+          note: 'OT รวมทั้งสิ้น ' + U.fmt(otTotal) + ' ชั่วโมง (แยกจากยอดเงิน)'
+        });
+      }
 
       var btn = U.el('btn-do-export'); btn.disabled = true; btn.textContent = '⏳ กำลังสร้าง…';
       PPT.export(deck).then(function () {
