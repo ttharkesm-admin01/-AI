@@ -66,7 +66,7 @@ sample-data/*.csv       # ตัวอย่างข้อมูล RAW_DATA
 - โค้ด oe/ กับ welfare/ ซ้ำกันมาก — **แก้ logic ร่วมต้องแก้ทั้งสองไฟล์**
 - localStorage keys: `cpf_oe_source`, `cpf_welfare_source` (เก็บ sheetId/sheetName)
 
-## งานที่ทำเสร็จแล้ว (ประวัติ PR #1–#11)
+## งานที่ทำเสร็จแล้ว (ประวัติ PR #1–#14)
 - แก้ bug: เรียงเดือน, parseNumber รองรับ whitespace, guard Chart.js, KPI สวัสดิการบวกลงตัว
 - ลบ "โคราช", ลบ config `auto`, ลบข้อความ OT ตกค้าง
 - Modal: ปิดด้วย Esc + focus trap · aria-label ปุ่มปิด
@@ -75,6 +75,8 @@ sample-data/*.csv       # ตัวอย่างข้อมูล RAW_DATA
 - รองรับฟอร์มสวัสดิการ wide + OT (ชั่วโมง) + section OT ในแดชบอร์ด
 - เพิ่ม deploy workflow + .nojekyll · เพิ่ม OT ในข้อมูล demo
 - เพิ่ม CLAUDE.md (บริบท + หลักการเขียนโค้ด)
+- ปรับ UI/UX (a11y): focus-visible, prefers-reduced-motion, aria-live status/toast
+- ขัดเงากราฟ/KPI: ตัวเลขบนยอดแท่ง (inline Chart plugin `barValueLabel`), tabular-nums, KPI hover shadow
 
 ## สิ่งที่ยังไม่ทำ / ไอเดียต่อยอด
 - รวมโค้ดซ้ำระหว่าง oe/ กับ welfare/ เป็น assets/app.js (ตอนนี้ duplicate ~80%)
@@ -92,3 +94,12 @@ sample-data/*.csv       # ตัวอย่างข้อมูล RAW_DATA
 - **ทำตามเป้าหมายที่วัดได้ (Goal-driven):** แปลงงานคลุมเครือเป็นเป้าหมายที่วัดผลได้
   เช่น "เพิ่ม validation" → เขียนเทสต์สำหรับ input ที่ผิดก่อน
 - หมายเหตุ: ยอมแลกความเร็วกับความรอบคอบโดยตั้งใจ — แต่ใช้วิจารณญาณกับงานเล็ก ๆ ที่ชัดเจน
+
+## แหล่งอ้างอิงภายนอกที่นำมาปรับใช้ (External references)
+- **andrej-karpathy-skills** (https://github.com/multica-ai/andrej-karpathy-skills) —
+  ที่มาของ "หลักการเขียนโค้ด" ข้างบน
+- **ui-ux-pro-max-skill** (https://github.com/nextlevelbuilder/ui-ux-pro-max-skill) —
+  นำ *แนวทาง* UI/UX มาปรับใช้กับ dashboard จริง (ไม่ได้ติดตั้ง skill เพราะใหญ่เกินจำเป็น):
+  focus-visible ring, prefers-reduced-motion, aria-live, ตัวเลขบนยอดแท่งกราฟ, tabular-nums
+- แนวทาง: หยิบ *หลักการ/ไอเดีย* จาก skill ภายนอกมาปรับใช้แบบ surgical — ไม่ติดตั้งทั้งก้อน
+  เว้นแต่ผู้ใช้ขอชัดเจน (คงหลัก "เรียบง่ายไว้ก่อน")
