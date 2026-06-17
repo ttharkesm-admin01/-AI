@@ -227,6 +227,7 @@
     'use strict';
     var KIND = 'welfare';
     var MEDICAL = 'ค่ารักษาพยาบาล';
+    var OTTYPE = 'OT';
     var ALL_TYPES = ['ค่ารักษาพยาบาล', 'เบี้ยเลี้ยง', 'ค่าน้ำมัน', 'ค่าที่พัก', 'สวัสดิการอื่นๆ'];
     var raw = [], filtered = [], lastSource = 'sample', lastUpdated = null;
     var charts = {};
@@ -309,12 +310,16 @@
     /* ---------- Render ---------- */
     function render() {
       applyFilters();
-      var med = filtered.filter(function (r) { return r.wtype === MEDICAL; });
-      var allow = filtered.filter(function (r) { return r.wtype !== MEDICAL; });
+      // OT เป็น "ชั่วโมง" แยกออกจากยอดเงินทั้งหมด
+      var otRecs = filtered.filter(function (r) { return r.wtype === OTTYPE; });
+      var money = filtered.filter(function (r) { return r.wtype !== OTTYPE; });
+      var otHours = U.sumBy(otRecs, 'amount');
+      var med = money.filter(function (r) { return r.wtype === MEDICAL; });
+      var allow = money.filter(function (r) { return r.wtype !== MEDICAL; });
       var totalMed = U.sumBy(med, 'amount');
       var totalAllow = U.sumBy(allow, 'amount');
       var grand = totalMed + totalAllow;
-      var empCount = U.uniqSorted(filtered.map(function (r) { return r.employee; })).length;
+      var empCount = U.uniqSorted(money.map(function (r) { return r.employee; })).length;
 
       U.el('kpi-med').innerHTML = U.fmt(totalMed) + ' <span class="unit">฿</span>';
       U.el('kpi-med-sub').textContent = U.pct(totalMed, grand) + '% ของทั้งหมด';
@@ -327,8 +332,8 @@
 
       renderMedical(med, grand);
       renderAllowances(allow, totalAllow);
-      renderPivot(filtered);
-      renderInsights(med, allow, filtered, grand, empCount);
+      renderPivot(money);
+      renderInsights(med, allow, money, grand, empCount, otHours, otRecs);
     }
 
     function renderMedical(med, grand) {
@@ -401,7 +406,7 @@
         '<td class="num">' + U.fmt(p.grand) + '</td></tr>' : '';
     }
 
-    function renderInsights(med, allow, all, grand, empCount) {
+    function renderInsights(med, allow, all, grand, empCount, otHours, otRecs) {
       var topMedEmp = U.toSortedPairs(U.groupSum(med, 'employee', 'amount'))[0];
       var topType = U.toSortedPairs(U.groupSum(all, 'wtype', 'amount'))[0];
       var peakMonth = U.toSortedPairs(U.groupSum(all, 'month', 'amount'))[0];
@@ -412,6 +417,10 @@
         { cls: 'teal', icon: '📈', title: 'เดือนจ่ายสวัสดิการสูงสุด', text: peakMonth ? U.monthLabelFull(peakMonth.key) : '–', sub: peakMonth ? U.fmt(peakMonth.value) + ' ฿' : '' },
         { cls: 'amber', icon: '👤', title: 'เฉลี่ยต่อคน', text: U.fmt(avg) + ' ฿', sub: 'จาก ' + empCount + ' คน' }
       ];
+      if (otHours > 0) {
+        var otPeople = otRecs ? U.uniqSorted(otRecs.map(function (r) { return r.employee; })).length : 0;
+        cards.push({ cls: 'b', icon: '⏱️', title: 'OT รวม (ชั่วโมง)', text: U.fmt(otHours) + ' ชม.', sub: otPeople + ' คนมี OT' });
+      }
       U.el('insights').innerHTML = cards.map(function (c) {
         return '<div class="insight ' + c.cls + '"><div class="i-icon">' + c.icon + '</div>' +
           '<div class="i-title">' + c.title + '</div><div class="i-text">' + c.text +
@@ -450,14 +459,15 @@
 
     /* ---------- Export ---------- */
     function doExport() {
-      var med = filtered.filter(function (r) { return r.wtype === MEDICAL; });
-      var allow = filtered.filter(function (r) { return r.wtype !== MEDICAL; });
+      var money = filtered.filter(function (r) { return r.wtype !== OTTYPE; });
+      var med = money.filter(function (r) { return r.wtype === MEDICAL; });
+      var allow = money.filter(function (r) { return r.wtype !== MEDICAL; });
       var totalMed = U.sumBy(med, 'amount'), totalAllow = U.sumBy(allow, 'amount'), grand = totalMed + totalAllow;
-      var empCount = U.uniqSorted(filtered.map(function (r) { return r.employee; })).length;
+      var empCount = U.uniqSorted(money.map(function (r) { return r.employee; })).length;
       var typePairs = U.toSortedPairs(U.groupSum(allow, 'wtype', 'amount'));
       var topMed = U.toSortedPairs(U.groupSum(med, 'employee', 'amount')).slice(0, 10);
       var posOf = {}; med.forEach(function (r) { posOf[r.employee] = r.position; });
-      var pivot = buildPivot(filtered);
+      var pivot = buildPivot(money);
       var period = periodLabel();
 
       var deck = {
