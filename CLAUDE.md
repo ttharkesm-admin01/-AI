@@ -44,7 +44,29 @@ sample-data/*.csv       # ตัวอย่างข้อมูล RAW_DATA
 - Claude GitHub App ติดตั้งแล้ว → push ได้โดยไม่ต้องใช้ token
 - เทมเพลต Excel สร้างด้วย openpyxl (ส่งให้ผู้ใช้ผ่านแชต ไม่ commit ลง repo)
 
-## งานที่ทำเสร็จแล้ว (ประวัติ PR #1–#9)
+## วิธีรัน / ทดสอบ (local)
+- **พรีวิวเว็บ:** เปิด `index.html` ตรง ๆ หรือรันเซิร์ฟเวอร์เล็ก ๆ:
+  `python3 -m http.server 8000` แล้วเปิด `http://localhost:8000/`
+- **ตรวจ syntax JS:** `node -c assets/data.js` (และ utils.js / ppt.js)
+- **ทดสอบ parser แบบไม่ต้องเปิดเบราว์เซอร์:** สร้าง shim `global.U.parseNumber`
+  แล้ว `require('./assets/data.js')` → เรียก `DataSource.normalizeAny(kind, rows)`
+  (rows = array-of-arrays แบบที่ได้จาก CSV/SheetJS) — ใช้เช็คผลการแปลง wide/OT
+- ไม่มี test runner / lint อย่างเป็นทางการ — พึ่ง `node -c` + ทดสอบด้วยมือ
+
+## ไลบรารีภายนอก (โหลดผ่าน CDN — ต้องมีเน็ต)
+- Chart.js `4.4.1` · SheetJS xlsx `0.18.5` · PptxGenJS `3.12.0` (โหลด on-demand ตอน export)
+- ฟอนต์ Google Sarabun · ถ้า CDN ล่ม: กราฟไม่ขึ้น (มี guard กันหน้าพัง) / export ใช้ไม่ได้
+
+## ข้อควรระวังทางเทคนิค (gotchas)
+- **อ่าน RAW_DATA ตาม "ตำแหน่งคอลัมน์" ไม่ใช่ชื่อหัว** — ห้ามสลับลำดับคอลัมน์
+- แถวที่คอลัมน์แรกไม่ตรง `MONTH_RE` (เช่นหัวตาราง) และแถว `amount <= 0` จะถูกข้าม
+- `esc()` กัน XSS — ใช้กับ user data ทุกครั้งที่ต่อ HTML string
+- Chart instances เก็บใน `charts{}` ต้อง `.destroy()` ก่อนวาดใหม่ (มีแล้วใน drawBar/drawDoughnut)
+- `fromExcel` เลือกแท็บ `RAW_DATA` ก่อน, ไม่มีก็เลือกแท็บที่มีข้อมูลมากสุด (ข้ามแท็บ "คำอธิบาย")
+- โค้ด oe/ กับ welfare/ ซ้ำกันมาก — **แก้ logic ร่วมต้องแก้ทั้งสองไฟล์**
+- localStorage keys: `cpf_oe_source`, `cpf_welfare_source` (เก็บ sheetId/sheetName)
+
+## งานที่ทำเสร็จแล้ว (ประวัติ PR #1–#11)
 - แก้ bug: เรียงเดือน, parseNumber รองรับ whitespace, guard Chart.js, KPI สวัสดิการบวกลงตัว
 - ลบ "โคราช", ลบ config `auto`, ลบข้อความ OT ตกค้าง
 - Modal: ปิดด้วย Esc + focus trap · aria-label ปุ่มปิด
@@ -52,6 +74,7 @@ sample-data/*.csv       # ตัวอย่างข้อมูล RAW_DATA
 - แก้ Export PowerPoint (KPI note ต้องเป็น array ของ {text,options})
 - รองรับฟอร์มสวัสดิการ wide + OT (ชั่วโมง) + section OT ในแดชบอร์ด
 - เพิ่ม deploy workflow + .nojekyll · เพิ่ม OT ในข้อมูล demo
+- เพิ่ม CLAUDE.md (บริบท + หลักการเขียนโค้ด)
 
 ## สิ่งที่ยังไม่ทำ / ไอเดียต่อยอด
 - รวมโค้ดซ้ำระหว่าง oe/ กับ welfare/ เป็น assets/app.js (ตอนนี้ duplicate ~80%)
