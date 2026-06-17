@@ -158,7 +158,9 @@ body {
 .kpi.amber::before { background: var(--amber); }
 .kpi.teal::before { background: var(--teal); }
 .kpi .k-label { font-size: .82rem; color: var(--muted); font-weight: 600; display: flex; align-items: center; gap: 6px; }
-.kpi .k-value { font-size: 1.7rem; font-weight: 800; color: var(--ink); margin-top: 4px; line-height: 1.1; }
+.kpi { transition: box-shadow .15s ease; }
+.kpi:hover { box-shadow: var(--shadow-lg); }
+.kpi .k-value { font-size: 1.7rem; font-weight: 800; color: var(--ink); margin-top: 4px; line-height: 1.1; font-variant-numeric: tabular-nums; }
 .kpi .k-value .unit { font-size: .8rem; font-weight: 600; color: var(--muted); margin-left: 3px; }
 .kpi .k-sub { font-size: .76rem; color: var(--muted); margin-top: 3px; }
 
@@ -190,7 +192,7 @@ body {
   padding: 10px 12px;
 }
 .mini .m-label { font-size: .72rem; color: var(--muted); font-weight: 600; }
-.mini .m-value { font-size: 1.08rem; font-weight: 800; color: var(--ink); margin-top: 2px; }
+.mini .m-value { font-size: 1.08rem; font-weight: 800; color: var(--ink); margin-top: 2px; font-variant-numeric: tabular-nums; }
 
 /* ---------- Chart blocks ---------- */
 .chart-block { }
