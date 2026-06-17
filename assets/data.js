@@ -110,6 +110,88 @@
     return out;
   }
 
+  /* ---------------- ฟอร์มสวัสดิการแบบกว้าง (wide) + OT ----------------
+     ตารางแบบ 1 คน/แถว: คอลัมน์แยกตามประเภทสวัสดิการ + คอลัมน์ OT (ชั่วโมง)
+     - หาเดือนจากเซลล์ใดก็ได้ในชีต (รูปแบบ 25xx-xx)
+     - คอลัมน์ "ค่าจ้าง/ชม." + คอลัมน์ OT ที่หัวมีคำว่า "เท่า" -> คำนวณเงิน OT
+       เงิน OT = ค่าจ้าง/ชม. × Σ(ชั่วโมง × ตัวคูณ)  -> รวมเข้า "สวัสดิการอื่นๆ"
+     คืน null ถ้าไม่ใช่ฟอร์มแบบนี้ (เพื่อให้ตกไปใช้ normalize ปกติ) */
+  var WTYPES = ['ค่ารักษาพยาบาล', 'เบี้ยเลี้ยง', 'ค่าน้ำมัน', 'ค่าที่พัก', 'สวัสดิการอื่นๆ'];
+  function cellStr(v) { return (v == null ? '' : String(v)).replace(/\s+/g, ' ').trim(); }
+
+  function normalizeWelfareWide(rows) {
+    // หาแถวหัวตาราง (มีทั้ง "ชื่อ" และชื่อประเภทสวัสดิการอย่างน้อยหนึ่ง)
+    var headIdx = -1, scanMax = Math.min(rows.length, 8);
+    for (var i = 0; i < scanMax; i++) {
+      var joined = (rows[i] || []).map(cellStr).join('|');
+      if (/ชื่อ/.test(joined) && /(ค่ารักษาพยาบาล|เบี้ยเลี้ยง|ค่าที่พัก)/.test(joined)) { headIdx = i; break; }
+    }
+    if (headIdx < 0) return null;
+
+    // หาเดือน (เซลล์ใดก็ได้ที่ตรงรูปแบบ 25xx-xx)
+    var month = '';
+    for (var r0 = 0; r0 < rows.length && !month; r0++) {
+      var cs = rows[r0] || [];
+      for (var c0 = 0; c0 < cs.length; c0++) {
+        var m = cellStr(cs[c0]).match(/(\d{4})\s*-\s*(\d{1,2})/);
+        if (m) { month = m[1] + '-' + (m[2].length < 2 ? '0' + m[2] : m[2]); break; }
+      }
+    }
+    if (!month) throw new Error('ฟอร์มสวัสดิการไม่พบ "เดือน" (ใส่รูปแบบ 2569-01 ในชีต)');
+
+    // รวมข้อความหัวจากแถว headIdx และแถวถัดไป (รองรับหัว 2 ชั้น เช่น OT)
+    var h1 = (rows[headIdx] || []).map(cellStr);
+    var h2 = (rows[headIdx + 1] || []).map(cellStr);
+    var width = Math.max(h1.length, h2.length);
+    var nameCol = -1, posCol = -1, rateCol = -1;
+    var typeCols = {};   // colIndex -> wtype
+    var otCols = [];     // { col, mult }
+    for (var c = 0; c < width; c++) {
+      var head = ((h1[c] || '') + ' ' + (h2[c] || '')).trim();
+      if (nameCol < 0 && /ชื่อ/.test(head)) { nameCol = c; continue; }
+      if (posCol < 0 && /ตำแหน่ง/.test(head)) { posCol = c; continue; }
+      if (rateCol < 0 && /ค่าจ้าง/.test(head)) { rateCol = c; continue; }
+      var hit = null;
+      WTYPES.forEach(function (t) { if (head.indexOf(t) >= 0) hit = t; });
+      if (hit && typeCols[c] === undefined) { typeCols[c] = hit; continue; }
+      var mm = head.match(/([\d.]+)\s*เท่า/);
+      if (mm) otCols.push({ col: c, mult: parseFloat(mm[1]) || 0 });
+    }
+    if (nameCol < 0 || !Object.keys(typeCols).length) return null;
+
+    var out = [];
+    for (var r = headIdx + 2; r < rows.length; r++) {
+      var cells = rows[r] || [];
+      var name = cellStr(cells[nameCol]);
+      if (!name || /^รวม/.test(name)) continue; // ข้ามแถวสรุป/ว่าง
+      var pos = posCol >= 0 ? cellStr(cells[posCol]) : '';
+      // เงิน OT = ค่าจ้าง/ชม. × Σ(ชม.×ตัวคูณ)
+      var otMoney = 0;
+      if (rateCol >= 0 && otCols.length) {
+        var rate = U.parseNumber(cells[rateCol]);
+        otCols.forEach(function (o) { otMoney += U.parseNumber(cells[o.col]) * o.mult; });
+        otMoney = rate * otMoney;
+      }
+      Object.keys(typeCols).forEach(function (c) {
+        var wtype = typeCols[c];
+        var amt = U.parseNumber(cells[c]);
+        var note = '';
+        if (wtype === 'สวัสดิการอื่นๆ' && otMoney > 0) { amt += otMoney; note = 'รวม OT'; }
+        if (amt > 0) out.push({ month: month, employee: name, position: pos, wtype: wtype, amount: amt, note: note });
+      });
+    }
+    return out;
+  }
+
+  /* เลือก parser อัตโนมัติ: welfare ลองฟอร์ม wide ก่อน ถ้าไม่ใช่ใช้ long ปกติ */
+  function normalizeAny(kind, rows) {
+    if (kind === 'welfare') {
+      var wide = normalizeWelfareWide(rows);
+      if (wide && wide.length) return wide;
+    }
+    return normalize(kind, rows);
+  }
+
   function fromSheets(kind) {
     var sc = SCHEMA[kind];
     var cfg = cfgGet(kind);
@@ -130,7 +212,7 @@
           throw new Error('เข้าถึงชีตไม่ได้ — โปรดตั้งค่าแชร์เป็น "ทุกคนที่มีลิงก์ (ผู้อ่าน)"');
         }
         var rows = parseCSV(text);
-        var records = normalize(kind, rows);
+        var records = normalizeAny(kind, rows);
         if (!records.length) throw new Error('ไม่พบข้อมูลในแท็บ "' + sheetName + '" (ตรวจสอบลำดับคอลัมน์ RAW_DATA)');
         return { records: records, source: 'sheets', sheetName: sheetName, count: records.length };
       });
@@ -140,12 +222,21 @@
     if (typeof XLSX === 'undefined') return Promise.reject(new Error('ไลบรารีอ่าน Excel ยังโหลดไม่เสร็จ ลองใหม่อีกครั้ง'));
     return file.arrayBuffer().then(function (buf) {
       var wb = XLSX.read(new Uint8Array(buf), { type: 'array' });
-      // เลือกแท็บ RAW_DATA ก่อน ถ้าไม่มีใช้แท็บสุดท้าย
+      // เลือกแท็บ RAW_DATA ก่อน ถ้าไม่มีเลือกแท็บที่มีข้อมูลมากสุด (ข้ามแท็บ "คำอธิบาย")
       var name = null;
       wb.SheetNames.forEach(function (n) { if (String(n).trim().toUpperCase() === 'RAW_DATA') name = n; });
-      if (!name) name = wb.SheetNames[wb.SheetNames.length - 1];
+      if (!name) {
+        var best = -1;
+        wb.SheetNames.forEach(function (n) {
+          if (/คำอธิบาย|readme|instruction/i.test(n)) return;
+          var rng = wb.Sheets[n] && wb.Sheets[n]['!ref'];
+          var cnt = rng ? XLSX.utils.decode_range(rng).e.r : 0;
+          if (cnt > best) { best = cnt; name = n; }
+        });
+        if (!name) name = wb.SheetNames[wb.SheetNames.length - 1];
+      }
       var rows = XLSX.utils.sheet_to_json(wb.Sheets[name], { header: 1, raw: true, defval: '' });
-      var records = normalize(kind, rows);
+      var records = normalizeAny(kind, rows);
       if (!records.length) throw new Error('ไม่พบข้อมูลในไฟล์ (ต้องมีแท็บ RAW_DATA และลำดับคอลัมน์ถูกต้อง)');
       return { records: records, source: 'excel', sheetName: name, fileName: file.name, count: records.length };
     });
@@ -290,6 +381,7 @@
     buildCsvUrl: buildCsvUrl,
     parseCSV: parseCSV,
     normalize: normalize,
+    normalizeAny: normalizeAny,
     fromSheets: fromSheets,
     fromExcel: fromExcel,
     loadAuto: loadAuto,
