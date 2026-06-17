@@ -44,14 +44,22 @@
     } catch (e) { return null; }
   }
 
+  var BAR_SHADOW = { type: 'outer', color: '000000', opacity: 0.25, blur: 5, offset: 2, angle: 90 };
+  var CARD_SHADOW = { type: 'outer', color: '94A3B8', opacity: 0.4, blur: 6, offset: 2, angle: 90 };
+
   function band(slide, title, color) {
-    slide.addShape('rect', { x: 0, y: 0, w: '100%', h: 0.85, fill: { color: color || C.green } });
+    slide.addShape('rect', { x: 0, y: 0, w: '100%', h: 0.85, fill: { color: color || C.green }, shadow: BAR_SHADOW });
     slide.addShape('rect', { x: 0, y: 0.85, w: '100%', h: 0.06, fill: { color: C.amber } });
-    slide.addText(title || '', { x: 0.45, y: 0, w: 12.4, h: 0.85, color: C.white, fontFace: F, fontSize: 22, bold: true, valign: 'middle' });
+    // จุดสีเล็ก ๆ หน้าหัวข้อ ให้ดูมีดีไซน์
+    slide.addShape('roundRect', { x: 0.45, y: 0.30, w: 0.25, h: 0.25, rectRadius: 0.05, fill: { color: C.amber } });
+    slide.addText(title || '', { x: 0.85, y: 0, w: 12.0, h: 0.85, color: C.white, fontFace: F, fontSize: 22, bold: true, valign: 'middle' });
   }
-  function footer(slide, deck) {
+  function footer(slide, deck, page, total) {
+    slide.addShape('line', { x: 0.45, y: 7.0, w: 12.43, h: 0, line: { color: C.line, width: 0.75 } });
     slide.addText((deck.org || 'CPF ธารเกษม') + '  •  ' + (deck.period || 'FY2569'),
-      { x: 0.45, y: 7.05, w: 12.4, h: 0.35, color: C.grey, fontFace: F, fontSize: 9, align: 'right' });
+      { x: 0.45, y: 7.05, w: 9.0, h: 0.35, color: C.grey, fontFace: F, fontSize: 9, align: 'left' });
+    if (page) slide.addText('หน้า ' + page + (total ? ' / ' + total : ''),
+      { x: 9.5, y: 7.05, w: 3.38, h: 0.35, color: C.grey, fontFace: F, fontSize: 9, align: 'right' });
   }
 
   function styledTable(slide, t, box) {
@@ -79,21 +87,27 @@
     });
   }
 
-  function renderSlide(pptx, sd, deck) {
+  function renderSlide(pptx, sd, deck, page, total) {
     var slide = pptx.addSlide();
 
     if (sd.layout === 'title') {
       slide.background = { color: C.greenDark };
-      slide.addShape('rect', { x: 0, y: 3.05, w: '100%', h: 0.07, fill: { color: C.amber } });
-      slide.addText(deck.org || 'CPF ธารเกษม', { x: 0.5, y: 1.5, w: 12.3, h: 0.6, color: C.greenLt, fontFace: F, fontSize: 22, bold: true, align: 'center' });
-      slide.addText(sd.title || '', { x: 0.5, y: 2.1, w: 12.3, h: 1.0, color: C.white, fontFace: F, fontSize: 40, bold: true, align: 'center' });
-      slide.addText(sd.subtitle || '', { x: 0.5, y: 3.3, w: 12.3, h: 0.6, color: 'C8E6C9', fontFace: F, fontSize: 18, align: 'center' });
-      slide.addText(sd.footer || '', { x: 0.5, y: 6.4, w: 12.3, h: 0.5, color: '9CCC9F', fontFace: F, fontSize: 12, align: 'center' });
+      // แถบตกแต่งบน/ล่าง
+      slide.addShape('rect', { x: 0, y: 0, w: '100%', h: 0.25, fill: { color: C.green } });
+      slide.addShape('rect', { x: 0, y: 7.25, w: '100%', h: 0.25, fill: { color: C.green } });
+      // โลโก้ CPF
+      slide.addShape('roundRect', { x: 6.06, y: 1.15, w: 1.2, h: 1.2, rectRadius: 0.18, fill: { color: C.green }, line: { color: C.greenLt, width: 1.5 } });
+      slide.addText('CPF', { x: 6.06, y: 1.15, w: 1.2, h: 1.2, color: C.white, fontFace: F, fontSize: 26, bold: true, align: 'center', valign: 'middle' });
+      slide.addText(deck.org || 'CPF ธารเกษม', { x: 0.5, y: 2.55, w: 12.3, h: 0.5, color: C.greenLt, fontFace: F, fontSize: 20, bold: true, align: 'center' });
+      slide.addText(sd.title || '', { x: 0.5, y: 3.05, w: 12.3, h: 1.0, color: C.white, fontFace: F, fontSize: 40, bold: true, align: 'center' });
+      slide.addShape('rect', { x: 5.67, y: 4.15, w: 2.0, h: 0.06, fill: { color: C.amber } });
+      slide.addText(sd.subtitle || '', { x: 0.5, y: 4.35, w: 12.3, h: 0.6, color: 'C8E6C9', fontFace: F, fontSize: 18, align: 'center' });
+      slide.addText(sd.footer || '', { x: 0.5, y: 6.5, w: 12.3, h: 0.5, color: '9CCC9F', fontFace: F, fontSize: 12, align: 'center' });
       return;
     }
 
     band(slide, sd.title, sd.color);
-    footer(slide, deck);
+    footer(slide, deck, page, total);
 
     if (sd.layout === 'kpi') {
       var items = sd.items || [];
@@ -102,11 +116,13 @@
       var bw = (13.33 - mL * 2 - gap * (n - 1)) / n;
       items.forEach(function (it, i) {
         var x = mL + i * (bw + gap);
-        slide.addShape('roundRect', { x: x, y: top, w: bw, h: bh, rectRadius: 0.08, fill: { color: 'F7FAF7' }, line: { color: it.color || C.green, width: 1 } });
-        slide.addShape('rect', { x: x, y: top, w: 0.08, h: bh, fill: { color: it.color || C.green } });
-        slide.addText(it.label || '', { x: x + 0.2, y: top + 0.18, w: bw - 0.35, h: 0.5, color: C.grey, fontFace: F, fontSize: 12, bold: true });
-        slide.addText(String(it.value), { x: x + 0.2, y: top + 0.7, w: bw - 0.35, h: 0.7, color: it.color || C.green, fontFace: F, fontSize: 26, bold: true });
-        if (it.sub) slide.addText(it.sub, { x: x + 0.2, y: top + 1.45, w: bw - 0.35, h: 0.4, color: C.grey, fontFace: F, fontSize: 11 });
+        var clr = it.color || C.green;
+        slide.addShape('roundRect', { x: x, y: top, w: bw, h: bh, rectRadius: 0.08, fill: { color: C.white }, line: { color: C.line, width: 0.75 }, shadow: CARD_SHADOW });
+        // แถบสีด้านบนการ์ด
+        slide.addShape('roundRect', { x: x, y: top, w: bw, h: 0.16, rectRadius: 0.04, fill: { color: clr } });
+        slide.addText(String(it.label || '').toUpperCase(), { x: x + 0.22, y: top + 0.34, w: bw - 0.4, h: 0.5, color: C.grey, fontFace: F, fontSize: 12, bold: true });
+        slide.addText(String(it.value), { x: x + 0.22, y: top + 0.82, w: bw - 0.4, h: 0.7, color: clr, fontFace: F, fontSize: 28, bold: true });
+        if (it.sub) slide.addText(it.sub, { x: x + 0.22, y: top + 1.55, w: bw - 0.4, h: 0.4, color: C.grey, fontFace: F, fontSize: 11 });
       });
       if (sd.note) {
         // pptxgenjs ต้องการ array ของ object {text, options} — แปลงจาก array ของ string ก่อน
@@ -172,7 +188,8 @@
       pptx.company = 'CPF';
       pptx.subject = deck.title || 'Dashboard';
       pptx.title = deck.title || 'CPF Dashboard';
-      (deck.slides || []).forEach(function (sd) { renderSlide(pptx, sd, deck); });
+      var total = (deck.slides || []).length;
+      (deck.slides || []).forEach(function (sd, i) { renderSlide(pptx, sd, deck, i + 1, total); });
       return pptx.writeFile({ fileName: deck.fileName || 'CPF_Dashboard.pptx' });
     });
   }
