@@ -321,6 +321,9 @@ table.data tfoot td { padding: 9px 11px; border-top: 2px solid var(--cpf); font-
   .mini-kpis { grid-template-columns: 1fr; }
   .app-header h1 { font-size: 1rem; }
   .wrap { padding: 14px 12px 50px; }
+  /* แตะง่ายขึ้นบนมือถือ (touch target ตามมาตรฐาน) */
+  .btn { min-height: 40px; }
+  .field select, .field input { min-height: 40px; }
 }
 
 /* ---------- Accessibility / UX ---------- */

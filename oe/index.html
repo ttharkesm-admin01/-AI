@@ -415,7 +415,7 @@
           responsive: true, maintainAspectRatio: false, cutout: '58%',
           plugins: {
             legend: { position: 'bottom' },
-            tooltip: { callbacks: { label: function (c) { return c.label + ': ' + U.fmt(c.parsed) + ' ฿'; } } }
+            tooltip: { callbacks: { label: function (c) { var t = c.dataset.data.reduce(function (a, b) { return a + (+b || 0); }, 0); return c.label + ': ' + U.fmt(c.parsed) + ' ฿ (' + U.pct(c.parsed, t) + '%)'; } } }
           }
         }
       });
