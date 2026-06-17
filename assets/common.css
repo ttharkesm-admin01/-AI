@@ -321,6 +321,24 @@ table.data tfoot td { padding: 9px 11px; border-top: 2px solid var(--cpf); font-
   .wrap { padding: 14px 12px 50px; }
 }
 
+/* ---------- Accessibility / UX ---------- */
+/* โฟกัสด้วยคีย์บอร์ดให้เห็นชัด (เฉพาะ keyboard ไม่ขึ้นตอนคลิกเมาส์) */
+.btn:focus-visible, .x-close:focus-visible, a:focus-visible,
+select:focus-visible, input:focus-visible, [tabindex]:focus-visible {
+  outline: 3px solid #FFB300;
+  outline-offset: 2px;
+  border-radius: 6px;
+}
+/* เคารพการตั้งค่าผู้ใช้ที่ลดการเคลื่อนไหว */
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after {
+    animation-duration: .001ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: .001ms !important;
+    scroll-behavior: auto !important;
+  }
+}
+
 /* ---------- Print ---------- */
 @media print {
   .app-header, .source-bar, .filter-bar, .header-actions, .btn { display: none !important; }
