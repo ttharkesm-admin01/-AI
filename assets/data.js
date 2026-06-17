@@ -165,20 +165,16 @@
       var name = cellStr(cells[nameCol]);
       if (!name || /^รวม/.test(name)) continue; // ข้ามแถวสรุป/ว่าง
       var pos = posCol >= 0 ? cellStr(cells[posCol]) : '';
-      // เงิน OT = ค่าจ้าง/ชม. × Σ(ชม.×ตัวคูณ)
-      var otMoney = 0;
-      if (rateCol >= 0 && otCols.length) {
-        var rate = U.parseNumber(cells[rateCol]);
-        otCols.forEach(function (o) { otMoney += U.parseNumber(cells[o.col]) * o.mult; });
-        otMoney = rate * otMoney;
-      }
+      // ยอดสวัสดิการ (บาท)
       Object.keys(typeCols).forEach(function (c) {
         var wtype = typeCols[c];
         var amt = U.parseNumber(cells[c]);
-        var note = '';
-        if (wtype === 'สวัสดิการอื่นๆ' && otMoney > 0) { amt += otMoney; note = 'รวม OT'; }
-        if (amt > 0) out.push({ month: month, employee: name, position: pos, wtype: wtype, amount: amt, note: note });
+        if (amt > 0) out.push({ month: month, employee: name, position: pos, wtype: wtype, amount: amt, note: '' });
       });
+      // OT รวมเป็น "จำนวนชั่วโมง" (ไม่แปลงเป็นเงิน) — หมวดแยก wtype = 'OT'
+      var otHours = 0;
+      otCols.forEach(function (o) { otHours += U.parseNumber(cells[o.col]); });
+      if (otHours > 0) out.push({ month: month, employee: name, position: pos, wtype: 'OT', amount: otHours, note: 'ชั่วโมง' });
     }
     return out;
   }
