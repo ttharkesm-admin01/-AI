@@ -279,47 +279,28 @@
 
   function sampleOE() {
     if (_cache.oe) return JSON.parse(JSON.stringify(_cache.oe));
-    var rnd = rng(2569013);
-    var MS = months('2569', 6); // ม.ค.–มิ.ย. 2569
-    var cats = [
-      ['ค่าจ้างเหมา', 'แปรผัน', 92000], ['ค่ากิจกรรมชุมชน', 'แปรผัน', 34000],
-      ['ค่าบำรุงสมาคมฯ', 'คงที่', 25000], ['ค่าไฟฟ้า', 'แปรผัน', 28000],
-      ['ค่าน้ำประปา', 'แปรผัน', 6000], ['ค่าโทรศัพท์/อินเทอร์เน็ต', 'คงที่', 5500],
-      ['ค่าน้ำมันเชื้อเพลิง', 'แปรผัน', 18000], ['ค่าซ่อมแซมบำรุงรักษา', 'แปรผัน', 15000],
-      ['ค่าวัสดุสำนักงาน', 'แปรผัน', 7000], ['ค่าเครื่องเขียนแบบพิมพ์', 'แปรผัน', 3500],
-      ['ค่ารักษาความปลอดภัย', 'คงที่', 22000], ['ค่าทำความสะอาด', 'คงที่', 12000],
-      ['ค่าเช่าอุปกรณ์', 'คงที่', 9000], ['ค่าประกันภัย', 'คงที่', 8000],
-      ['ค่ารับรอง', 'แปรผัน', 6500], ['ค่าเดินทาง', 'แปรผัน', 9500],
-      ['ค่าฝึกอบรม', 'แปรผัน', 7000], ['ค่าไปรษณีย์/ขนส่ง', 'แปรผัน', 4000],
-      ['ค่าธรรมเนียมธนาคาร', 'คงที่', 2500], ['ค่าที่ปรึกษา', 'คงที่', 15000],
-      ['ค่าบำรุงรักษาระบบ IT', 'คงที่', 6000], ['ค่าตรวจวิเคราะห์/แล็บ', 'แปรผัน', 8500],
-      ['ค่าสาธารณูปโภคอื่นๆ', 'แปรผัน', 4500], ['ค่าใช้จ่ายเบ็ดเตล็ด', 'แปรผัน', 5000]
+    // ข้อมูลจริง: ค่าใช้จ่าย OE โรงงานธารเกษม เดือน เม.ย. 2569 (2569-04)
+    // (แถวที่ไม่มีจำนวนเงินถูกตัดออกตามพฤติกรรม normalize)
+    var recs = [
+      { month: "2569-04", category: "ค่าอาหารและเครื่องดื่ม - ค่าใช้จ่ายในการประชุม", type: "ค่าใช้จ่าย", group: "แปรผัน", detail: "", amount: 4386, borrower: "" },
+      { month: "2569-04", category: "ค่าของไหว้ตามประเพณี", type: "ค่าใช้จ่าย", group: "แปรผัน", detail: "", amount: 25835, borrower: "" },
+      { month: "2569-04", category: "ค่าจัดส่งเอกสารและพัสดุ ไปรษณีย์", type: "ค่าใช้จ่าย", group: "แปรผัน", detail: "", amount: 310, borrower: "" },
+      { month: "2569-04", category: "ค่าเหยื่อสด-Pest Control", type: "ค่าใช้จ่าย", group: "แปรผัน", detail: "", amount: 200, borrower: "" },
+      { month: "2569-04", category: "ค่าบำรุงสมาคมผู้ผลิตอาหารสัตว์ไทย", type: "ค่าใช้จ่าย", group: "แปรผัน", detail: "", amount: 128275, borrower: "" },
+      { month: "2569-04", category: "ค่าน้ำบาดาล", type: "ค่าใช้จ่าย", group: "แปรผัน", detail: "", amount: 30548, borrower: "" },
+      { month: "2569-04", category: "ค่าใบอนุญาต", type: "ค่าใช้จ่าย", group: "แปรผัน", detail: "", amount: 731, borrower: "" },
+      { month: "2569-04", category: "ค่ากิจกรรมชุมชน", type: "ค่าใช้จ่าย", group: "แปรผัน", detail: "", amount: 51106, borrower: "" },
+      { month: "2569-04", category: "เงินยืมทดรอง", type: "เงินยืมทดรอง", group: "", detail: "", amount: 104234, borrower: "" },
+      { month: "2569-04", category: "น้ำดื่มถังธารตะวัน", type: "ค่าใช้จ่าย", group: "แปรผัน", detail: "", amount: 15947, borrower: "" },
+      { month: "2569-04", category: "ค่าบริการ ซัก รีด", type: "ค่าใช้จ่าย", group: "แปรผัน", detail: "", amount: 2325, borrower: "" },
+      { month: "2569-04", category: "ค่าเครื่องบิน", type: "ค่าใช้จ่าย", group: "แปรผัน", detail: "", amount: 7200, borrower: "" },
+      { month: "2569-04", category: "ค่าอื่นๆ , เงินรางวัล,กิจกรรมชมรม", type: "ค่าใช้จ่าย", group: "แปรผัน", detail: "", amount: 8884, borrower: "" },
+      { month: "2569-04", category: "ค่าบริการจราจร และสายตรวจโรงงาน", type: "ค่าใช้จ่าย", group: "คงที่", detail: "", amount: 1500, borrower: "" },
+      { month: "2569-04", category: "ค่าบริการจ้างเหมา-งานสวน", type: "ค่าใช้จ่าย", group: "คงที่", detail: "", amount: 60800, borrower: "" },
+      { month: "2569-04", category: "งานจ้างเหมากำจัดสิ่งปฏิกูล", type: "ค่าใช้จ่าย", group: "คงที่", detail: "", amount: 24000, borrower: "" },
+      { month: "2569-04", category: "ค่าซักผ้าชุดพนักงานาไซโล", type: "ค่าใช้จ่าย", group: "คงที่", detail: "", amount: 24000, borrower: "" },
+      { month: "2569-04", category: "ค่าใช้จ่ายสำนักงาน", type: "ค่าใช้จ่าย", group: "แปรผัน", detail: "", amount: 32124, borrower: "" }
     ];
-    var recs = [];
-    MS.forEach(function (mo) {
-      cats.forEach(function (c) {
-        var spread = c[1] === 'คงที่' ? 4 : 30;
-        recs.push({
-          month: mo, category: c[0], type: 'ค่าใช้จ่าย', group: c[1],
-          detail: '', amount: around(c[2], rnd, spread), borrower: ''
-        });
-      });
-    });
-    // เงินยืมทดรอง
-    var borrowers = ['นายประสิทธิ์ แก้วใส', 'นางสาวสุดารัตน์ โพธิ์ทอง', 'นายวิชัย แสงทอง',
-      'นายประยุทธ มั่นคง', 'นางสาวกนกวรรณ ใจดี'];
-    var purposes = ['ซื้ออุปกรณ์ซ่อมบำรุง', 'ค่าเดินทางราชการ', 'จัดกิจกรรมชุมชน',
-      'ซื้อวัสดุสิ้นเปลือง', 'ค่ารับรองลูกค้า', 'สำรองจ่ายค่าขนส่ง'];
-    var nAdv = 18;
-    for (var i = 0; i < nAdv; i++) {
-      var mo = MS[Math.floor(rnd() * MS.length)];
-      recs.push({
-        month: mo, category: 'เงินยืมทดรอง', type: 'เงินยืมทดรอง', group: '',
-        detail: purposes[Math.floor(rnd() * purposes.length)],
-        amount: 5000 + Math.round(rnd() * 30) * 1000,
-        borrower: borrowers[Math.floor(rnd() * borrowers.length)]
-      });
-    }
     var out = { records: recs, source: 'sample', count: recs.length };
     _cache.oe = JSON.parse(JSON.stringify(out));
     return out;
