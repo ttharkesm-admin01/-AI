@@ -361,6 +361,8 @@
         if (field && rnd() < 0.22) add(mo, e, 'ค่าที่พัก', 1200 + Math.round(rnd() * 5) * 500);
         // สวัสดิการอื่นๆ
         if (rnd() < 0.4) add(mo, e, 'สวัสดิการอื่นๆ', 300 + Math.round(rnd() * 6) * 200);
+        // OT — บันทึกเป็น "จำนวนชั่วโมง" (สาย field ทำ OT บ่อย/มากกว่า)
+        if (rnd() < (field ? 0.7 : 0.4)) add(mo, e, 'OT', Math.round((field ? 6 : 3) + rnd() * (field ? 18 : 8)), 'ชั่วโมง');
       });
     });
     var out = { records: recs, source: 'sample', count: recs.length };
