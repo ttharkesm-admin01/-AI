@@ -246,6 +246,7 @@
   <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
   <script src="../assets/utils.js"></script>
   <script src="../assets/data.js"></script>
+  <script src="../assets/app.js"></script>
   <script src="../assets/ppt.js"></script>
   <script>
   (function () {
@@ -256,34 +257,11 @@
     var ALL_TYPES = ['ค่ารักษาพยาบาล', 'เบี้ยเลี้ยง', 'ค่าน้ำมัน', 'ค่าที่พัก', 'สวัสดิการอื่นๆ'];
     var raw = [], filtered = [], lastSource = 'sample', lastUpdated = null;
     var charts = {};
-    // plugin วาดค่าตัวเลขไว้บนยอดแท่ง (อ่านได้ทันทีไม่ต้อง hover)
-    var barValueLabel = {
-      id: 'barValueLabel',
-      afterDatasetsDraw: function (chart) {
-        var ctx = chart.ctx;
-        chart.data.datasets.forEach(function (ds, di) {
-          var meta = chart.getDatasetMeta(di);
-          meta.data.forEach(function (elm, i) {
-            var v = ds.data[i];
-            if (!v) return;
-            ctx.save();
-            ctx.fillStyle = '#374151';
-            ctx.font = '600 11px Sarabun';
-            ctx.textAlign = 'center';
-            ctx.textBaseline = 'bottom';
-            ctx.fillText(U.fmtShort(v), elm.x, elm.y - 4);
-            ctx.restore();
-          });
-        });
-      }
-    };
+    var debouncedRender = App.debounce(render, 120);
 
     function init() {
-      if (window.Chart) {
-        Chart.defaults.font.family = 'Sarabun';
-        Chart.defaults.color = '#4b5563';
-        Chart.defaults.plugins.legend.labels.boxWidth = 12;
-      }
+      App.applyChartDefaults();
+      App.installModalKeytrap();
       bindEvents();
       loadData(false);
     }
@@ -500,36 +478,8 @@
     }
 
     /* ---------- Charts ---------- */
-    function drawDoughnut(id, labels, data, colors) {
-      if (!window.Chart) return;
-      var ctx = U.el(id); if (!ctx) return;
-      if (charts[id]) charts[id].destroy();
-      charts[id] = new Chart(ctx, {
-        type: 'doughnut',
-        data: { labels: labels, datasets: [{ data: data, backgroundColor: colors, borderWidth: 2, borderColor: '#fff' }] },
-        options: {
-          responsive: true, maintainAspectRatio: false, cutout: '58%',
-          plugins: { legend: { position: 'bottom' }, tooltip: { callbacks: { label: function (c) { var t = c.dataset.data.reduce(function (a, b) { return a + (+b || 0); }, 0); return c.label + ': ' + U.fmt(c.parsed) + ' ฿ (' + U.pct(c.parsed, t) + '%)'; } } } }
-        }
-      });
-    }
-    function drawBar(id, labels, data, color, label, unit) {
-      if (!window.Chart) return;
-      unit = unit || '฿';
-      var ctx = U.el(id); if (!ctx) return;
-      if (charts[id]) charts[id].destroy();
-      charts[id] = new Chart(ctx, {
-        type: 'bar',
-        plugins: [barValueLabel],
-        data: { labels: labels, datasets: [{ label: label, data: data, backgroundColor: color, borderRadius: 6, maxBarThickness: 46 }] },
-        options: {
-          responsive: true, maintainAspectRatio: false,
-          layout: { padding: { top: 18 } },
-          plugins: { legend: { display: false }, tooltip: { callbacks: { label: function (c) { return U.fmt(c.parsed.y) + ' ' + unit; } } } },
-          scales: { x: { grid: { display: false } }, y: { beginAtZero: true, ticks: { callback: function (v) { return U.fmtShort(v); } } } }
-        }
-      });
-    }
+    function drawDoughnut(id, labels, data, colors) { App.drawDoughnut(charts, id, labels, data, colors); }
+    function drawBar(id, labels, data, color, label, unit) { App.drawBar(charts, id, labels, data, color, label, unit); }
 
     /* ---------- Export ---------- */
     function doExport() {
@@ -615,8 +565,8 @@
 
     /* ---------- Events ---------- */
     function bindEvents() {
-      U.el('f-year').addEventListener('change', function () { buildMonthFilter(); render(); });
-      ['f-month', 'f-emp', 'f-type'].forEach(function (id) { U.el(id).addEventListener('change', render); });
+      U.el('f-year').addEventListener('change', function () { buildMonthFilter(); debouncedRender(); });
+      ['f-month', 'f-emp', 'f-type'].forEach(function (id) { U.el(id).addEventListener('change', debouncedRender); });
       U.el('btn-reset').addEventListener('click', function () {
         ['f-year', 'f-emp', 'f-type'].forEach(function (id) { U.el(id).value = ''; });
         buildMonthFilter(); U.el('f-month').value = ''; render();
@@ -653,28 +603,11 @@
       U.el('in-tab').value = cfg.sheetName || 'RAW_DATA';
       openModal('modal-connect');
     }
-    function openModal(id) {
-      var ov = U.el(id);
-      ov.classList.add('open');
-      var f = ov.querySelector('input, button, select, textarea, [tabindex]');
-      if (f) f.focus();
-    }
-    function closeModal(id) { U.el(id).classList.remove('open'); }
-    // ปิด modal ที่เปิดอยู่ด้วยปุ่ม Esc + กักโฟกัสไว้ใน modal (focus trap) ด้วย Tab
-    document.addEventListener('keydown', function (e) {
-      var ov = document.querySelector('.modal-overlay.open');
-      if (!ov) return;
-      if (e.key === 'Escape') { closeModal(ov.id); return; }
-      if (e.key !== 'Tab') return;
-      var f = U.$$('input, button, select, textarea, [tabindex]', ov).filter(function (n) { return !n.disabled && n.offsetParent !== null; });
-      if (!f.length) return;
-      var first = f[0], last = f[f.length - 1];
-      if (e.shiftKey && document.activeElement === first) { e.preventDefault(); last.focus(); }
-      else if (!e.shiftKey && document.activeElement === last) { e.preventDefault(); first.focus(); }
-    });
+    function openModal(id) { App.openModal(id); }
+    function closeModal(id) { App.closeModal(id); }
 
-    function esc(s) { return String(s == null ? '' : s).replace(/[&<>"]/g, function (c) { return ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' })[c]; }); }
-    function emptyRow(cols) { return '<tr><td colspan="' + cols + '" class="empty">ไม่มีข้อมูลตามตัวกรอง</td></tr>'; }
+    function esc(s) { return App.esc(s); }
+    function emptyRow(cols) { return App.emptyRow(cols); }
 
     if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', init);
     else init();

@@ -215,6 +215,7 @@
   <!-- Shared -->
   <script src="../assets/utils.js"></script>
   <script src="../assets/data.js"></script>
+  <script src="../assets/app.js"></script>
   <script src="../assets/ppt.js"></script>
   <script>
   (function () {
@@ -222,34 +223,11 @@
     var KIND = 'oe';
     var raw = [], filtered = [], lastSource = 'sample', lastUpdated = null;
     var charts = {};
-    // plugin วาดค่าตัวเลขไว้บนยอดแท่ง (อ่านได้ทันทีไม่ต้อง hover)
-    var barValueLabel = {
-      id: 'barValueLabel',
-      afterDatasetsDraw: function (chart) {
-        var ctx = chart.ctx;
-        chart.data.datasets.forEach(function (ds, di) {
-          var meta = chart.getDatasetMeta(di);
-          meta.data.forEach(function (elm, i) {
-            var v = ds.data[i];
-            if (!v) return;
-            ctx.save();
-            ctx.fillStyle = '#374151';
-            ctx.font = '600 11px Sarabun';
-            ctx.textAlign = 'center';
-            ctx.textBaseline = 'bottom';
-            ctx.fillText(U.fmtShort(v), elm.x, elm.y - 4);
-            ctx.restore();
-          });
-        });
-      }
-    };
+    var debouncedRender = App.debounce(render, 120);
 
     function init() {
-      if (window.Chart) {
-        Chart.defaults.font.family = 'Sarabun';
-        Chart.defaults.color = '#4b5563';
-        Chart.defaults.plugins.legend.labels.boxWidth = 12;
-      }
+      App.applyChartDefaults();
+      App.installModalKeytrap();
       bindEvents();
       loadData(false);
     }
@@ -322,6 +300,12 @@
       var totalExp = U.sumBy(exp, 'amount'), totalAdv = U.sumBy(adv, 'amount');
       var grand = totalExp + totalAdv;
       var cats = U.uniqSorted(exp.map(function (r) { return r.category; }));
+      // คำนวณ aggregate ที่ใช้ซ้ำในหลายส่วน "ครั้งเดียว" แล้วส่งต่อ
+      var agg = {
+        byCat: U.groupSum(exp, 'category', 'amount'),
+        byMonth: U.groupSum(exp, 'month', 'amount'),
+        fixed: U.sumBy(exp.filter(function (r) { return r.group === 'คงที่'; }), 'amount')
+      };
 
       // KPI
       U.el('kpi-exp').innerHTML = U.fmt(totalExp) + ' <span class="unit">฿</span>';
@@ -333,15 +317,15 @@
       U.el('kpi-cats').textContent = cats.length;
       U.el('kpi-cats-sub').textContent = 'หมวดค่าใช้จ่าย';
 
-      renderExpenses(exp, totalExp);
+      renderExpenses(exp, totalExp, agg);
       renderAdvances(adv, totalAdv);
-      renderInsights(exp, adv, totalExp, totalAdv);
+      renderInsights(exp, adv, totalExp, totalAdv, agg);
     }
 
-    function renderExpenses(exp, totalExp) {
-      var fixed = U.sumBy(exp.filter(function (r) { return r.group === 'คงที่'; }), 'amount');
-      var variable = U.sumBy(exp.filter(function (r) { return r.group === 'แปรผัน'; }), 'amount');
-      var byMonth = U.groupSum(exp, 'month', 'amount');
+    function renderExpenses(exp, totalExp, agg) {
+      var fixed = agg.fixed;
+      var variable = totalExp - fixed;
+      var byMonth = agg.byMonth;
       var monthsArr = Object.keys(byMonth).sort();
       var peak = U.toSortedPairs(byMonth)[0];
 
@@ -355,7 +339,7 @@
       drawBar('c-exp-bar', monthsArr.map(U.monthLabel), monthsArr.map(function (m) { return byMonth[m]; }), '#2E7D32', 'ค่าใช้จ่าย');
 
       // top5
-      var top5 = U.toSortedPairs(U.groupSum(exp, 'category', 'amount')).slice(0, 5);
+      var top5 = U.toSortedPairs(agg.byCat).slice(0, 5);
       var tb = U.el('tb-top5');
       tb.innerHTML = top5.length ? top5.map(function (p) {
         return '<tr><td>' + esc(p.key) + '</td><td class="num">' + U.fmt(p.value) +
@@ -383,11 +367,11 @@
       }).join('') : emptyRow(4);
     }
 
-    function renderInsights(exp, adv, totalExp, totalAdv) {
-      var topCat = U.toSortedPairs(U.groupSum(exp, 'category', 'amount'))[0];
-      var fixed = U.sumBy(exp.filter(function (r) { return r.group === 'คงที่'; }), 'amount');
+    function renderInsights(exp, adv, totalExp, totalAdv, agg) {
+      var topCat = U.toSortedPairs(agg.byCat)[0];
+      var fixed = agg.fixed;
       var variable = totalExp - fixed;
-      var peak = U.toSortedPairs(U.groupSum(exp, 'month', 'amount'))[0];
+      var peak = U.toSortedPairs(agg.byMonth)[0];
       var topBorrower = U.toSortedPairs(U.groupSum(adv, 'borrower', 'amount'))[0];
 
       var cards = [
@@ -403,45 +387,9 @@
       }).join('');
     }
 
-    /* ---------- Charts ---------- */
-    function drawDoughnut(id, labels, data, colors) {
-      if (!window.Chart) return;
-      var ctx = U.el(id); if (!ctx) return;
-      if (charts[id]) charts[id].destroy();
-      charts[id] = new Chart(ctx, {
-        type: 'doughnut',
-        data: { labels: labels, datasets: [{ data: data, backgroundColor: colors, borderWidth: 2, borderColor: '#fff' }] },
-        options: {
-          responsive: true, maintainAspectRatio: false, cutout: '58%',
-          plugins: {
-            legend: { position: 'bottom' },
-            tooltip: { callbacks: { label: function (c) { var t = c.dataset.data.reduce(function (a, b) { return a + (+b || 0); }, 0); return c.label + ': ' + U.fmt(c.parsed) + ' ฿ (' + U.pct(c.parsed, t) + '%)'; } } }
-          }
-        }
-      });
-    }
-    function drawBar(id, labels, data, color, label) {
-      if (!window.Chart) return;
-      var ctx = U.el(id); if (!ctx) return;
-      if (charts[id]) charts[id].destroy();
-      charts[id] = new Chart(ctx, {
-        type: 'bar',
-        plugins: [barValueLabel],
-        data: { labels: labels, datasets: [{ label: label, data: data, backgroundColor: color, borderRadius: 6, maxBarThickness: 46 }] },
-        options: {
-          responsive: true, maintainAspectRatio: false,
-          layout: { padding: { top: 18 } },
-          plugins: {
-            legend: { display: false },
-            tooltip: { callbacks: { label: function (c) { return U.fmt(c.parsed.y) + ' ฿'; } } }
-          },
-          scales: {
-            x: { grid: { display: false } },
-            y: { beginAtZero: true, ticks: { callback: function (v) { return U.fmtShort(v); } } }
-          }
-        }
-      });
-    }
+    /* ---------- Charts (ใช้ตัวร่วมใน app.js) ---------- */
+    function drawDoughnut(id, labels, data, colors) { App.drawDoughnut(charts, id, labels, data, colors); }
+    function drawBar(id, labels, data, color, label) { App.drawBar(charts, id, labels, data, color, label); }
 
     /* ---------- Export PPT ---------- */
     function doExport() {
@@ -498,9 +446,9 @@
 
     /* ---------- Events ---------- */
     function bindEvents() {
-      U.el('f-year').addEventListener('change', function () { buildMonthFilter(); render(); });
-      U.el('f-month').addEventListener('change', render);
-      U.el('f-type').addEventListener('change', render);
+      U.el('f-year').addEventListener('change', function () { buildMonthFilter(); debouncedRender(); });
+      U.el('f-month').addEventListener('change', debouncedRender);
+      U.el('f-type').addEventListener('change', debouncedRender);
       U.el('btn-reset').addEventListener('click', function () {
         U.el('f-year').value = ''; U.el('f-type').value = ''; buildMonthFilter(); U.el('f-month').value = ''; render();
       });
@@ -543,29 +491,12 @@
       U.el('in-tab').value = cfg.sheetName || 'RAW_DATA';
       openModal('modal-connect');
     }
-    function openModal(id) {
-      var ov = U.el(id);
-      ov.classList.add('open');
-      var f = ov.querySelector('input, button, select, textarea, [tabindex]');
-      if (f) f.focus();
-    }
-    function closeModal(id) { U.el(id).classList.remove('open'); }
-    // ปิด modal ที่เปิดอยู่ด้วยปุ่ม Esc + กักโฟกัสไว้ใน modal (focus trap) ด้วย Tab
-    document.addEventListener('keydown', function (e) {
-      var ov = document.querySelector('.modal-overlay.open');
-      if (!ov) return;
-      if (e.key === 'Escape') { closeModal(ov.id); return; }
-      if (e.key !== 'Tab') return;
-      var f = U.$$('input, button, select, textarea, [tabindex]', ov).filter(function (n) { return !n.disabled && n.offsetParent !== null; });
-      if (!f.length) return;
-      var first = f[0], last = f[f.length - 1];
-      if (e.shiftKey && document.activeElement === first) { e.preventDefault(); last.focus(); }
-      else if (!e.shiftKey && document.activeElement === last) { e.preventDefault(); first.focus(); }
-    });
+    function openModal(id) { App.openModal(id); }
+    function closeModal(id) { App.closeModal(id); }
 
-    /* ---------- Utils ---------- */
-    function esc(s) { return String(s == null ? '' : s).replace(/[&<>"]/g, function (c) { return ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' })[c]; }); }
-    function emptyRow(cols) { return '<tr><td colspan="' + cols + '" class="empty">ไม่มีข้อมูลตามตัวกรอง</td></tr>'; }
+    /* ---------- Utils (ใช้ตัวร่วมใน app.js) ---------- */
+    function esc(s) { return App.esc(s); }
+    function emptyRow(cols) { return App.emptyRow(cols); }
 
     if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', init);
     else init();
