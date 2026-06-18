@@ -25,6 +25,7 @@ sample-data/*.csv       # ตัวอย่างข้อมูล RAW_DATA
 
 ## สถาปัตยกรรมข้อมูล (สำคัญ)
 - โหลดอัตโนมัติ: มี config Google Sheets → ดึงสด, ไม่มี → ข้อมูลตัวอย่าง (demo ใน data.js)
+  - demo สวัสดิการ = **ข้อมูลจริงฝังในตัว** (ม.ค.–พ.ค. 2569, 22 คน, 127 records) แปลงจากไฟล์ฟอร์ม wide
 - Fallback: อัปโหลด Excel (.xlsx) ผ่านปุ่ม "🔗 เชื่อม → 📁 อัปโหลด Excel"
 - **OE RAW_DATA** (long): `เดือน|หมวดหมู่|ประเภท|กลุ่ม|รายละเอียด|จำนวนเงิน|ผู้ยืม`
   - ประเภท = `ค่าใช้จ่าย`/`เงินยืมทดรอง` · กลุ่ม = `คงที่`/`แปรผัน`
@@ -36,7 +37,8 @@ sample-data/*.csv       # ตัวอย่างข้อมูล RAW_DATA
 - `normalizeWelfareWide()` ใน data.js อ่านตาราง **1 คน/แถว** (คอลัมน์แยกตามประเภท + OT 7 อัตรา)
 - OT กรอกเป็น **"จำนวนชั่วโมง"** (ไม่มีอัตราค่าจ้างเป็นบาท) → รวมทุกอัตราเป็น record `wtype='OT'`
 - **OT แยกจากยอดเงินทุกที่** (KPI/กราฟ/pivot/export) แสดงเป็น "ชั่วโมง" หน่วย "ชม."
-- ฟอร์ม wide ต้องมีเซลล์ระบุเดือน (รูปแบบ `25xx-xx`) อยู่ในชีต
+- ฟอร์ม wide ต้องมีเซลล์ระบุเดือนในชีต — รับทั้งรูปแบบ `25xx-xx` และ**ชื่อเดือนไทย** (เต็ม/ย่อ เช่น "ประจำเดือน มกราคม 2569" / "ม.ค.69") ผ่าน `thaiMonthToCode()`
+- ไฟล์ wide ที่**แยกชีตตามเดือน** (ไม่มีแท็บ RAW_DATA): `fromExcel` อ่านรวมทุกชีต concat เป็น records ชุดเดียว
 - `normalizeAny()` เลือก parser: welfare ลอง wide ก่อน ไม่ใช่จึงใช้ long
 
 ## ข้อตกลงการพัฒนา
@@ -79,6 +81,8 @@ sample-data/*.csv       # ตัวอย่างข้อมูล RAW_DATA
 - เพิ่ม CLAUDE.md (บริบท + หลักการเขียนโค้ด)
 - ปรับ UI/UX (a11y): focus-visible, prefers-reduced-motion, aria-live status/toast
 - ขัดเงากราฟ/KPI: ตัวเลขบนยอดแท่ง (inline Chart plugin `barValueLabel`), tabular-nums, KPI hover shadow
+- ปรับดีไซน์หน้า Landing ตามดีไซน์ใหม่จาก Claude (hero gradient + การ์ด pill tag + stats)
+- ฝังข้อมูลสวัสดิการ/OT จริงเป็น demo + parser รองรับชื่อเดือนไทย & ไฟล์ wide หลายชีต
 
 ## สิ่งที่ยังไม่ทำ / ไอเดียต่อยอด
 - รวมโค้ดซ้ำระหว่าง oe/ กับ welfare/ เป็น assets/app.js (ตอนนี้ duplicate ~80%)
