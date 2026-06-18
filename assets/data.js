@@ -30,6 +30,32 @@
 
   var MONTH_RE = /^\s*\d{4}\s*-\s*\d{1,2}/;
 
+  /* ชื่อเดือนไทย (เต็ม/ย่อ) -> เลขเดือน 1–12 */
+  var THAI_MONTHS = [
+    ['มกราคม', 'ม.ค.'], ['กุมภาพันธ์', 'ก.พ.'], ['มีนาคม', 'มี.ค.'],
+    ['เมษายน', 'เม.ย.'], ['พฤษภาคม', 'พ.ค.'], ['มิถุนายน', 'มิ.ย.'],
+    ['กรกฎาคม', 'ก.ค.'], ['สิงหาคม', 'ส.ค.'], ['กันยายน', 'ก.ย.'],
+    ['ตุลาคม', 'ต.ค.'], ['พฤศจิกายน', 'พ.ย.'], ['ธันวาคม', 'ธ.ค.']
+  ];
+  /** หาเดือนแบบไทย ("มกราคม 2569" / "ม.ค.69") ในข้อความใด ๆ -> "2569-01" หรือ '' */
+  function thaiMonthToCode(text) {
+    var s = String(text || '');
+    for (var i = 0; i < THAI_MONTHS.length; i++) {
+      var names = THAI_MONTHS[i];
+      for (var k = 0; k < names.length; k++) {
+        var idx = s.indexOf(names[k]);
+        if (idx < 0) continue;
+        var ym = s.slice(idx + names[k].length).match(/(\d{2,4})/);
+        if (!ym) continue;
+        var y = parseInt(ym[1], 10);
+        if (y < 100) y += 2500;
+        var mo = i + 1;
+        return y + '-' + (mo < 10 ? '0' + mo : '' + mo);
+      }
+    }
+    return '';
+  }
+
   /* ---------------- Config (localStorage) ---------------- */
   function cfgGet(kind) {
     try {
@@ -128,16 +154,19 @@
     }
     if (headIdx < 0) return null;
 
-    // หาเดือน (เซลล์ใดก็ได้ที่ตรงรูปแบบ 25xx-xx)
+    // หาเดือน — รับทั้งรูปแบบ 25xx-xx และชื่อเดือนไทย ("ประจำเดือน มกราคม 2569")
     var month = '';
     for (var r0 = 0; r0 < rows.length && !month; r0++) {
       var cs = rows[r0] || [];
       for (var c0 = 0; c0 < cs.length; c0++) {
-        var m = cellStr(cs[c0]).match(/(\d{4})\s*-\s*(\d{1,2})/);
+        var txt = cellStr(cs[c0]);
+        var m = txt.match(/(\d{4})\s*-\s*(\d{1,2})/);
         if (m) { month = m[1] + '-' + (m[2].length < 2 ? '0' + m[2] : m[2]); break; }
+        var tm = thaiMonthToCode(txt);
+        if (tm) { month = tm; break; }
       }
     }
-    if (!month) throw new Error('ฟอร์มสวัสดิการไม่พบ "เดือน" (ใส่รูปแบบ 2569-01 ในชีต)');
+    if (!month) throw new Error('ฟอร์มสวัสดิการไม่พบ "เดือน" (ใส่รูปแบบ 2569-01 หรือชื่อเดือนไทยในชีต)');
 
     // รวมข้อความหัวจากแถว headIdx และแถวถัดไป (รองรับหัว 2 ชั้น เช่น OT)
     var h1 = (rows[headIdx] || []).map(cellStr);
@@ -218,6 +247,24 @@
     if (typeof XLSX === 'undefined') return Promise.reject(new Error('ไลบรารีอ่าน Excel ยังโหลดไม่เสร็จ ลองใหม่อีกครั้ง'));
     return file.arrayBuffer().then(function (buf) {
       var wb = XLSX.read(new Uint8Array(buf), { type: 'array' });
+      var sheetRows = function (n) { return XLSX.utils.sheet_to_json(wb.Sheets[n], { header: 1, raw: true, defval: '' }); };
+      var hasRaw = wb.SheetNames.some(function (n) { return String(n).trim().toUpperCase() === 'RAW_DATA'; });
+
+      // สวัสดิการแบบ wide ที่แยกชีตตามเดือน (ไม่มีแท็บ RAW_DATA) -> อ่านรวมทุกชีต
+      if (kind === 'welfare' && !hasRaw) {
+        var all = [], used = [];
+        wb.SheetNames.forEach(function (n) {
+          if (/คำอธิบาย|readme|instruction/i.test(n)) return;
+          try {
+            var w = normalizeWelfareWide(sheetRows(n));
+            if (w && w.length) { all = all.concat(w); used.push(n); }
+          } catch (e) { /* ข้ามชีตที่ไม่ใช่ฟอร์มสวัสดิการ */ }
+        });
+        if (all.length) {
+          return { records: all, source: 'excel', sheetName: used.join(', '), fileName: file.name, count: all.length };
+        }
+      }
+
       // เลือกแท็บ RAW_DATA ก่อน ถ้าไม่มีเลือกแท็บที่มีข้อมูลมากสุด (ข้ามแท็บ "คำอธิบาย")
       var name = null;
       wb.SheetNames.forEach(function (n) { if (String(n).trim().toUpperCase() === 'RAW_DATA') name = n; });
@@ -231,7 +278,7 @@
         });
         if (!name) name = wb.SheetNames[wb.SheetNames.length - 1];
       }
-      var rows = XLSX.utils.sheet_to_json(wb.Sheets[name], { header: 1, raw: true, defval: '' });
+      var rows = sheetRows(name);
       var records = normalizeAny(kind, rows);
       if (!records.length) throw new Error('ไม่พบข้อมูลในไฟล์ (ต้องมีแท็บ RAW_DATA และลำดับคอลัมน์ถูกต้อง)');
       return { records: records, source: 'excel', sheetName: name, fileName: file.name, count: records.length };
@@ -254,27 +301,8 @@
   }
 
   /* ============================================================
-     ข้อมูลตัวอย่าง (Demo) — สุ่มแบบกำหนดค่าคงที่ (deterministic)
-     ปีงบประมาณ พ.ศ. 2569
+     ข้อมูลตัวอย่าง (Demo) — ข้อมูลจริงฝังในตัว ปีงบประมาณ พ.ศ. 2569
      ============================================================ */
-  function rng(seed) {
-    return function () {
-      seed |= 0; seed = (seed + 0x6D2B79F5) | 0;
-      var t = Math.imul(seed ^ (seed >>> 15), 1 | seed);
-      t = (t + Math.imul(t ^ (t >>> 7), 61 | t)) ^ t;
-      return ((t ^ (t >>> 14)) >>> 0) / 4294967296;
-    };
-  }
-  function months(year, n) {
-    var arr = [];
-    for (var m = 1; m <= n; m++) arr.push(year + '-' + (m < 10 ? '0' + m : '' + m));
-    return arr;
-  }
-  function around(base, rnd, spread) { // ±spread%
-    var f = 1 + (rnd() * 2 - 1) * (spread / 100);
-    return Math.max(0, Math.round(base * f / 50) * 50);
-  }
-
   var _cache = {};
 
   function sampleOE() {
@@ -308,44 +336,137 @@
 
   function sampleWelfare() {
     if (_cache.welfare) return JSON.parse(JSON.stringify(_cache.welfare));
-    var rnd = rng(2569055);
-    var MS = months('2569', 5); // ม.ค.–พ.ค. 2569
-    var emps = [
-      ['นายสมชาย ทองดี', 'ผู้จัดการ'], ['นางสาวสุดารัตน์ โพธิ์ทอง', 'ธุรการ'],
-      ['นายธรพล อินทร์รำพันธุ', 'ช่าง'], ['นายวิชัย แสงทอง', 'พนักงานขับรถ'],
-      ['นางสาวกนกวรรณ ใจดี', 'ธุรการ'], ['นายประยุทธ มั่นคง', 'รปภ.'],
-      ['นางมาลี ศรีสุข', 'แม่บ้าน'], ['นายอนุชา พรหมมา', 'ช่าง'],
-      ['นายสมศักดิ์ บุญมี', 'พนักงานขับรถ'], ['นางสาวพิมพ์ใจ รักษ์ดี', 'ธุรการ'],
-      ['นายเอกชัย วงศ์ไทย', 'รปภ.'], ['นายสุรชัย กล้าหาญ', 'ช่าง'],
-      ['นางสาวนภาพร สดใส', 'แม่บ้าน'], ['นายชัยวัฒน์ ทรงศรี', 'พนักงานขับรถ'],
-      ['นายมานพ คงเจริญ', 'รปภ.'], ['นางสาวอรทัย ดวงแก้ว', 'ธุรการ'],
-      ['นายพิชิต เพิ่มพูล', 'ช่าง'], ['นายวีระ สุขสมบูรณ์', 'พนักงานขับรถ'],
-      ['นางสาวจันทร์เพ็ญ งามตา', 'แม่บ้าน'], ['นายธีระพงษ์ ภักดี', 'รปภ.'],
-      ['นายสมพร แก้วมณี', 'ช่าง'], ['นางสาวรัตนา พูนทรัพย์', 'ธุรการ']
+    // ข้อมูลจริง: สวัสดิการ & OT พนักงานสังกัดธุรการ โรงงานธารเกษม
+    // ม.ค.–พ.ค. 2569 (มิ.ย.69 ยังไม่กรอกข้อมูล) — OT เป็น "จำนวนชั่วโมง" รวมทุกอัตรา
+    var recs = [
+      { month: "2569-01", employee: "นางจารุวิจิตร์ ฤทธินาคา", position: "ผู้จัดการฝ่ายธุรการ", wtype: "ค่ารักษาพยาบาล", amount: 2550 },
+      { month: "2569-01", employee: "นายธรพล อินทร์รำพันธุ", position: "พนักงานขับรถ", wtype: "เบี้ยเลี้ยง", amount: 1500 },
+      { month: "2569-01", employee: "นายธรพล อินทร์รำพันธุ", position: "พนักงานขับรถ", wtype: "สวัสดิการอื่นๆ", amount: 385 },
+      { month: "2569-01", employee: "นายธรพล อินทร์รำพันธุ", position: "พนักงานขับรถ", wtype: "OT", amount: 11, note: "ชั่วโมง" },
+      { month: "2569-01", employee: "นางสาวลลิตวดี ตรวจนอก", position: "พนักงานรับแจ้งคิว", wtype: "OT", amount: 3, note: "ชั่วโมง" },
+      { month: "2569-01", employee: "นางสาวอำไพ คำแดง", position: "คนงานทำความสะอาดรอบนอก", wtype: "OT", amount: 9, note: "ชั่วโมง" },
+      { month: "2569-01", employee: "นางสาวอาภัสรา วงษ์น้อย", position: "คนงานทำความสะอาดรอบนอก", wtype: "OT", amount: 2, note: "ชั่วโมง" },
+      { month: "2569-01", employee: "นางสาวรพีพรรณ ปั้นสนิท", position: "คนงานทำความสะอาดสำนักงาน", wtype: "OT", amount: 4, note: "ชั่วโมง" },
+      { month: "2569-01", employee: "นางสาวสุธิดา บุญส่ง", position: "คนงานทำความสะอาดสำนักงาน", wtype: "OT", amount: 4, note: "ชั่วโมง" },
+      { month: "2569-01", employee: "นายสุพจน์ โพธิ์นวล", position: "พนักงานรักษาความปลอดภัย", wtype: "OT", amount: 65, note: "ชั่วโมง" },
+      { month: "2569-01", employee: "นายทองล้วน ทองเหลื่อม", position: "พนักงานรักษาความปลอดภัย", wtype: "OT", amount: 52, note: "ชั่วโมง" },
+      { month: "2569-01", employee: "นายชวลิต สีแวงนอก", position: "พนักงานรักษาความปลอดภัย", wtype: "OT", amount: 48, note: "ชั่วโมง" },
+      { month: "2569-01", employee: "นายนคร ผ่องศรี", position: "พนักงานรักษาความปลอดภัย", wtype: "OT", amount: 53, note: "ชั่วโมง" },
+      { month: "2569-01", employee: "นายสามารถ ใหมธรรมจักร", position: "พนักงานรักษาความปลอดภัย", wtype: "OT", amount: 65, note: "ชั่วโมง" },
+      { month: "2569-01", employee: "นายยงยุทธ์ ออสถิตย์", position: "พนักงานรักษาความปลอดภัย", wtype: "OT", amount: 20, note: "ชั่วโมง" },
+      { month: "2569-01", employee: "นายนพดล วงษ์ตา", position: "พนักงานรักษาความปลอดภัย", wtype: "OT", amount: 50, note: "ชั่วโมง" },
+      { month: "2569-01", employee: "นายกริช ภักดี", position: "พนักงานรักษาความปลอดภัย", wtype: "OT", amount: 52, note: "ชั่วโมง" },
+      { month: "2569-01", employee: "นายชนุดม จันทร์สีขาว", position: "พนักงานรักษาความปลอดภัย", wtype: "OT", amount: 48, note: "ชั่วโมง" },
+      { month: "2569-01", employee: "นายวิษณุ ชัยพร", position: "พนักงานรักษาความปลอดภัย", wtype: "OT", amount: 51, note: "ชั่วโมง" },
+      { month: "2569-01", employee: "นายกฤษณะ ใจธรรม", position: "พนักงานรักษาความปลอดภัย", wtype: "OT", amount: 48, note: "ชั่วโมง" },
+      { month: "2569-01", employee: "นายธีรวัฒน์ ทองพุ", position: "พนักงานรักษาความปลอดภัย", wtype: "OT", amount: 65, note: "ชั่วโมง" },
+      { month: "2569-02", employee: "นางจารุวิจิตร์ ฤทธินาคา", position: "ผู้จัดการฝ่ายธุรการ", wtype: "ค่ารักษาพยาบาล", amount: 3020 },
+      { month: "2569-02", employee: "นางสาวจันทร์รัตน์ มงคลทรัพย์", position: "ผู้จัดการแผนกบริการสำนักงาน", wtype: "ค่ารักษาพยาบาล", amount: 415 },
+      { month: "2569-02", employee: "นายกันตภณ เศวตพันธ์", position: "พนักงานริการสำนักงาน", wtype: "ค่ารักษาพยาบาล", amount: 470 },
+      { month: "2569-02", employee: "นายฉัตรเทพ จ้ายทองอยู่", position: "พนักงานซ่อมบำรุง", wtype: "ค่ารักษาพยาบาล", amount: 550 },
+      { month: "2569-02", employee: "นายฉัตรเทพ จ้ายทองอยู่", position: "พนักงานซ่อมบำรุง", wtype: "OT", amount: 7, note: "ชั่วโมง" },
+      { month: "2569-02", employee: "นายธรพล อินทร์รำพันธุ", position: "พนักงานขับรถ", wtype: "ค่ารักษาพยาบาล", amount: 515 },
+      { month: "2569-02", employee: "นายธรพล อินทร์รำพันธุ", position: "พนักงานขับรถ", wtype: "เบี้ยเลี้ยง", amount: 1800 },
+      { month: "2569-02", employee: "นายธรพล อินทร์รำพันธุ", position: "พนักงานขับรถ", wtype: "สวัสดิการอื่นๆ", amount: 845 },
+      { month: "2569-02", employee: "นายธรพล อินทร์รำพันธุ", position: "พนักงานขับรถ", wtype: "OT", amount: 12.23, note: "ชั่วโมง" },
+      { month: "2569-02", employee: "นางสาวลลิตวดี ตรวจนอก", position: "พนักงานรับแจ้งคิว", wtype: "ค่ารักษาพยาบาล", amount: 460 },
+      { month: "2569-02", employee: "นางสาวลลิตวดี ตรวจนอก", position: "พนักงานรับแจ้งคิว", wtype: "OT", amount: 9, note: "ชั่วโมง" },
+      { month: "2569-02", employee: "นางสาวอำไพ คำแดง", position: "คนงานทำความสะอาดรอบนอก", wtype: "OT", amount: 5, note: "ชั่วโมง" },
+      { month: "2569-02", employee: "นางสาวรพีพรรณ ปั้นสนิท", position: "คนงานทำความสะอาดสำนักงาน", wtype: "OT", amount: 3, note: "ชั่วโมง" },
+      { month: "2569-02", employee: "นายสุพจน์ โพธิ์นวล", position: "พนักงานรักษาความปลอดภัย", wtype: "ค่ารักษาพยาบาล", amount: 485 },
+      { month: "2569-02", employee: "นายสุพจน์ โพธิ์นวล", position: "พนักงานรักษาความปลอดภัย", wtype: "OT", amount: 48, note: "ชั่วโมง" },
+      { month: "2569-02", employee: "นายทองล้วน ทองเหลื่อม", position: "พนักงานรักษาความปลอดภัย", wtype: "ค่ารักษาพยาบาล", amount: 485 },
+      { month: "2569-02", employee: "นายทองล้วน ทองเหลื่อม", position: "พนักงานรักษาความปลอดภัย", wtype: "สวัสดิการอื่นๆ", amount: 4800 },
+      { month: "2569-02", employee: "นายทองล้วน ทองเหลื่อม", position: "พนักงานรักษาความปลอดภัย", wtype: "OT", amount: 51, note: "ชั่วโมง" },
+      { month: "2569-02", employee: "นายชวลิต สีแวงนอก", position: "พนักงานรักษาความปลอดภัย", wtype: "ค่ารักษาพยาบาล", amount: 485 },
+      { month: "2569-02", employee: "นายชวลิต สีแวงนอก", position: "พนักงานรักษาความปลอดภัย", wtype: "OT", amount: 48, note: "ชั่วโมง" },
+      { month: "2569-02", employee: "นายนคร ผ่องศรี", position: "พนักงานรักษาความปลอดภัย", wtype: "OT", amount: 40, note: "ชั่วโมง" },
+      { month: "2569-02", employee: "นายสามารถ ใหมธรรมจักร", position: "พนักงานรักษาความปลอดภัย", wtype: "ค่ารักษาพยาบาล", amount: 415 },
+      { month: "2569-02", employee: "นายสามารถ ใหมธรรมจักร", position: "พนักงานรักษาความปลอดภัย", wtype: "OT", amount: 45, note: "ชั่วโมง" },
+      { month: "2569-02", employee: "นายยงยุทธ์ ออสถิตย์", position: "พนักงานรักษาความปลอดภัย", wtype: "ค่ารักษาพยาบาล", amount: 415 },
+      { month: "2569-02", employee: "นายยงยุทธ์ ออสถิตย์", position: "พนักงานรักษาความปลอดภัย", wtype: "OT", amount: 46.42, note: "ชั่วโมง" },
+      { month: "2569-02", employee: "นายนพดล วงษ์ตา", position: "พนักงานรักษาความปลอดภัย", wtype: "ค่ารักษาพยาบาล", amount: 460 },
+      { month: "2569-02", employee: "นายนพดล วงษ์ตา", position: "พนักงานรักษาความปลอดภัย", wtype: "OT", amount: 53, note: "ชั่วโมง" },
+      { month: "2569-02", employee: "นายกริช ภักดี", position: "พนักงานรักษาความปลอดภัย", wtype: "ค่ารักษาพยาบาล", amount: 460 },
+      { month: "2569-02", employee: "นายกริช ภักดี", position: "พนักงานรักษาความปลอดภัย", wtype: "OT", amount: 33, note: "ชั่วโมง" },
+      { month: "2569-02", employee: "นายชนุดม จันทร์สีขาว", position: "พนักงานรักษาความปลอดภัย", wtype: "ค่ารักษาพยาบาล", amount: 460 },
+      { month: "2569-02", employee: "นายชนุดม จันทร์สีขาว", position: "พนักงานรักษาความปลอดภัย", wtype: "OT", amount: 53, note: "ชั่วโมง" },
+      { month: "2569-02", employee: "นายวิษณุ ชัยพร", position: "พนักงานรักษาความปลอดภัย", wtype: "ค่ารักษาพยาบาล", amount: 460 },
+      { month: "2569-02", employee: "นายวิษณุ ชัยพร", position: "พนักงานรักษาความปลอดภัย", wtype: "OT", amount: 48, note: "ชั่วโมง" },
+      { month: "2569-02", employee: "นายกฤษณะ ใจธรรม", position: "พนักงานรักษาความปลอดภัย", wtype: "ค่ารักษาพยาบาล", amount: 460 },
+      { month: "2569-02", employee: "นายกฤษณะ ใจธรรม", position: "พนักงานรักษาความปลอดภัย", wtype: "OT", amount: 50, note: "ชั่วโมง" },
+      { month: "2569-02", employee: "นายธีรวัฒน์ ทองพุ", position: "พนักงานรักษาความปลอดภัย", wtype: "ค่ารักษาพยาบาล", amount: 460 },
+      { month: "2569-02", employee: "นายธีรวัฒน์ ทองพุ", position: "พนักงานรักษาความปลอดภัย", wtype: "OT", amount: 56, note: "ชั่วโมง" },
+      { month: "2569-03", employee: "นางจารุวิจิตร์ ฤทธินาคา", position: "ผู้จัดการฝ่ายธุรการ", wtype: "ค่ารักษาพยาบาล", amount: 2550 },
+      { month: "2569-03", employee: "นางสาวจันทร์รัตน์ มงคลทรัพย์", position: "ผู้จัดการแผนกบริการสำนักงาน", wtype: "ค่ารักษาพยาบาล", amount: 4825 },
+      { month: "2569-03", employee: "นางสาวจันทร์รัตน์ มงคลทรัพย์", position: "ผู้จัดการแผนกบริการสำนักงาน", wtype: "เบี้ยเลี้ยง", amount: 300 },
+      { month: "2569-03", employee: "นายกันตภณ เศวตพันธ์", position: "พนักงานริการสำนักงาน", wtype: "เบี้ยเลี้ยง", amount: 300 },
+      { month: "2569-03", employee: "นายกันตภณ เศวตพันธ์", position: "พนักงานริการสำนักงาน", wtype: "OT", amount: 3.5, note: "ชั่วโมง" },
+      { month: "2569-03", employee: "นายฉัตรเทพ จ้ายทองอยู่", position: "พนักงานซ่อมบำรุง", wtype: "OT", amount: 15, note: "ชั่วโมง" },
+      { month: "2569-03", employee: "นายธรพล อินทร์รำพันธุ", position: "พนักงานขับรถ", wtype: "เบี้ยเลี้ยง", amount: 1800 },
+      { month: "2569-03", employee: "นายธรพล อินทร์รำพันธุ", position: "พนักงานขับรถ", wtype: "สวัสดิการอื่นๆ", amount: 1415 },
+      { month: "2569-03", employee: "นายธรพล อินทร์รำพันธุ", position: "พนักงานขับรถ", wtype: "OT", amount: 14, note: "ชั่วโมง" },
+      { month: "2569-03", employee: "นางสาวลลิตวดี ตรวจนอก", position: "พนักงานรับแจ้งคิว", wtype: "OT", amount: 9, note: "ชั่วโมง" },
+      { month: "2569-03", employee: "นางสาวอำไพ คำแดง", position: "คนงานทำความสะอาดรอบนอก", wtype: "OT", amount: 13, note: "ชั่วโมง" },
+      { month: "2569-03", employee: "นางสาวอาภัสรา วงษ์น้อย", position: "คนงานทำความสะอาดรอบนอก", wtype: "OT", amount: 3, note: "ชั่วโมง" },
+      { month: "2569-03", employee: "นางสาวรพีพรรณ ปั้นสนิท", position: "คนงานทำความสะอาดสำนักงาน", wtype: "OT", amount: 14, note: "ชั่วโมง" },
+      { month: "2569-03", employee: "นางสาวสุธิดา บุญส่ง", position: "คนงานทำความสะอาดสำนักงาน", wtype: "OT", amount: 9, note: "ชั่วโมง" },
+      { month: "2569-03", employee: "นายสุพจน์ โพธิ์นวล", position: "พนักงานรักษาความปลอดภัย", wtype: "OT", amount: 59, note: "ชั่วโมง" },
+      { month: "2569-03", employee: "นายทองล้วน ทองเหลื่อม", position: "พนักงานรักษาความปลอดภัย", wtype: "OT", amount: 62, note: "ชั่วโมง" },
+      { month: "2569-03", employee: "นายชวลิต สีแวงนอก", position: "พนักงานรักษาความปลอดภัย", wtype: "OT", amount: 62, note: "ชั่วโมง" },
+      { month: "2569-03", employee: "นายนคร ผ่องศรี", position: "พนักงานรักษาความปลอดภัย", wtype: "OT", amount: 59, note: "ชั่วโมง" },
+      { month: "2569-03", employee: "นายสามารถ ใหมธรรมจักร", position: "พนักงานรักษาความปลอดภัย", wtype: "OT", amount: 50, note: "ชั่วโมง" },
+      { month: "2569-03", employee: "นายยงยุทธ์ ออสถิตย์", position: "พนักงานรักษาความปลอดภัย", wtype: "ค่ารักษาพยาบาล", amount: 2068 },
+      { month: "2569-03", employee: "นายยงยุทธ์ ออสถิตย์", position: "พนักงานรักษาความปลอดภัย", wtype: "OT", amount: 56, note: "ชั่วโมง" },
+      { month: "2569-03", employee: "นายนพดล วงษ์ตา", position: "พนักงานรักษาความปลอดภัย", wtype: "OT", amount: 62, note: "ชั่วโมง" },
+      { month: "2569-03", employee: "นายกริช ภักดี", position: "พนักงานรักษาความปลอดภัย", wtype: "OT", amount: 44, note: "ชั่วโมง" },
+      { month: "2569-03", employee: "นายชนุดม จันทร์สีขาว", position: "พนักงานรักษาความปลอดภัย", wtype: "OT", amount: 64, note: "ชั่วโมง" },
+      { month: "2569-03", employee: "นายวิษณุ ชัยพร", position: "พนักงานรักษาความปลอดภัย", wtype: "OT", amount: 54, note: "ชั่วโมง" },
+      { month: "2569-03", employee: "นายกฤษณะ ใจธรรม", position: "พนักงานรักษาความปลอดภัย", wtype: "OT", amount: 56, note: "ชั่วโมง" },
+      { month: "2569-03", employee: "นายธีรวัฒน์ ทองพุ", position: "พนักงานรักษาความปลอดภัย", wtype: "ค่ารักษาพยาบาล", amount: 14259.5 },
+      { month: "2569-03", employee: "นายธีรวัฒน์ ทองพุ", position: "พนักงานรักษาความปลอดภัย", wtype: "OT", amount: 45, note: "ชั่วโมง" },
+      { month: "2569-04", employee: "นางจารุวิจิตร์ ฤทธินาคา", position: "ผู้จัดการฝ่ายธุรการ", wtype: "ค่ารักษาพยาบาล", amount: 2550 },
+      { month: "2569-04", employee: "นางสาวจันทร์รัตน์ มงคลทรัพย์", position: "ผู้จัดการแผนกบริการสำนักงาน", wtype: "ค่าน้ำมัน", amount: 688 },
+      { month: "2569-04", employee: "นายกันตภณ เศวตพันธ์", position: "พนักงานริการสำนักงาน", wtype: "OT", amount: 4.5, note: "ชั่วโมง" },
+      { month: "2569-04", employee: "นายฉัตรเทพ จ้ายทองอยู่", position: "พนักงานซ่อมบำรุง", wtype: "OT", amount: 5.5, note: "ชั่วโมง" },
+      { month: "2569-04", employee: "นายธรพล อินทร์รำพันธุ", position: "พนักงานขับรถ", wtype: "เบี้ยเลี้ยง", amount: 2400 },
+      { month: "2569-04", employee: "นายธรพล อินทร์รำพันธุ", position: "พนักงานขับรถ", wtype: "สวัสดิการอื่นๆ", amount: 1515 },
+      { month: "2569-04", employee: "นายธรพล อินทร์รำพันธุ", position: "พนักงานขับรถ", wtype: "OT", amount: 17.5, note: "ชั่วโมง" },
+      { month: "2569-04", employee: "นางสาวลลิตวดี ตรวจนอก", position: "พนักงานรับแจ้งคิว", wtype: "OT", amount: 15, note: "ชั่วโมง" },
+      { month: "2569-04", employee: "นางสาวอำไพ คำแดง", position: "คนงานทำความสะอาดรอบนอก", wtype: "OT", amount: 7.5, note: "ชั่วโมง" },
+      { month: "2569-04", employee: "นางสาวอาภัสรา วงษ์น้อย", position: "คนงานทำความสะอาดรอบนอก", wtype: "OT", amount: 5.5, note: "ชั่วโมง" },
+      { month: "2569-04", employee: "นางสาวรพีพรรณ ปั้นสนิท", position: "คนงานทำความสะอาดสำนักงาน", wtype: "OT", amount: 10.5, note: "ชั่วโมง" },
+      { month: "2569-04", employee: "นางสาวสุธิดา บุญส่ง", position: "คนงานทำความสะอาดสำนักงาน", wtype: "OT", amount: 3, note: "ชั่วโมง" },
+      { month: "2569-04", employee: "นายสุพจน์ โพธิ์นวล", position: "พนักงานรักษาความปลอดภัย", wtype: "OT", amount: 75, note: "ชั่วโมง" },
+      { month: "2569-04", employee: "นายทองล้วน ทองเหลื่อม", position: "พนักงานรักษาความปลอดภัย", wtype: "OT", amount: 69, note: "ชั่วโมง" },
+      { month: "2569-04", employee: "นายชวลิต สีแวงนอก", position: "พนักงานรักษาความปลอดภัย", wtype: "OT", amount: 68, note: "ชั่วโมง" },
+      { month: "2569-04", employee: "นายนคร ผ่องศรี", position: "พนักงานรักษาความปลอดภัย", wtype: "OT", amount: 31, note: "ชั่วโมง" },
+      { month: "2569-04", employee: "นายสามารถ ใหมธรรมจักร", position: "พนักงานรักษาความปลอดภัย", wtype: "OT", amount: 67, note: "ชั่วโมง" },
+      { month: "2569-04", employee: "นายยงยุทธ์ ออสถิตย์", position: "พนักงานรักษาความปลอดภัย", wtype: "OT", amount: 69, note: "ชั่วโมง" },
+      { month: "2569-04", employee: "นายนพดล วงษ์ตา", position: "พนักงานรักษาความปลอดภัย", wtype: "OT", amount: 61, note: "ชั่วโมง" },
+      { month: "2569-04", employee: "นายกริช ภักดี", position: "พนักงานรักษาความปลอดภัย", wtype: "ค่ารักษาพยาบาล", amount: 1720 },
+      { month: "2569-04", employee: "นายกริช ภักดี", position: "พนักงานรักษาความปลอดภัย", wtype: "OT", amount: 72, note: "ชั่วโมง" },
+      { month: "2569-04", employee: "นายชนุดม จันทร์สีขาว", position: "พนักงานรักษาความปลอดภัย", wtype: "OT", amount: 64, note: "ชั่วโมง" },
+      { month: "2569-04", employee: "นายวิษณุ ชัยพร", position: "พนักงานรักษาความปลอดภัย", wtype: "OT", amount: 55, note: "ชั่วโมง" },
+      { month: "2569-04", employee: "นายกฤษณะ ใจธรรม", position: "พนักงานรักษาความปลอดภัย", wtype: "OT", amount: 56, note: "ชั่วโมง" },
+      { month: "2569-04", employee: "นายธีรวัฒน์ ทองพุ", position: "พนักงานรักษาความปลอดภัย", wtype: "OT", amount: 47, note: "ชั่วโมง" },
+      { month: "2569-05", employee: "นางจารุวิจิตร์ ฤทธินาคา", position: "ผู้จัดการฝ่ายธุรการ", wtype: "ค่ารักษาพยาบาล", amount: 2550 },
+      { month: "2569-05", employee: "นางจารุวิจิตร์ ฤทธินาคา", position: "ผู้จัดการฝ่ายธุรการ", wtype: "เบี้ยเลี้ยง", amount: 600 },
+      { month: "2569-05", employee: "นางจารุวิจิตร์ ฤทธินาคา", position: "ผู้จัดการฝ่ายธุรการ", wtype: "ค่าที่พัก", amount: 696 },
+      { month: "2569-05", employee: "นางสาวจันทร์รัตน์ มงคลทรัพย์", position: "ผู้จัดการแผนกบริการสำนักงาน", wtype: "ค่ารักษาพยาบาล", amount: 3600 },
+      { month: "2569-05", employee: "นายฉัตรเทพ จ้ายทองอยู่", position: "พนักงานซ่อมบำรุง", wtype: "OT", amount: 11.5, note: "ชั่วโมง" },
+      { month: "2569-05", employee: "นายธรพล อินทร์รำพันธุ", position: "พนักงานขับรถ", wtype: "ค่ารักษาพยาบาล", amount: 3575 },
+      { month: "2569-05", employee: "นายธรพล อินทร์รำพันธุ", position: "พนักงานขับรถ", wtype: "เบี้ยเลี้ยง", amount: 600 },
+      { month: "2569-05", employee: "นายธรพล อินทร์รำพันธุ", position: "พนักงานขับรถ", wtype: "OT", amount: 25, note: "ชั่วโมง" },
+      { month: "2569-05", employee: "นางสาวลลิตวดี ตรวจนอก", position: "พนักงานรับแจ้งคิว", wtype: "OT", amount: 9, note: "ชั่วโมง" },
+      { month: "2569-05", employee: "นางสาวอำไพ คำแดง", position: "คนงานทำความสะอาดรอบนอก", wtype: "OT", amount: 9.5, note: "ชั่วโมง" },
+      { month: "2569-05", employee: "นางสาวรพีพรรณ ปั้นสนิท", position: "คนงานทำความสะอาดสำนักงาน", wtype: "OT", amount: 4, note: "ชั่วโมง" },
+      { month: "2569-05", employee: "นายสุพจน์ โพธิ์นวล", position: "พนักงานรักษาความปลอดภัย", wtype: "OT", amount: 73, note: "ชั่วโมง" },
+      { month: "2569-05", employee: "นายทองล้วน ทองเหลื่อม", position: "พนักงานรักษาความปลอดภัย", wtype: "OT", amount: 67, note: "ชั่วโมง" },
+      { month: "2569-05", employee: "นายยงยุทธ์ ออสถิตย์", position: "พนักงานรักษาความปลอดภัย", wtype: "OT", amount: 50, note: "ชั่วโมง" },
+      { month: "2569-05", employee: "นายนพดล วงษ์ตา", position: "พนักงานรักษาความปลอดภัย", wtype: "OT", amount: 61, note: "ชั่วโมง" },
+      { month: "2569-05", employee: "นายกริช ภักดี", position: "พนักงานรักษาความปลอดภัย", wtype: "OT", amount: 55, note: "ชั่วโมง" }
     ];
-    var recs = [];
-    function add(mo, e, wtype, amt, note) {
-      if (amt > 0) recs.push({ month: mo, employee: e[0], position: e[1], wtype: wtype, amount: amt, note: note || '' });
-    }
-    MS.forEach(function (mo) {
-      emps.forEach(function (e) {
-        var pos = e[1];
-        var field = (pos === 'พนักงานขับรถ' || pos === 'ช่าง' || pos === 'ผู้จัดการ');
-        // ค่ารักษาพยาบาล — เกิดเป็นครั้งคราว
-        if (rnd() < 0.28) add(mo, e, 'ค่ารักษาพยาบาล', 500 + Math.round(rnd() * 15) * 500);
-        // เบี้ยเลี้ยง — สาย field บ่อย
-        if (rnd() < (field ? 0.8 : 0.35)) add(mo, e, 'เบี้ยเลี้ยง', 800 + Math.round(rnd() * 8) * 450);
-        // ค่าน้ำมัน — พขร./ผู้จัดการ
-        if ((pos === 'พนักงานขับรถ' || pos === 'ผู้จัดการ') && rnd() < 0.85)
-          add(mo, e, 'ค่าน้ำมัน', 1500 + Math.round(rnd() * 9) * 500);
-        // ค่าที่พัก — เดินทางค้างคืน
-        if (field && rnd() < 0.22) add(mo, e, 'ค่าที่พัก', 1200 + Math.round(rnd() * 5) * 500);
-        // สวัสดิการอื่นๆ
-        if (rnd() < 0.4) add(mo, e, 'สวัสดิการอื่นๆ', 300 + Math.round(rnd() * 6) * 200);
-        // OT — บันทึกเป็น "จำนวนชั่วโมง" (สาย field ทำ OT บ่อย/มากกว่า)
-        if (rnd() < (field ? 0.7 : 0.4)) add(mo, e, 'OT', Math.round((field ? 6 : 3) + rnd() * (field ? 18 : 8)), 'ชั่วโมง');
-      });
-    });
     var out = { records: recs, source: 'sample', count: recs.length };
     _cache.welfare = JSON.parse(JSON.stringify(out));
     return out;
