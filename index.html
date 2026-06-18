@@ -7,89 +7,139 @@
   <meta name="description" content="แดชบอร์ดสรุปค่าใช้จ่าย OE และสวัสดิการพนักงาน โรงงานผลิตอาหารสัตว์ธารเกษม (CPF)" />
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
-  <link href="https://fonts.googleapis.com/css2?family=Sarabun:wght@300;400;600;700;800&display=swap" rel="stylesheet" />
+  <link href="https://fonts.googleapis.com/css2?family=Sarabun:wght@300;400;500;600;700;800&display=swap" rel="stylesheet" />
   <style>
     * { box-sizing: border-box; margin: 0; padding: 0; }
     body {
       font-family: 'Sarabun', system-ui, sans-serif;
-      background: linear-gradient(160deg, #1B5E20, #2E7D32 55%, #43A047);
-      min-height: 100vh; color: #fff;
+      background: #F4F6F3; color: #16221C;
+      min-height: 100vh; -webkit-font-smoothing: antialiased;
       display: flex; flex-direction: column; align-items: center;
-      padding: 32px 20px 50px;
+      padding: 40px 20px 56px;
     }
-    .home-head { text-align: center; max-width: 760px; margin-bottom: 36px; }
-    .home-logo {
-      width: 78px; height: 78px; border-radius: 20px; margin: 0 auto 18px;
-      background: rgba(255,255,255,.16); border: 1px solid rgba(255,255,255,.3);
-      display: grid; place-items: center; font-size: 30px; font-weight: 800; letter-spacing: 1px;
-      box-shadow: 0 10px 30px rgba(0,0,0,.2);
+    .wrap { width: 100%; max-width: 1000px; }
+
+    /* ---- brand bar ---- */
+    .brand { display: flex; align-items: center; gap: 11px; margin-bottom: 26px; }
+    .brand .logo {
+      width: 40px; height: 40px; border-radius: 10px; background: #00833E; color: #fff;
+      display: grid; place-items: center; font-weight: 800; font-size: 15px; letter-spacing: .5px;
     }
-    .home-head h1 { font-size: 2rem; font-weight: 800; line-height: 1.2; }
-    .home-head .org { font-size: 1.05rem; font-weight: 600; opacity: .95; margin-top: 6px; }
-    .home-head p { font-size: 1rem; font-weight: 300; opacity: .9; margin-top: 12px; }
-    .cards { display: grid; grid-template-columns: repeat(2, minmax(0, 320px)); gap: 22px; width: 100%; max-width: 720px; }
+    .brand .name { font-size: 15px; font-weight: 600; line-height: 1.15; }
+    .brand .name small { display: block; font-size: 11px; font-weight: 400; color: #8A938C; }
+
+    /* ---- hero ---- */
+    .hero {
+      position: relative; overflow: hidden; border-radius: 18px; color: #fff;
+      background: linear-gradient(135deg, #00833E 0%, #00622E 100%);
+      padding: 42px 44px; margin-bottom: 26px;
+    }
+    .hero .blob { position: absolute; border-radius: 50%; }
+    .hero .blob.b1 { right: -40px; top: -40px; width: 220px; height: 220px; background: rgba(255,255,255,.06); }
+    .hero .blob.b2 { right: 90px; bottom: -70px; width: 180px; height: 180px; background: rgba(255,255,255,.05); }
+    .hero .inner { position: relative; }
+    .hero .eyebrow { font-size: 12.5px; letter-spacing: 1px; text-transform: uppercase; opacity: .8; font-weight: 500; }
+    .hero h1 { margin: 10px 0 0; font-size: 32px; font-weight: 600; letter-spacing: -.4px; max-width: 620px; line-height: 1.25; }
+    .hero p { margin: 12px 0 0; font-size: 15px; opacity: .85; max-width: 560px; line-height: 1.6; }
+
+    /* ---- cards ---- */
+    .cards { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; }
     .card {
-      background: #fff; color: #1f2937; border-radius: 20px; padding: 26px 24px;
-      text-decoration: none; box-shadow: 0 14px 40px rgba(0,0,0,.25);
-      display: flex; flex-direction: column; gap: 12px;
-      transition: transform .15s ease, box-shadow .15s ease; position: relative; overflow: hidden;
+      text-align: left; text-decoration: none; color: inherit; cursor: pointer;
+      background: #fff; border: 1px solid #E6E9E5; border-radius: 16px; padding: 28px;
+      display: flex; flex-direction: column; gap: 18px;
+      box-shadow: 0 1px 2px rgba(16,40,28,.04);
+      transition: transform .15s ease, box-shadow .15s ease, border-color .15s ease;
     }
-    .card:hover { transform: translateY(-5px); box-shadow: 0 20px 50px rgba(0,0,0,.32); }
-    .card .c-top { width: 100%; height: 6px; position: absolute; left: 0; top: 0; }
-    .card.oe .c-top { background: #2E7D32; }
-    .card.welfare .c-top { background: #1565C0; }
-    .card .c-icon {
-      width: 56px; height: 56px; border-radius: 15px; display: grid; place-items: center; font-size: 28px;
+    .card:hover { transform: translateY(-3px); box-shadow: 0 12px 30px rgba(16,40,28,.10); border-color: #CFE0D5; }
+    .card .row { display: flex; align-items: center; justify-content: space-between; }
+    .card .tag {
+      display: inline-flex; align-items: center; gap: 8px;
+      font-size: 12px; font-weight: 600; padding: 5px 11px; border-radius: 20px;
     }
-    .card.oe .c-icon { background: #E8F5E9; }
-    .card.welfare .c-icon { background: #E3F2FD; }
-    .card h2 { font-size: 1.3rem; font-weight: 800; }
-    .card.oe h2 { color: #1B5E20; }
-    .card.welfare h2 { color: #0D47A1; }
-    .card p { font-size: .92rem; color: #4b5563; line-height: 1.55; flex: 1; }
-    .card .c-go {
-      align-self: flex-start; margin-top: 4px; font-weight: 700; font-size: .92rem;
-      padding: 9px 18px; border-radius: 10px; color: #fff;
+    .card.oe .tag { color: #00622E; background: #E7F2EB; }
+    .card.welfare .tag { color: #7A5C12; background: #F6EFD9; }
+    .card .arrow { color: #00833E; font-size: 20px; line-height: 1; transition: transform .15s ease; }
+    .card:hover .arrow { transform: translateX(4px); }
+    .card .title { font-size: 20px; font-weight: 600; letter-spacing: -.2px; margin-bottom: 7px; }
+    .card .desc { font-size: 13.5px; color: #6B7670; line-height: 1.6; }
+    .card .stats { display: flex; gap: 26px; padding-top: 16px; border-top: 1px solid #EEF1ED; }
+    .card .stats .v { font-size: 21px; font-weight: 700; color: #16221C; letter-spacing: -.3px; }
+    .card .stats .l { font-size: 11.5px; color: #8A938C; margin-top: 2px; }
+
+    /* ---- footer note ---- */
+    .note {
+      margin-top: 26px; font-size: 13px; color: #6B7670; line-height: 1.65;
+      background: #fff; border: 1px solid #E6E9E5; border-radius: 12px; padding: 16px 18px;
+      display: flex; gap: 10px; align-items: flex-start;
     }
-    .card.oe .c-go { background: #2E7D32; }
-    .card.welfare .c-go { background: #1565C0; }
-    .home-foot { margin-top: 40px; text-align: center; font-size: .82rem; opacity: .82; max-width: 640px; line-height: 1.6; }
-    .home-foot code { background: rgba(255,255,255,.18); padding: 1px 7px; border-radius: 5px; }
-    @media (max-width: 640px) {
-      .cards { grid-template-columns: 1fr; max-width: 360px; }
-      .home-head h1 { font-size: 1.6rem; }
+    .note .dot { width: 8px; height: 8px; border-radius: 50%; background: #C79A3A; flex: none; margin-top: 6px; }
+    .note code { background: #E9EDE8; padding: 1px 6px; border-radius: 5px; font-family: ui-monospace, monospace; font-size: 12px; }
+
+    @media (max-width: 680px) {
+      body { padding: 28px 16px 40px; }
+      .hero { padding: 32px 26px; }
+      .hero h1 { font-size: 25px; }
+      .cards { grid-template-columns: 1fr; }
     }
   </style>
 </head>
 <body>
-  <div class="home-head">
-    <div class="home-logo">CPF</div>
-    <h1>Dashboard ค่าใช้จ่าย &amp; สวัสดิการ</h1>
-    <div class="org">โรงงานผลิตอาหารสัตว์ธารเกษม</div>
-    <p>เลือกแดชบอร์ดที่ต้องการดู — ข้อมูลปีงบประมาณ พ.ศ. 2569<br />รองรับการดึงข้อมูลสดจาก Google Sheets และ Export PowerPoint</p>
-  </div>
+  <div class="wrap">
+    <div class="brand">
+      <div class="logo">CPF</div>
+      <div class="name">ธารเกษม<small>โรงงานผลิตอาหารสัตว์</small></div>
+    </div>
 
-  <div class="cards">
-    <a class="card oe" href="./oe/">
-      <div class="c-top"></div>
-      <div class="c-icon">💰</div>
-      <h2>Dashboard OE</h2>
-      <p>ค่าใช้จ่ายบริการสำนักงาน (Operating Expense) แยกหมวดคงที่/แปรผัน พร้อมเงินยืมทดรอง รายเดือน Top 5 และ Insights</p>
-      <span class="c-go">เปิดแดชบอร์ด →</span>
-    </a>
+    <section class="hero">
+      <span class="blob b1"></span>
+      <span class="blob b2"></span>
+      <div class="inner">
+        <div class="eyebrow">Dashboard ปีงบประมาณ พ.ศ. 2569</div>
+        <h1>สรุปค่าใช้จ่าย &amp; สวัสดิการพนักงาน</h1>
+        <p>เลือกแดชบอร์ดที่ต้องการดู — รองรับการดึงข้อมูลสดจาก Google Sheets และส่งออกเป็น PowerPoint สำหรับการประชุม</p>
+      </div>
+    </section>
 
-    <a class="card welfare" href="./welfare/">
-      <div class="c-top"></div>
-      <div class="c-icon">🧑‍🤝‍🧑</div>
-      <h2>Dashboard สวัสดิการ</h2>
-      <p>สวัสดิการพนักงาน 22 คน — ค่ารักษาพยาบาล เบี้ยเลี้ยง ค่าน้ำมัน ค่าที่พัก สวัสดิการอื่นๆ และ OT (ชั่วโมงล่วงเวลา) พร้อมตารางรายคน × เดือน</p>
-      <span class="c-go">เปิดแดชบอร์ด →</span>
-    </a>
-  </div>
+    <div class="cards">
+      <a class="card oe" href="./oe/">
+        <div class="row">
+          <span class="tag">Operating Expense</span>
+          <span class="arrow">→</span>
+        </div>
+        <div>
+          <div class="title">Dashboard OE ค่าใช้จ่าย</div>
+          <p class="desc">ค่าใช้จ่ายบริการสำนักงาน แยกหมวดคงที่ / แปรผัน พร้อมเงินยืมทดรอง รายเดือน Top 5 และ Insights</p>
+        </div>
+        <div class="stats">
+          <div><div class="v">12</div><div class="l">หมวดหมู่</div></div>
+          <div><div class="v">6</div><div class="l">เดือน (ต.ค.68–มี.ค.69)</div></div>
+        </div>
+      </a>
 
-  <div class="home-foot">
-    💡 ครั้งแรกจะแสดง <strong>ข้อมูลตัวอย่าง (Demo)</strong> ทันที — เชื่อมข้อมูลจริงได้โดยกดปุ่ม
-    <code>เชื่อม Google Sheets</code> ในแต่ละแดชบอร์ด แล้ววางลิงก์ชีตที่แชร์เป็น "ทุกคนที่มีลิงก์"
+      <a class="card welfare" href="./welfare/">
+        <div class="row">
+          <span class="tag">Employee Welfare</span>
+          <span class="arrow">→</span>
+        </div>
+        <div>
+          <div class="title">Dashboard สวัสดิการ</div>
+          <p class="desc">สวัสดิการพนักงาน 22 คน — ค่ารักษาพยาบาล เบี้ยเลี้ยง ค่าน้ำมัน ค่าที่พัก และ OT พร้อมตารางรายคน × เดือน</p>
+        </div>
+        <div class="stats">
+          <div><div class="v">22</div><div class="l">พนักงาน</div></div>
+          <div><div class="v">5</div><div class="l">ประเภทสวัสดิการ</div></div>
+        </div>
+      </a>
+    </div>
+
+    <div class="note">
+      <span class="dot"></span>
+      <div>
+        ครั้งแรกจะแสดง <strong>ข้อมูลตัวอย่าง (Demo)</strong> ทันที — เชื่อมข้อมูลจริงได้โดยกดปุ่ม
+        <code>เชื่อม Google Sheets</code> ในแต่ละแดชบอร์ด แล้ววางลิงก์ชีตที่แชร์เป็น “ทุกคนที่มีลิงก์”
+      </div>
+    </div>
   </div>
 </body>
 </html>
