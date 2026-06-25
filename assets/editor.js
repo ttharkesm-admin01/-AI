@@ -31,6 +31,12 @@
     ]
   };
 
+  /* หัวคอลัมน์ RAW_DATA (เรียงตาม SCHEMA.cols) สำหรับ Export — แปะลง Google Sheets ได้ทันที */
+  var HEADERS = {
+    oe: ['เดือน', 'หมวดหมู่', 'ประเภท', 'กลุ่ม', 'รายละเอียด', 'จำนวนเงิน', 'ผู้ยืม'],
+    welfare: ['เดือน', 'ชื่อพนักงาน', 'ตำแหน่ง', 'ประเภทสวัสดิการ', 'จำนวนเงิน', 'หมายเหตุ']
+  };
+
   var state = { kind: null, work: [], editIdx: -1, onApply: null, onReset: null };
   var built = false;
 
@@ -49,6 +55,13 @@
           '<button class="x-close" id="ed-close" aria-label="ปิด">&times;</button></div>' +
         '<div class="modal-body">' +
           '<div id="ed-sheet-link" class="help-block" style="margin-bottom:12px"></div>' +
+          '<div class="ed-tools">' +
+            '<span class="ed-tools-label">📦 สำรอง / นำเข้า:</span>' +
+            '<button class="btn btn-light btn-sm" id="ed-exp-xlsx">⬇️ Excel</button>' +
+            '<button class="btn btn-light btn-sm" id="ed-exp-csv">⬇️ CSV</button>' +
+            '<button class="btn btn-light btn-sm" id="ed-imp">📤 นำเข้าไฟล์</button>' +
+            '<input type="file" id="ed-imp-file" accept=".xlsx,.xls,.csv" style="display:none" />' +
+          '</div>' +
           '<div class="ed-grid">' +
             '<div class="ed-formwrap">' +
               '<div class="cb-title" id="ed-form-title">➕ เพิ่มรายการใหม่</div>' +
@@ -82,6 +95,13 @@
     U.el('ed-cancel-row').addEventListener('click', function () { state.editIdx = -1; renderForm(); });
     U.el('ed-save-all').addEventListener('click', saveAll);
     U.el('ed-clear-local').addEventListener('click', clearLocal);
+    U.el('ed-exp-xlsx').addEventListener('click', exportExcel);
+    U.el('ed-exp-csv').addEventListener('click', exportCSV);
+    U.el('ed-imp').addEventListener('click', function () { U.el('ed-imp-file').click(); });
+    U.el('ed-imp-file').addEventListener('change', function (e) {
+      var f = e.target.files[0]; e.target.value = '';
+      if (f) importFile(f);
+    });
     U.el('ed-list').addEventListener('click', function (e) {
       var b = e.target.closest('[data-ed]'); if (!b) return;
       var idx = parseInt(b.getAttribute('data-idx'), 10);
@@ -195,6 +215,60 @@
     } else {
       box.innerHTML = '💡 การแก้ด้านล่างนี้เก็บไว้<strong>เฉพาะในเบราว์เซอร์นี้</strong> (เครื่องอื่นไม่เห็น). ' +
         'อยากให้<strong>หลายคนเห็นพร้อมกันแบบเรียลไทม</strong> ให้กด “🔗 เชื่อม Google Sheets” แล้วแก้ข้อมูลในชีตแทน';
+    }
+  }
+
+  /* ---------- สำรอง (Export) / นำเข้า (Import) ---------- */
+  function fileBase() {
+    return 'CPF_ธารเกษม_' + (state.kind === 'oe' ? 'OE' : 'สวัสดิการ') + '_2569';
+  }
+  function buildAOA() {
+    var cols = DS.SCHEMA[state.kind].cols;
+    var aoa = [HEADERS[state.kind].slice()];
+    state.work.forEach(function (r) {
+      aoa.push(cols.map(function (c) { return r[c] == null ? '' : r[c]; }));
+    });
+    return aoa;
+  }
+  function exportExcel() {
+    if (!state.work.length) { U.toast('ยังไม่มีข้อมูลให้สำรอง', 'err'); return; }
+    if (typeof XLSX === 'undefined') { U.toast('ไลบรารี Excel ยังโหลดไม่เสร็จ ลองใหม่อีกครั้ง', 'err'); return; }
+    var ws = XLSX.utils.aoa_to_sheet(buildAOA());
+    var wb = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(wb, ws, 'RAW_DATA');
+    XLSX.writeFile(wb, fileBase() + '.xlsx');
+    U.toast('ดาวน์โหลดไฟล์ Excel สำรองแล้ว', 'ok');
+  }
+  function csvCell(v) {
+    var s = (v == null ? '' : String(v));
+    return /[",\r\n]/.test(s) ? '"' + s.replace(/"/g, '""') + '"' : s;
+  }
+  function exportCSV() {
+    if (!state.work.length) { U.toast('ยังไม่มีข้อมูลให้สำรอง', 'err'); return; }
+    var csv = buildAOA().map(function (row) { return row.map(csvCell).join(','); }).join('\r\n');
+    var blob = new Blob(['﻿' + csv], { type: 'text/csv;charset=utf-8' });
+    var a = document.createElement('a');
+    a.href = URL.createObjectURL(blob);
+    a.download = fileBase() + '.csv';
+    document.body.appendChild(a); a.click(); document.body.removeChild(a);
+    setTimeout(function () { URL.revokeObjectURL(a.href); }, 1000);
+    U.toast('ดาวน์โหลดไฟล์ CSV สำรองแล้ว', 'ok');
+  }
+  function importFile(file) {
+    if (state.work.length && !confirm('นำเข้าจะแทนที่รายการทั้งหมดในตาราง (' + state.work.length + ' รายการ) ดำเนินการต่อ?')) return;
+    var done = function (records) {
+      if (!records || !records.length) { U.toast('ไม่พบข้อมูลในไฟล์ (ตรวจลำดับคอลัมน์ RAW_DATA)', 'err'); return; }
+      state.work = records.map(function (r) { return Object.assign({}, r); });
+      state.editIdx = -1;
+      renderForm(); renderList();
+      U.toast('นำเข้า ' + records.length + ' รายการแล้ว — ตรวจสอบแล้วกด 💾 บันทึกทั้งหมด', 'ok');
+    };
+    if (/\.csv$/i.test(file.name)) {
+      file.text().then(function (t) { done(DS.normalizeAny(state.kind, DS.parseCSV(t))); })
+        .catch(function (e) { U.toast('อ่าน CSV ไม่สำเร็จ: ' + e.message, 'err'); });
+    } else {
+      DS.fromExcel(state.kind, file).then(function (res) { done(res.records); })
+        .catch(function (e) { U.toast(e.message, 'err'); });
     }
   }
 
