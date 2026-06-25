@@ -15,6 +15,7 @@
     oe: {
       sheetName: 'RAW_DATA',
       storageKey: 'cpf_oe_source',
+      localKey: 'cpf_oe_records',
       // 0:เดือน 1:หมวดหมู่ 2:ประเภท 3:กลุ่ม 4:รายละเอียด 5:จำนวนเงิน 6:ผู้ยืม
       cols: ['month', 'category', 'type', 'group', 'detail', 'amount', 'borrower'],
       amountIndex: 5
@@ -22,6 +23,7 @@
     welfare: {
       sheetName: 'RAW_DATA',
       storageKey: 'cpf_welfare_source',
+      localKey: 'cpf_welfare_records',
       // 0:เดือน 1:ชื่อพนักงาน 2:ตำแหน่ง 3:ประเภทสวัสดิการ 4:จำนวนเงิน 5:หมายเหตุ
       cols: ['month', 'employee', 'position', 'wtype', 'amount', 'note'],
       amountIndex: 4
@@ -72,6 +74,24 @@
     return merged;
   }
   function cfgClear(kind) { localStorage.removeItem(SCHEMA[kind].storageKey); }
+
+  /* ---------------- ข้อมูลที่ผู้ใช้แก้ไขเอง (localStorage) ----------------
+     เก็บ records ที่เพิ่ม/แก้ไข/ลบ ในหน้าเว็บ — ถ้ามี จะใช้แทนข้อมูลต้นทาง
+     (กดล้างเพื่อกลับไปใช้ Google Sheets / Excel / ตัวอย่าง) */
+  function localHas(kind) {
+    try { return !!localStorage.getItem(SCHEMA[kind].localKey); } catch (e) { return false; }
+  }
+  function localGet(kind) {
+    try {
+      var raw = localStorage.getItem(SCHEMA[kind].localKey);
+      var arr = raw ? JSON.parse(raw) : [];
+      return Array.isArray(arr) ? arr : [];
+    } catch (e) { return []; }
+  }
+  function localSet(kind, records) {
+    localStorage.setItem(SCHEMA[kind].localKey, JSON.stringify(records || []));
+  }
+  function localClear(kind) { localStorage.removeItem(SCHEMA[kind].localKey); }
 
   /* ---------------- Google Sheets ---------------- */
   /** รับได้ทั้ง URL เต็มหรือ ID ล้วน -> คืน ID */
@@ -287,6 +307,11 @@
 
   /* ---------------- โหลดอัตโนมัติ: มี config -> Sheets, ไม่มี -> ตัวอย่าง ---------------- */
   function loadAuto(kind) {
+    // ข้อมูลที่ผู้ใช้แก้ไขในเครื่อง (ถ้ามี) มาก่อนเสมอ
+    if (localHas(kind)) {
+      var recs = localGet(kind);
+      return Promise.resolve({ records: recs, source: 'local', count: recs.length });
+    }
     var cfg = cfgGet(kind);
     if (cfg.sheetId) {
       return fromSheets(kind).catch(function (err) {
@@ -477,6 +502,7 @@
   global.DataSource = {
     SCHEMA: SCHEMA,
     config: { get: cfgGet, set: cfgSet, clear: cfgClear },
+    local: { get: localGet, set: localSet, clear: localClear, has: localHas },
     extractSheetId: extractSheetId,
     buildCsvUrl: buildCsvUrl,
     parseCSV: parseCSV,
