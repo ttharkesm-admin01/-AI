@@ -352,6 +352,18 @@ select:focus-visible, input:focus-visible, [tabindex]:focus-visible {
 .ed-fields { display: flex; flex-direction: column; gap: 10px; }
 .ed-fields .field { min-width: 0; }
 .ed-form-actions { margin-top: 12px; display: flex; gap: 8px; }
+.ed-month { display: flex; gap: 6px; }
+.ed-month select { flex: 1; min-width: 0; }
+.ed-listbar { display: flex; gap: 8px; margin-bottom: 8px; }
+.ed-listbar #ed-search { flex: 1; min-width: 0; padding: 7px 10px; border: 1px solid var(--line); border-radius: 8px; font: inherit; }
+.ed-listbar #ed-sort { padding: 7px 8px; border: 1px solid var(--line); border-radius: 8px; font: inherit; background: #fff; }
+.ed-bulk { display: flex; align-items: center; gap: 12px; margin-bottom: 8px; font-size: .82rem; color: var(--muted); }
+.ed-bulk label { display: flex; align-items: center; gap: 6px; cursor: pointer; }
+.ed-bulk #ed-selinfo { color: var(--cpf-dark); font-weight: 600; }
+.ed-bulk .btn { margin-left: auto; }
+.ed-cbcol { width: 32px; text-align: center; }
+.ed-cbcol input { cursor: pointer; }
+.ed-summary { margin-top: 8px; font-size: .82rem; font-weight: 600; color: var(--ink-soft); text-align: right; }
 .ed-actions { white-space: nowrap; }
 .ed-actions .btn { padding: 4px 8px; }
 tr.ed-editing > td { background: var(--cpf-pale); }
