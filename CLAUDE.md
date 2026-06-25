@@ -16,6 +16,7 @@ welfare/index.html      # Dashboard สวัสดิการ (+ OT)
 assets/data.js          # ชั้นข้อมูล: Google Sheets(gviz CSV) / Excel(SheetJS) / demo
 assets/utils.js         # helper: U.* (fmt, เดือนไทย, groupSum ฯลฯ)
 assets/app.js           # โค้ด UI ร่วม: App.* (Chart drawBar/drawDoughnut, modal, esc, debounce)
+assets/editor.js        # โมดอล "จัดการข้อมูล" (เพิ่ม/แก้ไข/ลบ) ใช้ร่วม oe/+welfare/ → DataEditor.open()
 assets/ppt.js           # Export PowerPoint (PptxGenJS โหลด on-demand)
 assets/common.css       # ธีมกลาง
 test/parse.test.js      # เทสต์ parser (รัน `node --test` — ไม่ต้องลง dependency)
@@ -24,6 +25,10 @@ sample-data/*.csv       # ตัวอย่างข้อมูล RAW_DATA
 ```
 
 ## สถาปัตยกรรมข้อมูล (สำคัญ)
+- ลำดับความสำคัญ loadAuto: **ข้อมูลที่แก้ในเครื่อง (localStorage)** → Google Sheets → ตัวอย่าง
+  - แก้ผ่านปุ่ม "✏️ จัดการข้อมูล" (editor.js) → เก็บที่ `DataSource.local` keys `cpf_oe_records`/`cpf_welfare_records` source='local'
+  - สลับแหล่ง (เชื่อม Sheets / อัปโหลด Excel / ใช้ตัวอย่าง) จะ `DataSource.local.clear()` ให้ override หลุดเสมอ
+  - เรียลไทม/หลายคน = ใช้ Google Sheets (แก้ในชีต→รีเฟรช); localStorage = เฉพาะเบราว์เซอร์นั้น
 - โหลดอัตโนมัติ: มี config Google Sheets → ดึงสด, ไม่มี → ข้อมูลตัวอย่าง (demo ใน data.js)
   - demo สวัสดิการ = **ข้อมูลจริงฝังในตัว** (ม.ค.–พ.ค. 2569, 22 คน, 127 records) แปลงจากไฟล์ฟอร์ม wide
 - Fallback: อัปโหลด Excel (.xlsx) ผ่านปุ่ม "🔗 เชื่อม → 📁 อัปโหลด Excel"

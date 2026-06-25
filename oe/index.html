@@ -25,6 +25,7 @@
       <a class="btn btn-ghost btn-sm" href="../welfare/">🧑‍🤝‍🧑 สวัสดิการ</a>
       <button class="btn btn-ghost btn-sm" id="btn-connect">🔗 เชื่อม Google Sheets</button>
       <button class="btn btn-light btn-sm" id="btn-refresh">🔄 รีเฟรช</button>
+      <button class="btn btn-light btn-sm" id="btn-manage">✏️ จัดการข้อมูล</button>
       <button class="btn btn-ppt" id="btn-export">📊 Export PowerPoint</button>
     </div>
   </header>
@@ -216,6 +217,7 @@
   <script src="../assets/utils.js"></script>
   <script src="../assets/data.js"></script>
   <script src="../assets/app.js"></script>
+  <script src="../assets/editor.js"></script>
   <script src="../assets/ppt.js"></script>
   <script>
   (function () {
@@ -256,6 +258,7 @@
       s.className = 'status ' + (lastSource === 'sheets' ? 'ok' : lastSource === 'excel' ? 'ok' : res.fellBack ? 'err' : 'demo');
       if (lastSource === 'sheets') { txt.textContent = 'เชื่อม Google Sheets'; }
       else if (lastSource === 'excel') { txt.textContent = 'ไฟล์ Excel'; }
+      else if (lastSource === 'local') { s.className = 'status ok'; txt.textContent = 'แก้ไขในเครื่อง (เบราว์เซอร์นี้)'; }
       else if (res.fellBack) { s.className = 'status err'; txt.textContent = 'ต่อชีตไม่ได้ — แสดงข้อมูลตัวอย่าง'; }
       else { txt.textContent = 'ข้อมูลตัวอย่าง (Demo)'; }
       info.textContent = '• ' + (res.count || raw.length) + ' รายการ' + (res.fileName ? ' • ' + res.fileName : '');
@@ -459,16 +462,18 @@
       U.el('btn-export').addEventListener('click', function () { openModal('modal-export'); });
       U.el('btn-do-export').addEventListener('click', doExport);
       U.el('btn-connect').addEventListener('click', openConnect);
+      U.el('btn-manage').addEventListener('click', openManage);
 
       U.el('btn-save-src').addEventListener('click', function () {
         var id = DataSource.extractSheetId(U.el('in-sheet').value);
         var tab = U.el('in-tab').value.trim() || 'RAW_DATA';
         if (!id) { U.toast('กรุณาวางลิงก์หรือ Sheet ID', 'err'); return; }
         DataSource.config.set(KIND, { sheetId: id, sheetName: tab });
+        DataSource.local.clear(KIND);
         closeModal('modal-connect'); loadData(true);
       });
       U.el('btn-clear-src').addEventListener('click', function () {
-        DataSource.config.clear(KIND); closeModal('modal-connect'); loadData(false);
+        DataSource.config.clear(KIND); DataSource.local.clear(KIND); closeModal('modal-connect'); loadData(false);
         U.toast('กลับไปใช้ข้อมูลตัวอย่าง', 'ok');
       });
       U.el('btn-upload').addEventListener('click', function () { U.el('file-input').click(); });
@@ -476,7 +481,7 @@
         var f = e.target.files[0]; if (!f) return;
         setStatus('loading', 'กำลังอ่านไฟล์…');
         DataSource.fromExcel(KIND, f).then(function (res) {
-          DataSource.config.clear(KIND); closeModal('modal-connect'); onLoaded(res);
+          DataSource.config.clear(KIND); DataSource.local.clear(KIND); closeModal('modal-connect'); onLoaded(res);
           U.toast('โหลดไฟล์ Excel สำเร็จ', 'ok');
         }).catch(function (err) { U.toast(err.message, 'err'); loadData(false); });
         e.target.value = '';
@@ -490,6 +495,19 @@
       U.el('in-sheet').value = cfg.sheetId ? DataSource.buildCsvUrl(cfg.sheetId, cfg.sheetName).split('/gviz')[0] : '';
       U.el('in-tab').value = cfg.sheetName || 'RAW_DATA';
       openModal('modal-connect');
+    }
+    function openManage() {
+      DataEditor.open({
+        kind: KIND, records: raw,
+        onApply: function (records) {
+          onLoaded({ records: records, source: 'local', count: records.length });
+          U.toast('บันทึกข้อมูลแล้ว (เก็บในเบราว์เซอร์นี้)', 'ok');
+        },
+        onReset: function () {
+          loadData(!!DataSource.config.get(KIND).sheetId);
+          U.toast('ล้างข้อมูลที่แก้ไข กลับไปใช้ข้อมูลต้นทาง', 'ok');
+        }
+      });
     }
     function openModal(id) { App.openModal(id); }
     function closeModal(id) { App.closeModal(id); }

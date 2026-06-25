@@ -344,6 +344,19 @@ select:focus-visible, input:focus-visible, [tabindex]:focus-visible {
   }
 }
 
+/* ---------- Data editor modal ---------- */
+.modal.modal-wide { max-width: 920px; }
+.ed-grid { display: grid; grid-template-columns: 300px 1fr; gap: 18px; }
+.ed-fields { display: flex; flex-direction: column; gap: 10px; }
+.ed-fields .field { min-width: 0; }
+.ed-form-actions { margin-top: 12px; display: flex; gap: 8px; }
+.ed-actions { white-space: nowrap; }
+.ed-actions .btn { padding: 4px 8px; }
+tr.ed-editing > td { background: var(--cpf-pale); }
+@media (max-width: 760px) {
+  .ed-grid { grid-template-columns: 1fr; }
+}
+
 /* ---------- Print ---------- */
 @media print {
   .app-header, .source-bar, .filter-bar, .header-actions, .btn { display: none !important; }
