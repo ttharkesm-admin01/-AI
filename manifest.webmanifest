@@ -1,0 +1,15 @@
+{
+  "name": "CPF ธารเกษม — Dashboard ค่าใช้จ่าย & สวัสดิการ",
+  "short_name": "CPF ธารเกษม",
+  "description": "แดชบอร์ดสรุปค่าใช้จ่าย OE และสวัสดิการพนักงาน โรงงานผลิตอาหารสัตว์ธารเกษม",
+  "lang": "th",
+  "start_url": "./",
+  "scope": "./",
+  "display": "standalone",
+  "orientation": "any",
+  "background_color": "#ffffff",
+  "theme_color": "#2E7D32",
+  "icons": [
+    { "src": "./assets/icon.svg", "sizes": "any", "type": "image/svg+xml", "purpose": "any maskable" }
+  ]
+}
