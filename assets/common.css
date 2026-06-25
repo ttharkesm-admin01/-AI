@@ -346,6 +346,8 @@ select:focus-visible, input:focus-visible, [tabindex]:focus-visible {
 
 /* ---------- Data editor modal ---------- */
 .modal.modal-wide { max-width: 920px; }
+.ed-tools { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; margin-bottom: 14px; }
+.ed-tools-label { font-size: .82rem; font-weight: 600; color: var(--muted); margin-right: 2px; }
 .ed-grid { display: grid; grid-template-columns: 300px 1fr; gap: 18px; }
 .ed-fields { display: flex; flex-direction: column; gap: 10px; }
 .ed-fields .field { min-width: 0; }
