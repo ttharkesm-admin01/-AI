@@ -1,0 +1,8 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" role="img" aria-label="CPF ธารเกษม">
+  <rect width="512" height="512" rx="96" fill="#2E7D32"/>
+  <rect x="56" y="300" width="80" height="140" rx="12" fill="#A5D6A7"/>
+  <rect x="168" y="232" width="80" height="208" rx="12" fill="#FFFFFF"/>
+  <rect x="280" y="280" width="80" height="160" rx="12" fill="#F9A825"/>
+  <rect x="392" y="180" width="80" height="260" rx="12" fill="#FFFFFF"/>
+  <text x="256" y="150" font-family="Arial, sans-serif" font-size="120" font-weight="700" fill="#FFFFFF" text-anchor="middle">CPF</text>
+</svg>

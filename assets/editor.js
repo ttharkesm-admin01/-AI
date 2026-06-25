@@ -433,7 +433,8 @@
   function open(opts) {
     state.kind = opts.kind;
     state.work = (opts.records || []).map(function (r) { return Object.assign({}, r); });
-    state.editIdx = -1;
+    var fi = (typeof opts.focusIndex === 'number' && opts.focusIndex >= 0 && opts.focusIndex < state.work.length) ? opts.focusIndex : -1;
+    state.editIdx = fi;
     state.onApply = opts.onApply;
     state.onReset = opts.onReset;
     state.search = ''; state.sortKey = 'month'; state.sortDir = 'asc';
@@ -445,6 +446,7 @@
     renderForm();
     renderList();
     App.openModal('modal-editor');
+    if (fi >= 0) U.el('ed-form').scrollIntoView({ block: 'nearest' });
   }
 
   global.DataEditor = { open: open };
