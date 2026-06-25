@@ -9,6 +9,9 @@
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
   <link href="https://fonts.googleapis.com/css2?family=Sarabun:wght@300;400;600;700;800&display=swap" rel="stylesheet" />
   <link rel="stylesheet" href="../assets/common.css" />
+  <link rel="manifest" href="../manifest.webmanifest" />
+  <meta name="theme-color" content="#2E7D32" />
+  <link rel="apple-touch-icon" href="../assets/icon.svg" />
 </head>
 <body>
   <header class="app-header">
@@ -270,7 +273,7 @@
 
     function loadData(forceSheets) {
       setStatus('loading', 'กำลังโหลดข้อมูล…');
-      var p = forceSheets ? DataSource.fromSheets(KIND) : DataSource.loadAuto(KIND);
+      var p = forceSheets ? DataSource.fromSheetsCached(KIND) : DataSource.loadAuto(KIND);
       p.then(onLoaded).catch(function (err) {
         var s = DataSource.sample(KIND); s.error = err.message; s.fellBack = true; onLoaded(s);
       });
@@ -279,7 +282,10 @@
       raw = res.records || [];
       lastSource = res.source || 'sample';
       lastUpdated = new Date();
-      if (res.error) U.toast('ดึง Google Sheets ไม่สำเร็จ: ' + res.error, 'err');
+      if (res.error) {
+        if (res.source === 'sheets-cache') U.toast('เน็ตหลุด — แสดงข้อมูลแคชล่าสุด (เปิดดูออฟไลน์ได้)', 'ok');
+        else U.toast('ดึง Google Sheets ไม่สำเร็จ: ' + res.error, 'err');
+      }
       updateStatus(res);
       buildFilters();
       render();
@@ -288,12 +294,15 @@
       var s = U.el('status'), txt = U.el('status-text');
       s.className = 'status ' + (lastSource === 'sheets' || lastSource === 'excel' ? 'ok' : res.fellBack ? 'err' : 'demo');
       if (lastSource === 'sheets') txt.textContent = 'เชื่อม Google Sheets';
+      else if (lastSource === 'sheets-cache') { s.className = 'status err'; txt.textContent = 'Google Sheets (แคชออฟไลน์)'; }
       else if (lastSource === 'excel') txt.textContent = 'ไฟล์ Excel';
       else if (lastSource === 'local') { s.className = 'status ok'; txt.textContent = 'แก้ไขในเครื่อง (เบราว์เซอร์นี้)'; }
       else if (res.fellBack) { s.className = 'status err'; txt.textContent = 'ต่อชีตไม่ได้ — แสดงข้อมูลตัวอย่าง'; }
       else txt.textContent = 'ข้อมูลตัวอย่าง (Demo)';
       U.el('src-info').textContent = '• ' + (res.count || raw.length) + ' รายการ' + (res.fileName ? ' • ' + res.fileName : '');
-      U.el('src-updated').textContent = 'อัปเดต: ' + lastUpdated.toLocaleTimeString('th-TH', { hour: '2-digit', minute: '2-digit' });
+      U.el('src-updated').textContent = res.cachedAt
+        ? 'แคชเมื่อ: ' + new Date(res.cachedAt).toLocaleString('th-TH', { day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit' })
+        : 'อัปเดต: ' + lastUpdated.toLocaleTimeString('th-TH', { hour: '2-digit', minute: '2-digit' });
     }
     function setStatus(cls, text) { U.el('status').className = 'status ' + cls; U.el('status-text').textContent = text; }
 
@@ -631,5 +640,6 @@
     else init();
   })();
   </script>
+  <script>if ('serviceWorker' in navigator) { addEventListener('load', function () { navigator.serviceWorker.register('../sw.js').catch(function () {}); }); }</script>
 </body>
 </html>

@@ -21,6 +21,8 @@ assets/ppt.js           # Export PowerPoint (PptxGenJS โหลด on-demand)
 assets/common.css       # ธีมกลาง
 test/parse.test.js      # เทสต์ parser (รัน `node --test` — ไม่ต้องลง dependency)
 sample-data/*.csv       # ตัวอย่างข้อมูล RAW_DATA
+sw.js                   # Service Worker (PWA) — precache แอปเชลล์ + offline
+manifest.webmanifest    # PWA manifest (ติดตั้งบนมือถือได้) · assets/icon.svg = ไอคอน
 .github/workflows/deploy-pages.yml  # auto-deploy Pages เมื่อ push main
 ```
 
@@ -29,6 +31,9 @@ sample-data/*.csv       # ตัวอย่างข้อมูล RAW_DATA
   - แก้ผ่านปุ่ม "✏️ จัดการข้อมูล" (editor.js) → เก็บที่ `DataSource.local` keys `cpf_oe_records`/`cpf_welfare_records` source='local'
   - สลับแหล่ง (เชื่อม Sheets / อัปโหลด Excel / ใช้ตัวอย่าง) จะ `DataSource.local.clear()` ให้ override หลุดเสมอ
   - เรียลไทม/หลายคน = ใช้ Google Sheets (แก้ในชีต→รีเฟรช); localStorage = เฉพาะเบราว์เซอร์นั้น
+- **แคช Sheets ออฟไลน์:** ดึง Sheets สำเร็จ → เก็บที่ key `*_sheetcache`; เน็ตหลุด `fromSheetsCached()` คืนแคชล่าสุด (source='sheets-cache') ไม่มีแคชค่อยตกไปตัวอย่าง
+- **คลิกแก้จากตาราง:** ตารางรายการดิบ (OE "เงินยืมทดรอง" `tb-adv`) คลิกแถว → `DataEditor.open({focusIndex})` เปิด editor ที่รายการนั้น (เฉพาะตาราง 1:1 ไม่ใช่ยอดรวม)
+- **PWA:** sw.js (network-first สำหรับ navigation, SWR สำหรับ asset, ไม่แตะ docs.google.com) — แก้โค้ดแอปแล้วต้องเพิ่ม `CACHE_VERSION` ใน sw.js
 - โหลดอัตโนมัติ: มี config Google Sheets → ดึงสด, ไม่มี → ข้อมูลตัวอย่าง (demo ใน data.js)
   - demo สวัสดิการ = **ข้อมูลจริงฝังในตัว** (ม.ค.–พ.ค. 2569, 22 คน, 127 records) แปลงจากไฟล์ฟอร์ม wide
 - Fallback: อัปโหลด Excel (.xlsx) ผ่านปุ่ม "🔗 เชื่อม → 📁 อัปโหลด Excel"

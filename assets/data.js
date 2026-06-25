@@ -93,6 +93,16 @@
   }
   function localClear(kind) { localStorage.removeItem(SCHEMA[kind].localKey); }
 
+  /* ---------------- แคชข้อมูล Sheets (สำหรับเปิดดูออฟไลน์เมื่อเน็ตหลุด) ----------------
+     เก็บผลดึง Sheets ครั้งล่าสุด แยกจาก local override (ผู้ใช้แก้เอง) */
+  function cacheKey(kind) { return SCHEMA[kind].localKey + '_sheetcache'; }
+  function cacheSet(kind, records) {
+    try { localStorage.setItem(cacheKey(kind), JSON.stringify({ records: records, ts: Date.now() })); } catch (e) { /* เต็ม/ปิด storage */ }
+  }
+  function cacheGet(kind) {
+    try { var r = localStorage.getItem(cacheKey(kind)); return r ? JSON.parse(r) : null; } catch (e) { return null; }
+  }
+
   /* ---------------- Google Sheets ---------------- */
   /** รับได้ทั้ง URL เต็มหรือ ID ล้วน -> คืน ID */
   function extractSheetId(input) {
@@ -259,8 +269,20 @@
         var rows = parseCSV(text);
         var records = normalizeAny(kind, rows);
         if (!records.length) throw new Error('ไม่พบข้อมูลในแท็บ "' + sheetName + '" (ตรวจสอบลำดับคอลัมน์ RAW_DATA)');
+        cacheSet(kind, records); // เก็บไว้เปิดดูออฟไลน์ครั้งหน้า
         return { records: records, source: 'sheets', sheetName: sheetName, count: records.length };
       });
+  }
+
+  /* ดึง Sheets; ถ้าล้มเหลว (เน็ตหลุด ฯลฯ) ใช้แคชล่าสุดแทน — ไม่มีแคชค่อยโยน error ต่อ */
+  function fromSheetsCached(kind) {
+    return fromSheets(kind).catch(function (err) {
+      var cached = cacheGet(kind);
+      if (cached && cached.records && cached.records.length) {
+        return { records: cached.records, source: 'sheets-cache', count: cached.records.length, error: err.message, fellBack: true, cachedAt: cached.ts };
+      }
+      throw err;
+    });
   }
 
   function fromExcel(kind, file) {
@@ -314,8 +336,8 @@
     }
     var cfg = cfgGet(kind);
     if (cfg.sheetId) {
-      return fromSheets(kind).catch(function (err) {
-        // ล้มเหลว -> ตกไปใช้ตัวอย่าง พร้อมแจ้ง error
+      return fromSheetsCached(kind).catch(function (err) {
+        // ล้มเหลวและไม่มีแคช -> ตกไปใช้ตัวอย่าง พร้อมแจ้ง error
         var s = sample(kind);
         s.error = err.message || String(err);
         s.fellBack = true;
@@ -509,6 +531,7 @@
     normalize: normalize,
     normalizeAny: normalizeAny,
     fromSheets: fromSheets,
+    fromSheetsCached: fromSheetsCached,
     fromExcel: fromExcel,
     loadAuto: loadAuto,
     sample: sample

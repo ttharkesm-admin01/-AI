@@ -367,6 +367,8 @@ select:focus-visible, input:focus-visible, [tabindex]:focus-visible {
 .ed-actions { white-space: nowrap; }
 .ed-actions .btn { padding: 4px 8px; }
 tr.ed-editing > td { background: var(--cpf-pale); }
+tr.ed-rowlink { cursor: pointer; }
+tr.ed-rowlink:hover > td { background: var(--cpf-pale); }
 @media (max-width: 760px) {
   .ed-grid { grid-template-columns: 1fr; }
 }
