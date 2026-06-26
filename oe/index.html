@@ -242,55 +242,21 @@
   (function () {
     'use strict';
     var KIND = 'oe';
-    var raw = [], filtered = [], lastSource = 'sample', lastUpdated = null;
-    var charts = {};
+    var raw = [], filtered = [], charts = {}, _lastAgg = null;
     var debouncedRender = App.debounce(render, 120);
+    var dash = App.dashboardSetup(KIND, {
+      getRaw: function () { return raw; },
+      onRaw: function (r) { raw = r; },
+      buildFilters: buildFilters,
+      render: render,
+      debouncedRender: function () { debouncedRender(); }
+    });
 
     function init() {
       App.applyChartDefaults();
       App.installModalKeytrap();
       bindEvents();
-      loadData(false);
-    }
-
-    /* ---------- Load ---------- */
-    function loadData(forceSheets) {
-      setStatus('loading', 'กำลังโหลดข้อมูล…');
-      var p = forceSheets ? DataSource.fromSheetsCached(KIND) : DataSource.loadAuto(KIND);
-      p.then(onLoaded).catch(function (err) {
-        var s = DataSource.sample(KIND); s.error = err.message; s.fellBack = true; onLoaded(s);
-      });
-    }
-    function onLoaded(res) {
-      raw = res.records || [];
-      lastSource = res.source || 'sample';
-      lastUpdated = new Date();
-      if (res.error) {
-        if (res.source === 'sheets-cache') U.toast('เน็ตหลุด — แสดงข้อมูลแคชล่าสุด (เปิดดูออฟไลน์ได้)', 'ok');
-        else U.toast('ดึง Google Sheets ไม่สำเร็จ: ' + res.error, 'err');
-      }
-      updateStatus(res);
-      buildFilters();
-      render();
-    }
-
-    function updateStatus(res) {
-      var s = U.el('status'), txt = U.el('status-text');
-      var info = U.el('src-info'), upd = U.el('src-updated');
-      s.className = 'status ' + (lastSource === 'sheets' ? 'ok' : lastSource === 'excel' ? 'ok' : res.fellBack ? 'err' : 'demo');
-      if (lastSource === 'sheets') { txt.textContent = 'เชื่อม Google Sheets'; }
-      else if (lastSource === 'sheets-cache') { s.className = 'status err'; txt.textContent = 'Google Sheets (แคชออฟไลน์)'; }
-      else if (lastSource === 'excel') { txt.textContent = 'ไฟล์ Excel'; }
-      else if (lastSource === 'local') { s.className = 'status ok'; txt.textContent = 'แก้ไขในเครื่อง (เบราว์เซอร์นี้)'; }
-      else if (res.fellBack) { s.className = 'status err'; txt.textContent = 'ต่อชีตไม่ได้ — แสดงข้อมูลตัวอย่าง'; }
-      else { txt.textContent = 'ข้อมูลตัวอย่าง (Demo)'; }
-      info.textContent = '• ' + (res.count || raw.length) + ' รายการ' + (res.fileName ? ' • ' + res.fileName : '');
-      upd.textContent = res.cachedAt
-        ? 'แคชเมื่อ: ' + new Date(res.cachedAt).toLocaleString('th-TH', { day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit' })
-        : 'อัปเดต: ' + lastUpdated.toLocaleTimeString('th-TH', { hour: '2-digit', minute: '2-digit' });
-    }
-    function setStatus(cls, text) {
-      var s = U.el('status'); s.className = 'status ' + cls; U.el('status-text').textContent = text;
+      dash.loadData(false);
     }
 
     /* ---------- Filters ---------- */
@@ -299,15 +265,7 @@
       var curYear = U.el('f-year').value;
       U.fillSelect(U.el('f-year'), years, { allLabel: 'ทุกปี' });
       if (years.indexOf(curYear) >= 0) U.el('f-year').value = curYear;
-      buildMonthFilter();
-    }
-    function buildMonthFilter() {
-      var y = U.el('f-year').value;
-      var ms = U.uniqSorted(raw.filter(function (r) { return !y || U.yearOf(r.month) === y; })
-        .map(function (r) { return r.month; }));
-      var cur = U.el('f-month').value;
-      U.fillSelect(U.el('f-month'), ms, { allLabel: 'ทุกเดือน', label: U.monthLabelFull });
-      if (ms.indexOf(cur) >= 0) U.el('f-month').value = cur;
+      dash.buildMonthFilter();
     }
     function applyFilters() {
       var y = U.el('f-year').value, m = U.el('f-month').value, t = U.el('f-type').value;
@@ -324,18 +282,16 @@
       applyFilters();
       var exp = filtered.filter(function (r) { return r.type === 'ค่าใช้จ่าย'; });
       var adv = filtered.filter(function (r) { return r.type === 'เงินยืมทดรอง'; });
-
       var totalExp = U.sumBy(exp, 'amount'), totalAdv = U.sumBy(adv, 'amount');
       var grand = totalExp + totalAdv;
       var cats = U.uniqSorted(exp.map(function (r) { return r.category; }));
-      // คำนวณ aggregate ที่ใช้ซ้ำในหลายส่วน "ครั้งเดียว" แล้วส่งต่อ
       var agg = {
         byCat: U.groupSum(exp, 'category', 'amount'),
         byMonth: U.groupSum(exp, 'month', 'amount'),
         fixed: U.sumBy(exp.filter(function (r) { return r.group === 'คงที่'; }), 'amount')
       };
+      _lastAgg = { exp: exp, adv: adv, totalExp: totalExp, totalAdv: totalAdv, grand: grand, cats: cats, agg: agg };
 
-      // KPI
       U.el('kpi-exp').innerHTML = U.fmt(totalExp) + ' <span class="unit">฿</span>';
       U.el('kpi-exp-sub').textContent = U.fmtShort(totalExp) + ' บาท';
       U.el('kpi-adv').innerHTML = U.fmt(totalAdv) + ' <span class="unit">฿</span>';
@@ -361,18 +317,15 @@
       U.el('m-var').textContent = U.fmtShort(variable);
       U.el('m-peak').textContent = peak ? U.monthLabel(peak.key) : '–';
 
-      // donut fixed vs variable
       drawDoughnut('c-exp-donut', ['คงที่', 'แปรผัน'], [fixed, variable], ['#2E7D32', '#F9A825']);
-      // bar by month
       drawBar('c-exp-bar', monthsArr.map(U.monthLabel), monthsArr.map(function (m) { return byMonth[m]; }), '#2E7D32', 'ค่าใช้จ่าย');
 
-      // top5
       var top5 = U.toSortedPairs(agg.byCat).slice(0, 5);
       var tb = U.el('tb-top5');
       tb.innerHTML = top5.length ? top5.map(function (p) {
-        return '<tr><td>' + esc(p.key) + '</td><td class="num">' + U.fmt(p.value) +
+        return '<tr><td>' + App.esc(p.key) + '</td><td class="num">' + U.fmt(p.value) +
           '</td><td class="num">' + U.pct(p.value, totalExp) + '%</td></tr>';
-      }).join('') : emptyRow(3);
+      }).join('') : App.emptyRow(3);
     }
 
     function renderAdvances(adv, totalAdv) {
@@ -390,9 +343,9 @@
       var rows = adv.slice().sort(function (a, b) { return U.cmpMonth(a.month, b.month) || b.amount - a.amount; });
       var tb = U.el('tb-adv');
       tb.innerHTML = rows.length ? rows.map(function (r) {
-        return '<tr class="ed-rowlink" data-raw-idx="' + raw.indexOf(r) + '" title="คลิกเพื่อแก้ไขรายการนี้"><td>' + U.monthLabel(r.month) + '</td><td>' + esc(r.detail || '-') +
-          '</td><td>' + esc(r.borrower || '-') + '</td><td class="num">' + U.fmt(r.amount) + '</td></tr>';
-      }).join('') : emptyRow(4);
+        return '<tr class="ed-rowlink" data-raw-idx="' + raw.indexOf(r) + '" title="คลิกเพื่อแก้ไขรายการนี้"><td>' + U.monthLabel(r.month) + '</td><td>' + App.esc(r.detail || '-') +
+          '</td><td>' + App.esc(r.borrower || '-') + '</td><td class="num">' + U.fmt(r.amount) + '</td></tr>';
+      }).join('') : App.emptyRow(4);
     }
 
     function renderInsights(exp, adv, totalExp, totalAdv, agg) {
@@ -403,10 +356,10 @@
       var topBorrower = U.toSortedPairs(U.groupSum(adv, 'borrower', 'amount'))[0];
 
       var cards = [
-        { cls: '', icon: '💸', title: 'หมวดใช้จ่ายสูงสุด', text: topCat ? esc(topCat.key) : '–', sub: topCat ? U.fmt(topCat.value) + ' ฿' : '' },
+        { cls: '', icon: '💸', title: 'หมวดใช้จ่ายสูงสุด', text: topCat ? App.esc(topCat.key) : '–', sub: topCat ? U.fmt(topCat.value) + ' ฿' : '' },
         { cls: 'amber', icon: '⚖️', title: 'สัดส่วน คงที่ : แปรผัน', text: U.pct(fixed, totalExp) + '% : ' + U.pct(variable, totalExp) + '%', sub: 'คงที่ ' + U.fmtShort(fixed) + ' / แปรผัน ' + U.fmtShort(variable) },
         { cls: 'teal', icon: '📈', title: 'เดือนใช้จ่ายสูงสุด', text: peak ? U.monthLabelFull(peak.key) : '–', sub: peak ? U.fmt(peak.value) + ' ฿' : '' },
-        { cls: 'b', icon: '🤝', title: 'ผู้ยืมทดรองสูงสุด', text: topBorrower ? esc(topBorrower.key) : '–', sub: topBorrower ? U.fmt(topBorrower.value) + ' ฿' : 'ไม่มีรายการ' }
+        { cls: 'b', icon: '🤝', title: 'ผู้ยืมทดรองสูงสุด', text: topBorrower ? App.esc(topBorrower.key) : '–', sub: topBorrower ? U.fmt(topBorrower.value) + ' ฿' : 'ไม่มีรายการ' }
       ];
       U.el('insights').innerHTML = cards.map(function (c) {
         return '<div class="insight ' + c.cls + '"><div class="i-icon">' + c.icon + '</div>' +
@@ -415,19 +368,19 @@
       }).join('');
     }
 
-    /* ---------- Charts (ใช้ตัวร่วมใน app.js) ---------- */
+    /* ---------- Charts ---------- */
     function drawDoughnut(id, labels, data, colors) { App.drawDoughnut(charts, id, labels, data, colors); }
     function drawBar(id, labels, data, color, label) { App.drawBar(charts, id, labels, data, color, label); }
 
     /* ---------- Export PPT ---------- */
     function doExport() {
-      var exp = filtered.filter(function (r) { return r.type === 'ค่าใช้จ่าย'; });
-      var adv = filtered.filter(function (r) { return r.type === 'เงินยืมทดรอง'; });
-      var totalExp = U.sumBy(exp, 'amount'), totalAdv = U.sumBy(adv, 'amount'), grand = totalExp + totalAdv;
-      var fixed = U.sumBy(exp.filter(function (r) { return r.group === 'คงที่'; }), 'amount');
-      var top5 = U.toSortedPairs(U.groupSum(exp, 'category', 'amount')).slice(0, 5);
+      var d = _lastAgg; if (!d) return;
+      var exp = d.exp, adv = d.adv, totalExp = d.totalExp, totalAdv = d.totalAdv, grand = d.grand;
+      var fixed = d.agg.fixed;
+      var top5 = U.toSortedPairs(d.agg.byCat).slice(0, 5);
       var advRows = adv.slice().sort(function (a, b) { return b.amount - a.amount; }).slice(0, 12);
-      var period = periodLabel();
+      var period = dash.periodLabel(filtered);
+      var src = dash.getLastSource();
 
       var deck = {
         org: 'CPF ธารเกษม', period: period, title: 'Dashboard OE',
@@ -440,9 +393,9 @@
               { label: 'ค่าใช้จ่าย OE รวม', value: U.fmt(totalExp) + ' ฿', color: '2E7D32' },
               { label: 'เงินยืมทดรอง', value: U.fmt(totalAdv) + ' ฿', color: '1565C0' },
               { label: 'รวมทั้งสิ้น', value: U.fmt(grand) + ' ฿', color: 'F9A825' },
-              { label: 'จำนวนหมวดหมู่', value: String(U.uniqSorted(exp.map(function (r) { return r.category; })).length), color: '00897B' }
+              { label: 'จำนวนหมวดหมู่', value: String(d.cats.length), color: '00897B' }
             ],
-            note: ['ช่วงเวลา: ' + period, 'สัดส่วนคงที่:แปรผัน = ' + U.pct(fixed, totalExp) + '% : ' + U.pct(totalExp - fixed, totalExp) + '%', 'แหล่งข้อมูล: ' + (lastSource === 'sheets' ? 'Google Sheets' : lastSource === 'excel' ? 'ไฟล์ Excel' : 'ข้อมูลตัวอย่าง')]
+            note: ['ช่วงเวลา: ' + period, 'สัดส่วนคงที่:แปรผัน = ' + U.pct(fixed, totalExp) + '% : ' + U.pct(totalExp - fixed, totalExp) + '%', 'แหล่งข้อมูล: ' + (src === 'sheets' ? 'Google Sheets' : src === 'excel' ? 'ไฟล์ Excel' : 'ข้อมูลตัวอย่าง')]
           },
           {
             layout: 'imageTable', title: 'ค่าใช้จ่าย: สัดส่วน & Top 5',
@@ -460,31 +413,19 @@
 
       var btn = U.el('btn-do-export'); btn.disabled = true; btn.textContent = '⏳ กำลังสร้าง…';
       PPT.export(deck).then(function () {
-        closeModal('modal-export'); U.toast('ดาวน์โหลดไฟล์ PowerPoint สำเร็จ', 'ok');
+        App.closeModal('modal-export'); U.toast('ดาวน์โหลดไฟล์ PowerPoint สำเร็จ', 'ok');
       }).catch(function (e) { U.toast('Export ไม่สำเร็จ: ' + e.message, 'err'); })
         .then(function () { btn.disabled = false; btn.textContent = '⬇️ ดาวน์โหลด .pptx'; });
     }
 
-    function periodLabel() {
-      var ms = U.uniqSorted(filtered.map(function (r) { return r.month; }));
-      if (!ms.length) return 'ปีงบประมาณ พ.ศ. 2569';
-      if (ms.length === 1) return U.monthLabelFull(ms[0]);
-      return 'ปีงบประมาณ พ.ศ. ' + U.yearOf(ms[0]) + ' (' + U.monthLabel(ms[0]) + ' – ' + U.monthLabel(ms[ms.length - 1]) + ')';
-    }
-
     function collectExportData() {
-      var exp = filtered.filter(function (r) { return r.type === 'ค่าใช้จ่าย'; });
-      var adv = filtered.filter(function (r) { return r.type === 'เงินยืมทดรอง'; });
-      var totalExp = U.sumBy(exp, 'amount'), totalAdv = U.sumBy(adv, 'amount'), grand = totalExp + totalAdv;
-      var fixed = U.sumBy(exp.filter(function (r) { return r.group === 'คงที่'; }), 'amount');
-      var variable = totalExp - fixed;
-      var byCat = U.groupSum(exp, 'category', 'amount');
-      var byMonth = U.groupSum(exp, 'month', 'amount');
-      var top5 = U.toSortedPairs(byCat).slice(0, 5);
-      var peak = U.toSortedPairs(byMonth)[0];
+      var d = _lastAgg; if (!d) return {};
+      var exp = d.exp, adv = d.adv, totalExp = d.totalExp, totalAdv = d.totalAdv, grand = d.grand;
+      var fixed = d.agg.fixed, variable = totalExp - fixed;
+      var top5 = U.toSortedPairs(d.agg.byCat).slice(0, 5);
+      var peak = U.toSortedPairs(d.agg.byMonth)[0];
       var advByBorrower = U.toSortedPairs(U.groupSum(adv, 'borrower', 'amount'));
-      var advByMonth = U.groupSum(adv, 'month', 'amount');
-      var advPeak = U.toSortedPairs(advByMonth)[0];
+      var advPeak = U.toSortedPairs(U.groupSum(adv, 'month', 'amount'))[0];
       var ms = U.uniqSorted(filtered.map(function (r) { return r.month; }));
       var periodStr = !ms.length ? 'ปีงบประมาณ พ.ศ. 2569' :
         ms.length === 1 ? U.monthLabelFull(ms[0]) :
@@ -542,93 +483,35 @@
 
     /* ---------- Events ---------- */
     function bindEvents() {
-      U.el('f-year').addEventListener('change', function () { buildMonthFilter(); debouncedRender(); });
+      dash.bindCommonEvents();
       U.el('f-month').addEventListener('change', debouncedRender);
       U.el('f-type').addEventListener('change', debouncedRender);
       U.el('btn-reset').addEventListener('click', function () {
-        U.el('f-year').value = ''; U.el('f-type').value = ''; buildMonthFilter(); U.el('f-month').value = ''; render();
+        U.el('f-year').value = ''; U.el('f-type').value = ''; dash.buildMonthFilter(); U.el('f-month').value = ''; render();
       });
-      U.el('btn-refresh').addEventListener('click', function () {
-        var cfg = DataSource.config.get(KIND);
-        loadData(!!cfg.sheetId);
-      });
-      U.el('btn-export').addEventListener('click', function () { openModal('modal-export'); });
-      U.el('btn-export-img').addEventListener('click', function () { openModal('modal-export-img'); });
+      U.el('btn-export').addEventListener('click', function () { App.openModal('modal-export'); });
+      U.el('btn-export-img').addEventListener('click', function () { App.openModal('modal-export-img'); });
       U.el('btn-dl-jpg').addEventListener('click', function () {
         var btn = U.el('btn-dl-jpg'); btn.disabled = true; btn.textContent = '⏳ กำลังสร้าง…';
         ExportImg.jpg('CPF_OE_2569', collectExportData()).then(function () {
-          closeModal('modal-export-img'); U.toast('ดาวน์โหลด JPG สำเร็จ', 'ok');
+          App.closeModal('modal-export-img'); U.toast('ดาวน์โหลด JPG สำเร็จ', 'ok');
         }).catch(function (e) { U.toast('Export ไม่สำเร็จ: ' + e.message, 'err'); })
           .then(function () { btn.disabled = false; btn.textContent = '⬇️ ดาวน์โหลด JPG'; });
       });
       U.el('btn-dl-pdf').addEventListener('click', function () {
         var btn = U.el('btn-dl-pdf'); btn.disabled = true; btn.textContent = '⏳ กำลังสร้าง…';
         ExportImg.pdf('CPF_OE_2569', collectExportData()).then(function () {
-          closeModal('modal-export-img'); U.toast('ดาวน์โหลด PDF สำเร็จ', 'ok');
+          App.closeModal('modal-export-img'); U.toast('ดาวน์โหลด PDF สำเร็จ', 'ok');
         }).catch(function (e) { U.toast('Export ไม่สำเร็จ: ' + e.message, 'err'); })
           .then(function () { btn.disabled = false; btn.textContent = '📄 ดาวน์โหลด PDF'; });
       });
       U.el('btn-do-export').addEventListener('click', doExport);
-      U.el('btn-connect').addEventListener('click', openConnect);
-      U.el('btn-manage').addEventListener('click', openManage);
       U.el('tb-adv').addEventListener('click', function (e) {
         var tr = e.target.closest('tr[data-raw-idx]'); if (!tr) return;
         var idx = parseInt(tr.getAttribute('data-raw-idx'), 10);
-        if (idx >= 0) openManage(idx);
-      });
-
-      U.el('btn-save-src').addEventListener('click', function () {
-        var id = DataSource.extractSheetId(U.el('in-sheet').value);
-        var tab = U.el('in-tab').value.trim() || 'RAW_DATA';
-        if (!id) { U.toast('กรุณาวางลิงก์หรือ Sheet ID', 'err'); return; }
-        DataSource.config.set(KIND, { sheetId: id, sheetName: tab });
-        DataSource.local.clear(KIND);
-        closeModal('modal-connect'); loadData(true);
-      });
-      U.el('btn-clear-src').addEventListener('click', function () {
-        DataSource.config.clear(KIND); DataSource.local.clear(KIND); closeModal('modal-connect'); loadData(false);
-        U.toast('กลับไปใช้ข้อมูลตัวอย่าง', 'ok');
-      });
-      U.el('btn-upload').addEventListener('click', function () { U.el('file-input').click(); });
-      U.el('file-input').addEventListener('change', function (e) {
-        var f = e.target.files[0]; if (!f) return;
-        setStatus('loading', 'กำลังอ่านไฟล์…');
-        DataSource.fromExcel(KIND, f).then(function (res) {
-          DataSource.config.clear(KIND); DataSource.local.clear(KIND); closeModal('modal-connect'); onLoaded(res);
-          U.toast('โหลดไฟล์ Excel สำเร็จ', 'ok');
-        }).catch(function (err) { U.toast(err.message, 'err'); loadData(false); });
-        e.target.value = '';
-      });
-
-      U.$$('[data-close]').forEach(function (b) { b.addEventListener('click', function () { closeModal(b.closest('.modal-overlay').id); }); });
-      U.$$('.modal-overlay').forEach(function (o) { o.addEventListener('click', function (e) { if (e.target === o) closeModal(o.id); }); });
-    }
-    function openConnect() {
-      var cfg = DataSource.config.get(KIND);
-      U.el('in-sheet').value = cfg.sheetId ? DataSource.buildCsvUrl(cfg.sheetId, cfg.sheetName).split('/gviz')[0] : '';
-      U.el('in-tab').value = cfg.sheetName || 'RAW_DATA';
-      openModal('modal-connect');
-    }
-    function openManage(focusIndex) {
-      DataEditor.open({
-        kind: KIND, records: raw,
-        focusIndex: (typeof focusIndex === 'number' ? focusIndex : -1),
-        onApply: function (records) {
-          onLoaded({ records: records, source: 'local', count: records.length });
-          U.toast('บันทึกข้อมูลแล้ว (เก็บในเบราว์เซอร์นี้)', 'ok');
-        },
-        onReset: function () {
-          loadData(!!DataSource.config.get(KIND).sheetId);
-          U.toast('ล้างข้อมูลที่แก้ไข กลับไปใช้ข้อมูลต้นทาง', 'ok');
-        }
+        if (idx >= 0) dash.openManage(idx);
       });
     }
-    function openModal(id) { App.openModal(id); }
-    function closeModal(id) { App.closeModal(id); }
-
-    /* ---------- Utils (ใช้ตัวร่วมใน app.js) ---------- */
-    function esc(s) { return App.esc(s); }
-    function emptyRow(cols) { return App.emptyRow(cols); }
 
     if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', init);
     else init();
