@@ -157,12 +157,30 @@
     _toastTimer = setTimeout(function () { t.classList.remove('show'); }, 3200);
   }
 
+  /** ดาวน์โหลดข้อมูลเป็น Excel (.xlsx) — ต้องโหลด XLSX library ก่อน */
+  function exportExcel(headers, rows, filename) {
+    if (!window.XLSX) { toast('ไลบรารี XLSX ยังไม่พร้อม', 'err'); return; }
+    var ws = XLSX.utils.aoa_to_sheet([headers].concat(rows));
+    var wb = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(wb, ws, 'RAW_DATA');
+    XLSX.writeFile(wb, filename);
+  }
+
+  /** วันที่ปัจจุบันรูปแบบ DD-MM-YYYY สำหรับชื่อไฟล์ */
+  function fileDate() {
+    var d = new Date();
+    var dd = String(d.getDate()).padStart(2, '0');
+    var mm = String(d.getMonth() + 1).padStart(2, '0');
+    return dd + '-' + mm + '-' + d.getFullYear();
+  }
+
   global.U = {
     TH_MONTH_FULL: TH_MONTH_FULL, TH_MONTH_ABBR: TH_MONTH_ABBR,
     parseNumber: parseNumber, fmt: fmt, fmtBaht: fmtBaht, fmtShort: fmtShort, pct: pct,
     yearOf: yearOf, monthNumOf: monthNumOf, monthLabel: monthLabel, monthLabelFull: monthLabelFull,
     cmpMonth: cmpMonth, uniqSorted: uniqSorted, sumBy: sumBy, groupSum: groupSum, toSortedPairs: toSortedPairs,
     palette: palette, PALETTE_GREEN: PALETTE_GREEN, PALETTE_BLUE: PALETTE_BLUE, PALETTE_MIX: PALETTE_MIX,
-    $: $, $$: $$, el: el, fillSelect: fillSelect, toast: toast
+    $: $, $$: $$, el: el, fillSelect: fillSelect, toast: toast,
+    exportExcel: exportExcel, fileDate: fileDate
   };
 })(window);

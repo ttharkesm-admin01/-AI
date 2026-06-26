@@ -31,6 +31,7 @@
       <button class="btn btn-light btn-sm" id="btn-manage">✏️ จัดการข้อมูล</button>
       <button class="btn btn-ppt" id="btn-export">📊 Export PowerPoint</button>
       <button class="btn btn-light btn-sm" id="btn-export-img">🖼️ ส่งออก JPG/PDF</button>
+      <button class="btn btn-light btn-sm" id="btn-export-data">📋 ส่งออก Excel</button>
     </div>
   </header>
 
@@ -635,6 +636,15 @@
           .then(function () { btn.disabled = false; btn.textContent = '📄 ดาวน์โหลด PDF'; });
       });
       U.el('btn-do-export').addEventListener('click', doExport);
+      U.el('btn-export-data').addEventListener('click', function () {
+        if (!filtered.length) { U.toast('ไม่มีข้อมูลตามตัวกรอง', 'err'); return; }
+        var headers = ['เดือน', 'ชื่อพนักงาน', 'ตำแหน่ง', 'ประเภทสวัสดิการ', 'จำนวน', 'หมายเหตุ'];
+        var rows = filtered.map(function (r) {
+          return [r.month, r.employee || '', r.position || '', r.wtype || '', r.amount, r.note || ''];
+        });
+        U.exportExcel(headers, rows, 'CPF_Welfare_' + U.fileDate() + '.xlsx');
+        U.toast('ดาวน์โหลด Excel สำเร็จ', 'ok');
+      });
     }
 
     if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', init);
