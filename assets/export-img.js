@@ -25,6 +25,10 @@ var ExportImg = (function () {
     return d;
   }
 
+  function esc(s) {
+    return String(s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
+  }
+
   function today() {
     return new Date().toLocaleDateString('th-TH', { year: 'numeric', month: '2-digit', day: '2-digit' }).replace(/\//g, '-');
   }
@@ -68,16 +72,16 @@ var ExportImg = (function () {
     var tbl = '<table style="width:100%;border-collapse:collapse;font-size:10px">';
     tbl += '<thead><tr style="background:' + color + '">' +
       heads.map(function (h, i) {
-        return '<th style="padding:4px 6px;color:#fff;font-weight:600;text-align:' + (i > 0 ? 'right' : 'left') + ';white-space:nowrap">' + h + '</th>';
+        return '<th style="padding:4px 6px;color:#fff;font-weight:600;text-align:' + (i > 0 ? 'right' : 'left') + ';white-space:nowrap">' + esc(h) + '</th>';
       }).join('') + '</tr></thead><tbody>';
     rows.forEach(function (row, ri) {
       tbl += '<tr style="background:' + (ri % 2 === 0 ? '#f9fafb' : '#fff') + '">' +
         row.map(function (cell, ci) {
-          return '<td style="padding:4px 6px;border-bottom:1px solid #f3f4f6;text-align:' + (ci > 0 ? 'right' : 'left') + ';max-width:110px;overflow:hidden;white-space:nowrap;text-overflow:ellipsis">' + cell + '</td>';
+          return '<td style="padding:4px 6px;border-bottom:1px solid #f3f4f6;text-align:' + (ci > 0 ? 'right' : 'left') + ';max-width:110px;overflow:hidden;white-space:nowrap;text-overflow:ellipsis">' + esc(cell) + '</td>';
         }).join('') + '</tr>';
     });
     tbl += '</tbody></table>';
-    wrap.innerHTML += tbl;
+    wrap.insertAdjacentHTML('beforeend', tbl);
     return wrap;
   }
 
@@ -95,8 +99,8 @@ var ExportImg = (function () {
     p.miniKpis.forEach(function (m, i) {
       mkRow.appendChild(mk('div',
         'padding:9px 12px;flex:1' + (i < p.miniKpis.length - 1 ? ';border-right:1px solid ' + LINE : ''),
-        '<div style="font-size:10px;color:' + MUTED + ';margin-bottom:2px">' + m.label + '</div>' +
-        '<div style="font-size:12.5px;font-weight:700;color:' + INK + '">' + m.value + '</div>'
+        '<div style="font-size:10px;color:' + MUTED + ';margin-bottom:2px">' + esc(m.label) + '</div>' +
+        '<div style="font-size:12.5px;font-weight:700;color:' + INK + '">' + esc(m.value) + '</div>'
       ));
     });
     panel.appendChild(mkRow);
@@ -141,7 +145,7 @@ var ExportImg = (function () {
       var insGrid = mk('div', 'display:grid;grid-template-columns:repeat(' + cols + ',1fr);gap:10px');
       cfg.insights.forEach(function (ins) {
         insGrid.appendChild(mk('div', 'font-size:11px;color:' + INK + ';line-height:1.55',
-          '<span style="background:#e65100;color:#fff;border-radius:4px;padding:1px 5px;font-size:10px;font-weight:700;margin-right:5px">' + ins.num + '</span>' + ins.text
+          '<span style="background:#e65100;color:#fff;border-radius:4px;padding:1px 5px;font-size:10px;font-weight:700;margin-right:5px">' + esc(ins.num) + '</span>' + esc(ins.text)
         ));
       });
       insWrap.appendChild(insGrid);
