@@ -583,6 +583,7 @@
         otSection = {
           title: '⏰ OT Top 3 (ชั่วโมง)',
           totalHours: U.fmt(U.sumBy(otRecs, 'amount')) + ' ชม.',
+          chartImg: charts['c-ot-bar'] ? charts['c-ot-bar'].toBase64Image('image/png', 1) : null,
           months: otMonths.map(function (mc) { return { code: mc, label: U.monthLabel(mc) }; }),
           rows: otTop3.map(function (emp) {
             var bm = {};

@@ -51,11 +51,11 @@ var ExportImg = (function () {
     if (imgSrc) {
       var img = document.createElement('img');
       img.src = imgSrc;
-      img.style.cssText = 'width:100%;height:200px;object-fit:contain;display:block';
+      img.style.cssText = 'width:100%;height:185px;object-fit:fill;display:block;border-radius:4px';
       wrap.appendChild(img);
     } else {
       wrap.appendChild(mk('div',
-        'height:200px;background:#f3f4f6;border-radius:8px;display:flex;align-items:center;justify-content:center;font-size:11px;color:' + MUTED,
+        'height:185px;background:#f3f4f6;border-radius:8px;display:flex;align-items:center;justify-content:center;font-size:11px;color:' + MUTED,
         'ไม่มีข้อมูล'
       ));
     }
@@ -105,12 +105,16 @@ var ExportImg = (function () {
     });
     panel.appendChild(mkRow);
 
-    // 3-column: A (donut), B (bar), C (table)
-    var grid = mk('div', 'display:grid;grid-template-columns:1fr 1fr 1fr;gap:10px;padding:10px;align-items:start');
-    grid.appendChild(chartCell(p.sectionA.title, p.sectionA.chartImg));
-    grid.appendChild(chartCell(p.sectionB.title, p.sectionB.chartImg));
-    grid.appendChild(tableCell(p.sectionC.title, p.sectionC.heads, p.sectionC.rows, p.color));
-    panel.appendChild(grid);
+    // Row 1: charts — donut (1fr) | bar (1.6fr) wider cells → charts get full width
+    var chartRow = mk('div', 'display:grid;grid-template-columns:1fr 1.6fr;gap:8px;padding:10px 10px 6px');
+    chartRow.appendChild(chartCell(p.sectionA.title, p.sectionA.chartImg));
+    chartRow.appendChild(chartCell(p.sectionB.title, p.sectionB.chartImg));
+    panel.appendChild(chartRow);
+
+    // Row 2: table — full panel width
+    var tableRow = mk('div', 'padding:0 10px 10px');
+    tableRow.appendChild(tableCell(p.sectionC.title, p.sectionC.heads, p.sectionC.rows, p.color));
+    panel.appendChild(tableRow);
 
     return panel;
   }
@@ -126,31 +130,48 @@ var ExportImg = (function () {
       wrap.appendChild(mk('div', 'padding:12px;font-size:11px;color:' + MUTED, 'ไม่มีข้อมูล OT'));
       return wrap;
     }
-    var heads = ['#', 'ชื่อพนักงาน', 'ตำแหน่ง']
+
+    // Body: chart (if available) left + Top 3 table right
+    var body = mk('div', 'display:grid;grid-template-columns:' + (ot.chartImg ? '1.8fr 1fr' : '1fr') + ';gap:10px;padding:10px;align-items:start');
+
+    if (ot.chartImg) {
+      var chartWrap = mk('div', 'min-width:0');
+      chartWrap.appendChild(mk('div', 'font-size:10px;font-weight:700;color:#374151;margin-bottom:5px', 'OT รายเดือน (ชม.)'));
+      var ci = document.createElement('img');
+      ci.src = ot.chartImg;
+      ci.style.cssText = 'width:100%;height:155px;object-fit:fill;display:block;border-radius:4px';
+      chartWrap.appendChild(ci);
+      body.appendChild(chartWrap);
+    }
+
+    // Top 3 table
+    var heads = ['#', 'ชื่อพนักงาน']
       .concat(ot.months.map(function (m) { return m.label; }))
       .concat(['รวม (ชม.)']);
-    var tbl = '<table style="width:100%;border-collapse:collapse;font-size:10.5px">';
+    var tbl = '<table style="width:100%;border-collapse:collapse;font-size:10px">';
     tbl += '<thead><tr style="background:' + COLOR + '">' +
       heads.map(function (h, i) {
-        return '<th style="padding:5px 8px;color:#fff;font-weight:600;text-align:' +
-          (i === 0 ? 'center' : i <= 2 ? 'left' : 'right') + ';white-space:nowrap">' + esc(h) + '</th>';
+        return '<th style="padding:4px 6px;color:#fff;font-weight:600;text-align:' +
+          (i === 0 ? 'center' : i === 1 ? 'left' : 'right') + ';white-space:nowrap">' + esc(h) + '</th>';
       }).join('') + '</tr></thead><tbody>';
     ot.rows.forEach(function (row, ri) {
       tbl += '<tr style="background:' + (ri % 2 === 0 ? '#f3e5f5' : '#fff') + '">' +
-        '<td style="padding:5px 8px;text-align:center;font-weight:700;color:' + COLOR + '">' + (ri + 1) + '</td>' +
-        '<td style="padding:5px 8px;font-weight:600">' + esc(row.name) + '</td>' +
-        '<td style="padding:5px 8px;color:' + MUTED + '">' + esc(row.position) + '</td>' +
+        '<td style="padding:4px 6px;text-align:center;font-weight:700;color:' + COLOR + '">' + (ri + 1) + '</td>' +
+        '<td style="padding:4px 6px;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:100px">' + esc(row.name) + '</td>' +
         ot.months.map(function (m) {
           var v = row.byMonth[m.code] || '';
-          return '<td style="padding:5px 8px;text-align:right;color:' + (v ? INK : MUTED) + '">' + esc(v || '–') + '</td>';
+          return '<td style="padding:4px 6px;text-align:right;color:' + (v ? INK : MUTED) + '">' + esc(v || '–') + '</td>';
         }).join('') +
-        '<td style="padding:5px 8px;text-align:right;font-weight:700;color:' + COLOR + '">' + esc(row.total) + '</td>' +
+        '<td style="padding:4px 6px;text-align:right;font-weight:700;color:' + COLOR + '">' + esc(row.total) + '</td>' +
         '</tr>';
     });
     tbl += '</tbody></table>';
-    var inner = mk('div', 'padding:0');
-    inner.insertAdjacentHTML('beforeend', tbl);
-    wrap.appendChild(inner);
+    var tableWrap = mk('div', 'min-width:0');
+    tableWrap.appendChild(mk('div', 'font-size:10px;font-weight:700;color:#374151;margin-bottom:5px', 'Top 3 OT (พนักงาน)'));
+    tableWrap.insertAdjacentHTML('beforeend', tbl);
+    body.appendChild(tableWrap);
+
+    wrap.appendChild(body);
     return wrap;
   }
 
