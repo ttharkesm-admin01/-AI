@@ -276,51 +276,22 @@
     var MEDICAL = 'ค่ารักษาพยาบาล';
     var OTTYPE = 'OT';
     var ALL_TYPES = ['ค่ารักษาพยาบาล', 'เบี้ยเลี้ยง', 'ค่าน้ำมัน', 'ค่าที่พัก', 'สวัสดิการอื่นๆ'];
-    var raw = [], filtered = [], lastSource = 'sample', lastUpdated = null;
-    var charts = {};
+    var raw = [], filtered = [], charts = {}, _lastAgg = null;
     var debouncedRender = App.debounce(render, 120);
+    var dash = App.dashboardSetup(KIND, {
+      getRaw: function () { return raw; },
+      onRaw: function (r) { raw = r; },
+      buildFilters: buildFilters,
+      render: render,
+      debouncedRender: function () { debouncedRender(); }
+    });
 
     function init() {
       App.applyChartDefaults();
       App.installModalKeytrap();
       bindEvents();
-      loadData(false);
+      dash.loadData(false);
     }
-
-    function loadData(forceSheets) {
-      setStatus('loading', 'กำลังโหลดข้อมูล…');
-      var p = forceSheets ? DataSource.fromSheetsCached(KIND) : DataSource.loadAuto(KIND);
-      p.then(onLoaded).catch(function (err) {
-        var s = DataSource.sample(KIND); s.error = err.message; s.fellBack = true; onLoaded(s);
-      });
-    }
-    function onLoaded(res) {
-      raw = res.records || [];
-      lastSource = res.source || 'sample';
-      lastUpdated = new Date();
-      if (res.error) {
-        if (res.source === 'sheets-cache') U.toast('เน็ตหลุด — แสดงข้อมูลแคชล่าสุด (เปิดดูออฟไลน์ได้)', 'ok');
-        else U.toast('ดึง Google Sheets ไม่สำเร็จ: ' + res.error, 'err');
-      }
-      updateStatus(res);
-      buildFilters();
-      render();
-    }
-    function updateStatus(res) {
-      var s = U.el('status'), txt = U.el('status-text');
-      s.className = 'status ' + (lastSource === 'sheets' || lastSource === 'excel' ? 'ok' : res.fellBack ? 'err' : 'demo');
-      if (lastSource === 'sheets') txt.textContent = 'เชื่อม Google Sheets';
-      else if (lastSource === 'sheets-cache') { s.className = 'status err'; txt.textContent = 'Google Sheets (แคชออฟไลน์)'; }
-      else if (lastSource === 'excel') txt.textContent = 'ไฟล์ Excel';
-      else if (lastSource === 'local') { s.className = 'status ok'; txt.textContent = 'แก้ไขในเครื่อง (เบราว์เซอร์นี้)'; }
-      else if (res.fellBack) { s.className = 'status err'; txt.textContent = 'ต่อชีตไม่ได้ — แสดงข้อมูลตัวอย่าง'; }
-      else txt.textContent = 'ข้อมูลตัวอย่าง (Demo)';
-      U.el('src-info').textContent = '• ' + (res.count || raw.length) + ' รายการ' + (res.fileName ? ' • ' + res.fileName : '');
-      U.el('src-updated').textContent = res.cachedAt
-        ? 'แคชเมื่อ: ' + new Date(res.cachedAt).toLocaleString('th-TH', { day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit' })
-        : 'อัปเดต: ' + lastUpdated.toLocaleTimeString('th-TH', { hour: '2-digit', minute: '2-digit' });
-    }
-    function setStatus(cls, text) { U.el('status').className = 'status ' + cls; U.el('status-text').textContent = text; }
 
     /* ---------- Filters ---------- */
     function buildFilters() {
@@ -339,14 +310,7 @@
       U.fillSelect(U.el('f-type'), types, { allLabel: 'ทุกประเภท' });
       if (types.indexOf(ct) >= 0) U.el('f-type').value = ct;
 
-      buildMonthFilter();
-    }
-    function buildMonthFilter() {
-      var y = U.el('f-year').value;
-      var ms = U.uniqSorted(raw.filter(function (r) { return !y || U.yearOf(r.month) === y; }).map(function (r) { return r.month; }));
-      var cur = U.el('f-month').value;
-      U.fillSelect(U.el('f-month'), ms, { allLabel: 'ทุกเดือน', label: U.monthLabelFull });
-      if (ms.indexOf(cur) >= 0) U.el('f-month').value = cur;
+      dash.buildMonthFilter();
     }
     function applyFilters() {
       var y = U.el('f-year').value, m = U.el('f-month').value, e = U.el('f-emp').value, t = U.el('f-type').value;
@@ -362,7 +326,6 @@
     /* ---------- Render ---------- */
     function render() {
       applyFilters();
-      // OT เป็น "ชั่วโมง" แยกออกจากยอดเงินทั้งหมด
       var otRecs = filtered.filter(function (r) { return r.wtype === OTTYPE; });
       var money = filtered.filter(function (r) { return r.wtype !== OTTYPE; });
       var otHours = U.sumBy(otRecs, 'amount');
@@ -372,6 +335,7 @@
       var totalAllow = U.sumBy(allow, 'amount');
       var grand = totalMed + totalAllow;
       var empCount = U.uniqSorted(money.map(function (r) { return r.employee; })).length;
+      _lastAgg = { otRecs: otRecs, money: money, otHours: otHours, med: med, allow: allow, totalMed: totalMed, totalAllow: totalAllow, grand: grand, empCount: empCount };
 
       U.el('kpi-med').innerHTML = U.fmt(totalMed) + ' <span class="unit">฿</span>';
       U.el('kpi-med-sub').textContent = U.pct(totalMed, grand) + '% ของทั้งหมด';
@@ -409,8 +373,8 @@
       var byEmp = U.toSortedPairs(U.groupSum(otRecs, 'employee', 'amount')).slice(0, 10);
       var posOf = {}; otRecs.forEach(function (r) { posOf[r.employee] = r.position; });
       U.el('tb-ot').innerHTML = byEmp.length ? byEmp.map(function (p) {
-        return '<tr><td>' + esc(p.key) + '</td><td>' + esc(posOf[p.key] || '-') + '</td><td class="num">' + U.fmt(p.value) + '</td></tr>';
-      }).join('') : emptyRow(3);
+        return '<tr><td>' + App.esc(p.key) + '</td><td>' + App.esc(posOf[p.key] || '-') + '</td><td class="num">' + U.fmt(p.value) + '</td></tr>';
+      }).join('') : App.emptyRow(3);
     }
 
     function renderMedical(med, grand) {
@@ -427,8 +391,8 @@
       var byEmp = U.toSortedPairs(U.groupSum(med, 'employee', 'amount')).slice(0, 8);
       var posOf = {}; med.forEach(function (r) { posOf[r.employee] = r.position; });
       U.el('tb-med').innerHTML = byEmp.length ? byEmp.map(function (p) {
-        return '<tr><td>' + esc(p.key) + '</td><td>' + esc(posOf[p.key] || '-') + '</td><td class="num">' + U.fmt(p.value) + '</td></tr>';
-      }).join('') : emptyRow(3);
+        return '<tr><td>' + App.esc(p.key) + '</td><td>' + App.esc(posOf[p.key] || '-') + '</td><td class="num">' + U.fmt(p.value) + '</td></tr>';
+      }).join('') : App.emptyRow(3);
     }
 
     function renderAllowances(allow, totalAllow) {
@@ -446,8 +410,8 @@
       drawBar('c-allow-bar', monthsArr.map(U.monthLabel), monthsArr.map(function (m) { return byMonth[m]; }), '#1565C0', 'เบี้ยเลี้ยง & อื่นๆ');
 
       U.el('tb-type').innerHTML = typePairs.length ? typePairs.map(function (p) {
-        return '<tr><td>' + esc(p.key) + '</td><td class="num">' + U.fmt(p.value) + '</td><td class="num">' + U.pct(p.value, totalAllow) + '%</td></tr>';
-      }).join('') : emptyRow(3);
+        return '<tr><td>' + App.esc(p.key) + '</td><td class="num">' + U.fmt(p.value) + '</td><td class="num">' + U.pct(p.value, totalAllow) + '%</td></tr>';
+      }).join('') : App.emptyRow(3);
     }
 
     function buildPivot(records) {
@@ -474,10 +438,10 @@
         p.months.map(function (m) { return '<th class="num">' + U.monthLabel(m) + '</th>'; }).join('') +
         '<th class="num">รวม</th></tr>';
       U.el('pivot-body').innerHTML = p.rows.length ? p.rows.map(function (r) {
-        return '<tr><td>' + esc(r.employee) + '</td><td>' + esc(r.position || '-') + '</td>' +
+        return '<tr><td>' + App.esc(r.employee) + '</td><td>' + App.esc(r.position || '-') + '</td>' +
           p.months.map(function (m) { return '<td class="num">' + (r.m[m] ? U.fmt(r.m[m]) : '-') + '</td>'; }).join('') +
           '<td class="num"><strong>' + U.fmt(r.total) + '</strong></td></tr>';
-      }).join('') : emptyRow(p.months.length + 3);
+      }).join('') : App.emptyRow(p.months.length + 3);
       U.el('pivot-foot').innerHTML = p.rows.length ? '<tr><td colspan="2">รวมทุกคน</td>' +
         p.months.map(function (m) { return '<td class="num">' + U.fmt(p.colTotals[m] || 0) + '</td>'; }).join('') +
         '<td class="num">' + U.fmt(p.grand) + '</td></tr>' : '';
@@ -489,8 +453,8 @@
       var peakMonth = U.toSortedPairs(U.groupSum(all, 'month', 'amount'))[0];
       var avg = empCount ? Math.round(grand / empCount) : 0;
       var cards = [
-        { cls: '', icon: '🏥', title: 'พนักงานค่ารักษาสูงสุด', text: topMedEmp ? esc(topMedEmp.key) : '–', sub: topMedEmp ? U.fmt(topMedEmp.value) + ' ฿' : 'ไม่มีรายการ' },
-        { cls: 'b', icon: '💵', title: 'ประเภทสวัสดิการสูงสุด', text: topType ? esc(topType.key) : '–', sub: topType ? U.fmt(topType.value) + ' ฿' : '' },
+        { cls: '', icon: '🏥', title: 'พนักงานค่ารักษาสูงสุด', text: topMedEmp ? App.esc(topMedEmp.key) : '–', sub: topMedEmp ? U.fmt(topMedEmp.value) + ' ฿' : 'ไม่มีรายการ' },
+        { cls: 'b', icon: '💵', title: 'ประเภทสวัสดิการสูงสุด', text: topType ? App.esc(topType.key) : '–', sub: topType ? U.fmt(topType.value) + ' ฿' : '' },
         { cls: 'teal', icon: '📈', title: 'เดือนจ่ายสวัสดิการสูงสุด', text: peakMonth ? U.monthLabelFull(peakMonth.key) : '–', sub: peakMonth ? U.fmt(peakMonth.value) + ' ฿' : '' },
         { cls: 'amber', icon: '👤', title: 'เฉลี่ยต่อคน', text: U.fmt(avg) + ' ฿', sub: 'จาก ' + empCount + ' คน' }
       ];
@@ -511,17 +475,15 @@
 
     /* ---------- Export ---------- */
     function doExport() {
-      var otRecs = filtered.filter(function (r) { return r.wtype === OTTYPE; });
-      var money = filtered.filter(function (r) { return r.wtype !== OTTYPE; });
-      var med = money.filter(function (r) { return r.wtype === MEDICAL; });
-      var allow = money.filter(function (r) { return r.wtype !== MEDICAL; });
-      var totalMed = U.sumBy(med, 'amount'), totalAllow = U.sumBy(allow, 'amount'), grand = totalMed + totalAllow;
-      var empCount = U.uniqSorted(money.map(function (r) { return r.employee; })).length;
+      var d = _lastAgg; if (!d) return;
+      var otRecs = d.otRecs, money = d.money, med = d.med, allow = d.allow;
+      var totalMed = d.totalMed, totalAllow = d.totalAllow, grand = d.grand, empCount = d.empCount;
       var typePairs = U.toSortedPairs(U.groupSum(allow, 'wtype', 'amount'));
       var topMed = U.toSortedPairs(U.groupSum(med, 'employee', 'amount')).slice(0, 10);
       var posOf = {}; med.forEach(function (r) { posOf[r.employee] = r.position; });
       var pivot = buildPivot(money);
-      var period = periodLabel();
+      var period = dash.periodLabel(filtered);
+      var src = dash.getLastSource();
 
       var deck = {
         org: 'CPF ธารเกษม', period: period, title: 'Dashboard สวัสดิการ',
@@ -536,7 +498,7 @@
               { label: 'รวมทั้งสิ้น', value: U.fmt(grand) + ' ฿', color: 'F9A825' },
               { label: 'พนักงานที่ได้รับ', value: String(empCount) + ' คน', color: '00897B' }
             ],
-            note: ['ช่วงเวลา: ' + period, 'เฉลี่ยต่อคน: ' + U.fmt(empCount ? Math.round(grand / empCount) : 0) + ' บาท', 'แหล่งข้อมูล: ' + (lastSource === 'sheets' ? 'Google Sheets' : lastSource === 'excel' ? 'ไฟล์ Excel' : 'ข้อมูลตัวอย่าง')]
+            note: ['ช่วงเวลา: ' + period, 'เฉลี่ยต่อคน: ' + U.fmt(empCount ? Math.round(grand / empCount) : 0) + ' บาท', 'แหล่งข้อมูล: ' + (src === 'sheets' ? 'Google Sheets' : src === 'excel' ? 'ไฟล์ Excel' : 'ข้อมูลตัวอย่าง')]
           },
           {
             layout: 'imageTable', title: 'ค่ารักษาพยาบาล',
@@ -579,31 +541,19 @@
 
       var btn = U.el('btn-do-export'); btn.disabled = true; btn.textContent = '⏳ กำลังสร้าง…';
       PPT.export(deck).then(function () {
-        closeModal('modal-export'); U.toast('ดาวน์โหลดไฟล์ PowerPoint สำเร็จ', 'ok');
+        App.closeModal('modal-export'); U.toast('ดาวน์โหลดไฟล์ PowerPoint สำเร็จ', 'ok');
       }).catch(function (e) { U.toast('Export ไม่สำเร็จ: ' + e.message, 'err'); })
         .then(function () { btn.disabled = false; btn.textContent = '⬇️ ดาวน์โหลด .pptx'; });
     }
 
-    function periodLabel() {
-      var ms = U.uniqSorted(filtered.map(function (r) { return r.month; }));
-      if (!ms.length) return 'ปีงบประมาณ พ.ศ. 2569';
-      if (ms.length === 1) return U.monthLabelFull(ms[0]);
-      return 'ปีงบประมาณ พ.ศ. ' + U.yearOf(ms[0]) + ' (' + U.monthLabel(ms[0]) + ' – ' + U.monthLabel(ms[ms.length - 1]) + ')';
-    }
-
     function collectWelfareData() {
-      var otRecs = filtered.filter(function (r) { return r.wtype === OTTYPE; });
-      var money = filtered.filter(function (r) { return r.wtype !== OTTYPE; });
-      var med = money.filter(function (r) { return r.wtype === MEDICAL; });
-      var allow = money.filter(function (r) { return r.wtype !== MEDICAL; });
-      var totalMed = U.sumBy(med, 'amount'), totalAllow = U.sumBy(allow, 'amount'), grand = totalMed + totalAllow;
-      var empCount = U.uniqSorted(money.map(function (r) { return r.employee; })).length;
+      var d = _lastAgg; if (!d) return {};
+      var otRecs = d.otRecs, money = d.money, med = d.med, allow = d.allow;
+      var totalMed = d.totalMed, totalAllow = d.totalAllow, grand = d.grand, empCount = d.empCount;
       var topMedEmp = U.toSortedPairs(U.groupSum(med, 'employee', 'amount'));
       var typePairs = U.toSortedPairs(U.groupSum(allow, 'wtype', 'amount'));
-      var byMedMonth = U.groupSum(med, 'month', 'amount');
-      var byAllowMonth = U.groupSum(allow, 'month', 'amount');
-      var medPeak = U.toSortedPairs(byMedMonth)[0];
-      var allowPeak = U.toSortedPairs(byAllowMonth)[0];
+      var medPeak = U.toSortedPairs(U.groupSum(med, 'month', 'amount'))[0];
+      var allowPeak = U.toSortedPairs(U.groupSum(allow, 'month', 'amount'))[0];
       var ms = U.uniqSorted(filtered.map(function (r) { return r.month; }));
       var periodStr = !ms.length ? 'ปีงบประมาณ พ.ศ. 2569' :
         ms.length === 1 ? U.monthLabelFull(ms[0]) :
@@ -662,79 +612,30 @@
 
     /* ---------- Events ---------- */
     function bindEvents() {
-      U.el('f-year').addEventListener('change', function () { buildMonthFilter(); debouncedRender(); });
+      dash.bindCommonEvents();
       ['f-month', 'f-emp', 'f-type'].forEach(function (id) { U.el(id).addEventListener('change', debouncedRender); });
       U.el('btn-reset').addEventListener('click', function () {
         ['f-year', 'f-emp', 'f-type'].forEach(function (id) { U.el(id).value = ''; });
-        buildMonthFilter(); U.el('f-month').value = ''; render();
+        dash.buildMonthFilter(); U.el('f-month').value = ''; render();
       });
-      U.el('btn-refresh').addEventListener('click', function () { loadData(!!DataSource.config.get(KIND).sheetId); });
-      U.el('btn-export').addEventListener('click', function () { openModal('modal-export'); });
-      U.el('btn-export-img').addEventListener('click', function () { openModal('modal-export-img'); });
+      U.el('btn-export').addEventListener('click', function () { App.openModal('modal-export'); });
+      U.el('btn-export-img').addEventListener('click', function () { App.openModal('modal-export-img'); });
       U.el('btn-dl-jpg').addEventListener('click', function () {
         var btn = U.el('btn-dl-jpg'); btn.disabled = true; btn.textContent = '⏳ กำลังสร้าง…';
         ExportImg.jpg('CPF_สวัสดิการ_2569', collectWelfareData()).then(function () {
-          closeModal('modal-export-img'); U.toast('ดาวน์โหลด JPG สำเร็จ', 'ok');
+          App.closeModal('modal-export-img'); U.toast('ดาวน์โหลด JPG สำเร็จ', 'ok');
         }).catch(function (e) { U.toast('Export ไม่สำเร็จ: ' + e.message, 'err'); })
           .then(function () { btn.disabled = false; btn.textContent = '⬇️ ดาวน์โหลด JPG'; });
       });
       U.el('btn-dl-pdf').addEventListener('click', function () {
         var btn = U.el('btn-dl-pdf'); btn.disabled = true; btn.textContent = '⏳ กำลังสร้าง…';
         ExportImg.pdf('CPF_สวัสดิการ_2569', collectWelfareData()).then(function () {
-          closeModal('modal-export-img'); U.toast('ดาวน์โหลด PDF สำเร็จ', 'ok');
+          App.closeModal('modal-export-img'); U.toast('ดาวน์โหลด PDF สำเร็จ', 'ok');
         }).catch(function (e) { U.toast('Export ไม่สำเร็จ: ' + e.message, 'err'); })
           .then(function () { btn.disabled = false; btn.textContent = '📄 ดาวน์โหลด PDF'; });
       });
       U.el('btn-do-export').addEventListener('click', doExport);
-      U.el('btn-connect').addEventListener('click', openConnect);
-      U.el('btn-manage').addEventListener('click', openManage);
-      U.el('btn-save-src').addEventListener('click', function () {
-        var id = DataSource.extractSheetId(U.el('in-sheet').value);
-        var tab = U.el('in-tab').value.trim() || 'RAW_DATA';
-        if (!id) { U.toast('กรุณาวางลิงก์หรือ Sheet ID', 'err'); return; }
-        DataSource.config.set(KIND, { sheetId: id, sheetName: tab });
-        DataSource.local.clear(KIND);
-        closeModal('modal-connect'); loadData(true);
-      });
-      U.el('btn-clear-src').addEventListener('click', function () {
-        DataSource.config.clear(KIND); DataSource.local.clear(KIND); closeModal('modal-connect'); loadData(false); U.toast('กลับไปใช้ข้อมูลตัวอย่าง', 'ok');
-      });
-      U.el('btn-upload').addEventListener('click', function () { U.el('file-input').click(); });
-      U.el('file-input').addEventListener('change', function (e) {
-        var f = e.target.files[0]; if (!f) return;
-        setStatus('loading', 'กำลังอ่านไฟล์…');
-        DataSource.fromExcel(KIND, f).then(function (res) {
-          DataSource.config.clear(KIND); DataSource.local.clear(KIND); closeModal('modal-connect'); onLoaded(res); U.toast('โหลดไฟล์ Excel สำเร็จ', 'ok');
-        }).catch(function (err) { U.toast(err.message, 'err'); loadData(false); });
-        e.target.value = '';
-      });
-      U.$$('[data-close]').forEach(function (b) { b.addEventListener('click', function () { closeModal(b.closest('.modal-overlay').id); }); });
-      U.$$('.modal-overlay').forEach(function (o) { o.addEventListener('click', function (e) { if (e.target === o) closeModal(o.id); }); });
     }
-    function openConnect() {
-      var cfg = DataSource.config.get(KIND);
-      U.el('in-sheet').value = cfg.sheetId ? DataSource.buildCsvUrl(cfg.sheetId, cfg.sheetName).split('/gviz')[0] : '';
-      U.el('in-tab').value = cfg.sheetName || 'RAW_DATA';
-      openModal('modal-connect');
-    }
-    function openManage() {
-      DataEditor.open({
-        kind: KIND, records: raw,
-        onApply: function (records) {
-          onLoaded({ records: records, source: 'local', count: records.length });
-          U.toast('บันทึกข้อมูลแล้ว (เก็บในเบราว์เซอร์นี้)', 'ok');
-        },
-        onReset: function () {
-          loadData(!!DataSource.config.get(KIND).sheetId);
-          U.toast('ล้างข้อมูลที่แก้ไข กลับไปใช้ข้อมูลต้นทาง', 'ok');
-        }
-      });
-    }
-    function openModal(id) { App.openModal(id); }
-    function closeModal(id) { App.closeModal(id); }
-
-    function esc(s) { return App.esc(s); }
-    function emptyRow(cols) { return App.emptyRow(cols); }
 
     if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', init);
     else init();
