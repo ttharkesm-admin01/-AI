@@ -51,7 +51,7 @@ var ExportImg = (function () {
     if (imgSrc) {
       var img = document.createElement('img');
       img.src = imgSrc;
-      img.style.cssText = 'width:100%;height:auto;max-height:145px;object-fit:contain;display:block';
+      img.style.cssText = 'width:100%;height:auto;max-height:200px;object-fit:contain;display:block';
       wrap.appendChild(img);
     } else {
       wrap.appendChild(mk('div',
@@ -115,6 +115,45 @@ var ExportImg = (function () {
     return panel;
   }
 
+  function buildOTSection(ot) {
+    var COLOR = '#6A1B9A';
+    var wrap = mk('div', 'border:1.5px solid #e1bee7;border-radius:12px;overflow:hidden;margin-top:14px');
+    wrap.appendChild(mk('div',
+      'background:' + COLOR + ';color:#fff;padding:8px 14px;font-size:13px;font-weight:700',
+      ot.title + '  <span style="font-size:11px;font-weight:400;opacity:.85">รวม ' + esc(ot.totalHours) + '</span>'
+    ));
+    if (!ot.rows || !ot.rows.length) {
+      wrap.appendChild(mk('div', 'padding:12px;font-size:11px;color:' + MUTED, 'ไม่มีข้อมูล OT'));
+      return wrap;
+    }
+    var heads = ['#', 'ชื่อพนักงาน', 'ตำแหน่ง']
+      .concat(ot.months.map(function (m) { return m.label; }))
+      .concat(['รวม (ชม.)']);
+    var tbl = '<table style="width:100%;border-collapse:collapse;font-size:10.5px">';
+    tbl += '<thead><tr style="background:' + COLOR + '">' +
+      heads.map(function (h, i) {
+        return '<th style="padding:5px 8px;color:#fff;font-weight:600;text-align:' +
+          (i === 0 ? 'center' : i <= 2 ? 'left' : 'right') + ';white-space:nowrap">' + esc(h) + '</th>';
+      }).join('') + '</tr></thead><tbody>';
+    ot.rows.forEach(function (row, ri) {
+      tbl += '<tr style="background:' + (ri % 2 === 0 ? '#f3e5f5' : '#fff') + '">' +
+        '<td style="padding:5px 8px;text-align:center;font-weight:700;color:' + COLOR + '">' + (ri + 1) + '</td>' +
+        '<td style="padding:5px 8px;font-weight:600">' + esc(row.name) + '</td>' +
+        '<td style="padding:5px 8px;color:' + MUTED + '">' + esc(row.position) + '</td>' +
+        ot.months.map(function (m) {
+          var v = row.byMonth[m.code] || '';
+          return '<td style="padding:5px 8px;text-align:right;color:' + (v ? INK : MUTED) + '">' + esc(v || '–') + '</td>';
+        }).join('') +
+        '<td style="padding:5px 8px;text-align:right;font-weight:700;color:' + COLOR + '">' + esc(row.total) + '</td>' +
+        '</tr>';
+    });
+    tbl += '</tbody></table>';
+    var inner = mk('div', 'padding:0');
+    inner.insertAdjacentHTML('beforeend', tbl);
+    wrap.appendChild(inner);
+    return wrap;
+  }
+
   /* ── main template ───────────────────────────────────────── */
   function buildReportDOM(cfg) {
     var root = mk('div',
@@ -136,6 +175,11 @@ var ExportImg = (function () {
     var panels = mk('div', 'display:grid;grid-template-columns:1fr 1fr;gap:14px');
     [cfg.leftPanel, cfg.rightPanel].forEach(function (p) { panels.appendChild(buildPanel(p)); });
     root.appendChild(panels);
+
+    // ─ OT section (optional)
+    if (cfg.otSection) {
+      root.appendChild(buildOTSection(cfg.otSection));
+    }
 
     // ─ Insights
     if (cfg.insights && cfg.insights.length) {
