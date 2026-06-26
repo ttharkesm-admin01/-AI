@@ -591,6 +591,75 @@
       return 'ปีงบประมาณ พ.ศ. ' + U.yearOf(ms[0]) + ' (' + U.monthLabel(ms[0]) + ' – ' + U.monthLabel(ms[ms.length - 1]) + ')';
     }
 
+    function collectWelfareData() {
+      var otRecs = filtered.filter(function (r) { return r.wtype === OTTYPE; });
+      var money = filtered.filter(function (r) { return r.wtype !== OTTYPE; });
+      var med = money.filter(function (r) { return r.wtype === MEDICAL; });
+      var allow = money.filter(function (r) { return r.wtype !== MEDICAL; });
+      var totalMed = U.sumBy(med, 'amount'), totalAllow = U.sumBy(allow, 'amount'), grand = totalMed + totalAllow;
+      var empCount = U.uniqSorted(money.map(function (r) { return r.employee; })).length;
+      var topMedEmp = U.toSortedPairs(U.groupSum(med, 'employee', 'amount'));
+      var typePairs = U.toSortedPairs(U.groupSum(allow, 'wtype', 'amount'));
+      var byMedMonth = U.groupSum(med, 'month', 'amount');
+      var byAllowMonth = U.groupSum(allow, 'month', 'amount');
+      var medPeak = U.toSortedPairs(byMedMonth)[0];
+      var allowPeak = U.toSortedPairs(byAllowMonth)[0];
+      var ms = U.uniqSorted(filtered.map(function (r) { return r.month; }));
+      var periodStr = !ms.length ? 'ปีงบประมาณ พ.ศ. 2569' :
+        ms.length === 1 ? U.monthLabelFull(ms[0]) :
+        'ข้อมูล ' + U.monthLabel(ms[0]) + '–' + U.monthLabel(ms[ms.length - 1]);
+      var avg = empCount ? Math.round(grand / empCount) : 0;
+      return {
+        title: 'แดชบอร์ดสรุปค่าใช้จ่ายสวัสดิการพนักงาน',
+        subtitle: 'โรงงานผลิตอาหารสัตว์ธารเกษม (CPF)  |  ประจำปีงบประมาณ พ.ศ. 2569  (' + periodStr + ')',
+        kpis: [
+          { icon: '🏥', label: 'ค่ารักษาพยาบาล', value: U.fmt(totalMed), unit: 'บาท', sub: U.pct(totalMed, grand) + '% ของทั้งหมด' },
+          { icon: '🚗', label: 'เบี้ยเลี้ยง & อื่นๆ', value: U.fmt(totalAllow), unit: 'บาท', sub: U.pct(totalAllow, grand) + '% ของทั้งหมด' },
+          { icon: '📦', label: 'รวมทั้งสิ้น', value: U.fmt(grand), unit: 'บาท', sub: 'เฉลี่ย ' + U.fmt(avg) + ' ฿/คน' },
+          { icon: '👥', label: 'พนักงานที่ได้รับ', value: String(empCount), unit: 'คน', sub: 'สวัสดิการปีงบประมาณ 2569' }
+        ],
+        leftPanel: {
+          title: 'ค่ารักษาพยาบาล',
+          color: '#2E7D32',
+          miniKpis: [
+            { label: 'รวมค่ารักษา', value: U.fmt(totalMed) + ' บาท' },
+            { label: 'จำนวนครั้ง', value: med.length + ' ครั้ง' },
+            { label: 'เดือนสูงสุด', value: medPeak ? U.monthLabel(medPeak.key) + '  ' + U.fmt(medPeak.value) + ' บาท' : '–' }
+          ],
+          sectionA: { title: 'A) สัดส่วนรายเดือน', chartImg: charts['c-med-donut'] ? charts['c-med-donut'].toBase64Image('image/png', 1) : null },
+          sectionB: { title: 'B) ค่ารักษาพยาบาลรายเดือน', chartImg: charts['c-med-bar'] ? charts['c-med-bar'].toBase64Image('image/png', 1) : null },
+          sectionC: {
+            title: 'C) Top พนักงาน (ค่ารักษา)',
+            heads: ['พนักงาน', 'จำนวนเงิน'],
+            rows: topMedEmp.slice(0, 8).map(function (p) { return [p.key, U.fmt(p.value) + ' ฿']; })
+          }
+        },
+        rightPanel: {
+          title: 'เบี้ยเลี้ยง & สวัสดิการอื่นๆ',
+          color: '#1565C0',
+          miniKpis: [
+            { label: 'รวมทั้งหมด', value: U.fmt(totalAllow) + ' บาท' },
+            { label: 'ประเภทสูงสุด', value: typePairs[0] ? typePairs[0].key : '–' },
+            { label: 'เดือนสูงสุด', value: allowPeak ? U.monthLabel(allowPeak.key) + '  ' + U.fmt(allowPeak.value) + ' บาท' : '–' }
+          ],
+          sectionA: { title: 'A) สัดส่วนตามประเภท', chartImg: charts['c-allow-donut'] ? charts['c-allow-donut'].toBase64Image('image/png', 1) : null },
+          sectionB: { title: 'B) เบี้ยเลี้ยง & อื่นๆ รายเดือน', chartImg: charts['c-allow-bar'] ? charts['c-allow-bar'].toBase64Image('image/png', 1) : null },
+          sectionC: {
+            title: 'C) แยกตามประเภท',
+            heads: ['ประเภทสวัสดิการ', 'จำนวนเงิน', 'สัดส่วน'],
+            rows: typePairs.map(function (p) { return [p.key, U.fmt(p.value) + ' ฿', U.pct(p.value, totalAllow) + '%']; })
+          }
+        },
+        insights: [
+          { num: 1, text: 'ค่ารักษาพยาบาล ' + U.pct(totalMed, grand) + '% ของสวัสดิการทั้งหมด' + (topMedEmp[0] ? ' • ' + topMedEmp[0].key + ' สูงสุด ' + U.fmt(topMedEmp[0].value) + ' ฿' : '') },
+          { num: 2, text: 'ประเภทสวัสดิการสูงสุด: ' + (typePairs[0] ? typePairs[0].key + ' ' + U.fmt(typePairs[0].value) + ' บาท' : '–') },
+          { num: 3, text: 'เดือนจ่ายสวัสดิการสูงสุด: ' + (medPeak || allowPeak ? U.monthLabelFull((medPeak || allowPeak).key) : '–') },
+          { num: 4, text: 'เฉลี่ยต่อคน ' + U.fmt(avg) + ' บาท  จาก ' + empCount + ' คน' + (otRecs.length ? '  •  OT รวม ' + U.fmt(U.sumBy(otRecs, 'amount')) + ' ชม.' : '') }
+        ],
+        footnote: '① หมายเหตุ: สรุปข้อมูลจากระบบ Dashboard CPF ธารเกษม  •  สร้างเมื่อ ' + new Date().toLocaleDateString('th-TH', { dateStyle: 'long' })
+      };
+    }
+
     /* ---------- Events ---------- */
     function bindEvents() {
       U.el('f-year').addEventListener('change', function () { buildMonthFilter(); debouncedRender(); });
@@ -604,14 +673,14 @@
       U.el('btn-export-img').addEventListener('click', function () { openModal('modal-export-img'); });
       U.el('btn-dl-jpg').addEventListener('click', function () {
         var btn = U.el('btn-dl-jpg'); btn.disabled = true; btn.textContent = '⏳ กำลังสร้าง…';
-        ExportImg.jpg('CPF_สวัสดิการ_2569').then(function () {
+        ExportImg.jpg('CPF_สวัสดิการ_2569', collectWelfareData()).then(function () {
           closeModal('modal-export-img'); U.toast('ดาวน์โหลด JPG สำเร็จ', 'ok');
         }).catch(function (e) { U.toast('Export ไม่สำเร็จ: ' + e.message, 'err'); })
           .then(function () { btn.disabled = false; btn.textContent = '⬇️ ดาวน์โหลด JPG'; });
       });
       U.el('btn-dl-pdf').addEventListener('click', function () {
         var btn = U.el('btn-dl-pdf'); btn.disabled = true; btn.textContent = '⏳ กำลังสร้าง…';
-        ExportImg.pdf('CPF_สวัสดิการ_2569').then(function () {
+        ExportImg.pdf('CPF_สวัสดิการ_2569', collectWelfareData()).then(function () {
           closeModal('modal-export-img'); U.toast('ดาวน์โหลด PDF สำเร็จ', 'ok');
         }).catch(function (e) { U.toast('Export ไม่สำเร็จ: ' + e.message, 'err'); })
           .then(function () { btn.disabled = false; btn.textContent = '📄 ดาวน์โหลด PDF'; });

@@ -472,6 +472,74 @@
       return 'ปีงบประมาณ พ.ศ. ' + U.yearOf(ms[0]) + ' (' + U.monthLabel(ms[0]) + ' – ' + U.monthLabel(ms[ms.length - 1]) + ')';
     }
 
+    function collectExportData() {
+      var exp = filtered.filter(function (r) { return r.type === 'ค่าใช้จ่าย'; });
+      var adv = filtered.filter(function (r) { return r.type === 'เงินยืมทดรอง'; });
+      var totalExp = U.sumBy(exp, 'amount'), totalAdv = U.sumBy(adv, 'amount'), grand = totalExp + totalAdv;
+      var fixed = U.sumBy(exp.filter(function (r) { return r.group === 'คงที่'; }), 'amount');
+      var variable = totalExp - fixed;
+      var byCat = U.groupSum(exp, 'category', 'amount');
+      var byMonth = U.groupSum(exp, 'month', 'amount');
+      var top5 = U.toSortedPairs(byCat).slice(0, 5);
+      var peak = U.toSortedPairs(byMonth)[0];
+      var advByBorrower = U.toSortedPairs(U.groupSum(adv, 'borrower', 'amount'));
+      var advByMonth = U.groupSum(adv, 'month', 'amount');
+      var advPeak = U.toSortedPairs(advByMonth)[0];
+      var ms = U.uniqSorted(filtered.map(function (r) { return r.month; }));
+      var periodStr = !ms.length ? 'ปีงบประมาณ พ.ศ. 2569' :
+        ms.length === 1 ? U.monthLabelFull(ms[0]) :
+        'ข้อมูล ' + U.monthLabel(ms[0]) + '–' + U.monthLabel(ms[ms.length - 1]);
+      return {
+        title: 'แดชบอร์ดสรุปค่าใช้จ่ายและเงินยืมทดรอง',
+        subtitle: 'โรงงานผลิตอาหารสัตว์ธารเกษม (CPF)  |  ประจำปีงบประมาณ พ.ศ. 2569  (' + periodStr + ')',
+        kpis: [
+          { icon: '💰', label: 'ค่าใช้จ่าย OE รวม', value: U.fmt(totalExp), unit: 'บาท', sub: U.fmtShort(totalExp) },
+          { icon: '🤝', label: 'เงินยืมทดรองรวม', value: U.fmt(totalAdv), unit: 'บาท', sub: adv.length + ' รายการ' },
+          { icon: '📦', label: 'รวมทั้งสิ้น', value: U.fmt(grand), unit: 'บาท', sub: 'OE ' + U.pct(totalExp, grand) + '% • ยืม ' + U.pct(totalAdv, grand) + '%' },
+          { icon: '🗂️', label: 'จำนวนรายการ', value: String(exp.length + adv.length), unit: 'รายการ', sub: 'ค่าใช้จ่าย ' + exp.length + ' / เงินยืม ' + adv.length }
+        ],
+        leftPanel: {
+          title: 'ค่าใช้จ่าย',
+          color: '#2E7D32',
+          miniKpis: [
+            { label: 'คงที่ตามสัญญา', value: U.fmt(fixed) + ' บาท' },
+            { label: 'แปรผัน', value: U.fmt(variable) + ' บาท' },
+            { label: 'เดือนสูงสุด', value: peak ? U.monthLabel(peak.key) + '  ' + U.fmt(peak.value) + ' บาท' : '–' }
+          ],
+          sectionA: { title: 'A) สัดส่วนค่าใช้จ่ายตามประเภท', chartImg: charts['c-exp-donut'] ? charts['c-exp-donut'].toBase64Image('image/png', 1) : null },
+          sectionB: { title: 'B) ค่าใช้จ่ายรายเดือน', chartImg: charts['c-exp-bar'] ? charts['c-exp-bar'].toBase64Image('image/png', 1) : null },
+          sectionC: {
+            title: 'C) ค่าใช้จ่ายสูงสุด 5 อันดับ',
+            heads: ['หมวดหมู่', 'จำนวนเงิน', 'สัดส่วน'],
+            rows: top5.map(function (p) { return [p.key, U.fmt(p.value) + ' ฿', U.pct(p.value, totalExp) + '%']; })
+          }
+        },
+        rightPanel: {
+          title: 'เงินยืมทดรอง',
+          color: '#1565C0',
+          miniKpis: [
+            { label: 'ยอดรวม', value: U.fmt(totalAdv) + ' บาท' },
+            { label: 'ผู้ยืม', value: advByBorrower.length + ' คน' },
+            { label: 'เดือนสูงสุด', value: advPeak ? U.monthLabel(advPeak.key) + '  ' + U.fmt(advPeak.value) + ' บาท' : '–' }
+          ],
+          sectionA: { title: 'A) สัดส่วนเงินยืมรายเดือน', chartImg: charts['c-adv-donut'] ? charts['c-adv-donut'].toBase64Image('image/png', 1) : null },
+          sectionB: { title: 'B) เงินยืมทดรองรายเดือน', chartImg: charts['c-adv-bar'] ? charts['c-adv-bar'].toBase64Image('image/png', 1) : null },
+          sectionC: {
+            title: 'C) สรุปตามผู้ยืม',
+            heads: ['ผู้ยืม', 'จำนวนเงิน', 'สัดส่วน'],
+            rows: advByBorrower.slice(0, 8).map(function (p) { return [p.key, U.fmt(p.value) + ' ฿', U.pct(p.value, totalAdv) + '%']; })
+          }
+        },
+        insights: [
+          { num: 1, text: 'ค่าใช้จ่ายรวมสูงกว่าเงินยืมทดรอง ' + (totalAdv > 0 ? (totalExp / totalAdv).toFixed(1) : '–') + ' เท่า ของยอดรวมทั้งหมด' },
+          { num: 2, text: 'สัดส่วนคงที่ตามสัญญา ' + U.pct(fixed, totalExp) + '% ของค่าใช้จ่ายทั้งหมด' },
+          { num: 3, text: 'เดือนค่าใช้จ่ายสูงสุด: ' + (peak ? U.monthLabelFull(peak.key) + ' ' + U.fmt(peak.value) + ' บาท' : '–') },
+          { num: 4, text: 'ผู้ยืมทดรองสูงสุด: ' + (advByBorrower[0] ? advByBorrower[0].key + ' ' + U.fmt(advByBorrower[0].value) + ' บาท' : 'ไม่มีรายการ') }
+        ],
+        footnote: '① หมายเหตุ: สรุปข้อมูลจากระบบ Dashboard CPF ธารเกษม  •  สร้างเมื่อ ' + new Date().toLocaleDateString('th-TH', { dateStyle: 'long' })
+      };
+    }
+
     /* ---------- Events ---------- */
     function bindEvents() {
       U.el('f-year').addEventListener('change', function () { buildMonthFilter(); debouncedRender(); });
@@ -488,14 +556,14 @@
       U.el('btn-export-img').addEventListener('click', function () { openModal('modal-export-img'); });
       U.el('btn-dl-jpg').addEventListener('click', function () {
         var btn = U.el('btn-dl-jpg'); btn.disabled = true; btn.textContent = '⏳ กำลังสร้าง…';
-        ExportImg.jpg('CPF_OE_2569').then(function () {
+        ExportImg.jpg('CPF_OE_2569', collectExportData()).then(function () {
           closeModal('modal-export-img'); U.toast('ดาวน์โหลด JPG สำเร็จ', 'ok');
         }).catch(function (e) { U.toast('Export ไม่สำเร็จ: ' + e.message, 'err'); })
           .then(function () { btn.disabled = false; btn.textContent = '⬇️ ดาวน์โหลด JPG'; });
       });
       U.el('btn-dl-pdf').addEventListener('click', function () {
         var btn = U.el('btn-dl-pdf'); btn.disabled = true; btn.textContent = '⏳ กำลังสร้าง…';
-        ExportImg.pdf('CPF_OE_2569').then(function () {
+        ExportImg.pdf('CPF_OE_2569', collectExportData()).then(function () {
           closeModal('modal-export-img'); U.toast('ดาวน์โหลด PDF สำเร็จ', 'ok');
         }).catch(function (e) { U.toast('Export ไม่สำเร็จ: ' + e.message, 'err'); })
           .then(function () { btn.disabled = false; btn.textContent = '📄 ดาวน์โหลด PDF'; });
