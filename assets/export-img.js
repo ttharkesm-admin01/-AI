@@ -1,5 +1,5 @@
-/* export-img.js — ส่งออก Dashboard เป็น JPG / PDF (multi-page A4 landscape)
-   โหลด html2canvas + jsPDF แบบ on-demand (ไม่บล็อก page load) */
+/* export-img.js — ส่งออก Dashboard เป็น JPG / PDF แบบ clean report
+   ซ่อน nav/filter/status chrome ก่อน capture และใส่ print-header แทน */
 var ExportImg = (function () {
   'use strict';
   var H2C_URL = 'https://cdn.jsdelivr.net/npm/html2canvas@1.4.1/dist/html2canvas.min.js';
@@ -13,35 +13,80 @@ var ExportImg = (function () {
     });
   }
 
-  function capture() {
-    // de-sticky header so it doesn't double-render at top
-    var hdr = document.querySelector('.app-header');
-    var hdrPos = hdr ? hdr.style.position : '';
-    if (hdr) hdr.style.position = 'relative';
+  function buildPrintHeader() {
+    var h1 = document.querySelector('.app-header h1');
+    var sub = document.querySelector('.app-header .sub');
+    var srcInfo = document.querySelector('#src-info');
+    var updInfo = document.querySelector('#src-updated');
+    var title = h1 ? h1.textContent.trim() : '';
+    var subtitle = sub ? sub.textContent.trim() : '';
+    var note = [(srcInfo ? srcInfo.textContent.replace(/^•\s*/, '') : ''), (updInfo ? updInfo.textContent : '')].filter(Boolean).join(' • ');
 
-    // expand any capped tables so full content appears
-    var wraps = document.querySelectorAll('.tbl-wrap');
-    var saved = [];
-    wraps.forEach(function (el) {
-      saved.push({ el: el, mh: el.style.maxHeight, ov: el.style.overflow });
+    var hdr = document.createElement('div');
+    hdr.id = '__print-hdr__';
+    hdr.style.cssText = [
+      'background:linear-gradient(135deg,#1B5E20,#2E7D32 55%,#43A047)',
+      'color:#fff', 'padding:20px 24px 16px', 'border-radius:12px',
+      'margin-bottom:18px', 'display:flex', 'align-items:center', 'gap:16px'
+    ].join(';');
+
+    var logo = document.createElement('div');
+    logo.style.cssText = 'width:52px;height:52px;border-radius:14px;background:rgba(255,255,255,.18);display:grid;place-items:center;font-weight:800;font-size:20px;border:1px solid rgba(255,255,255,.28);flex:none';
+    logo.textContent = 'CPF';
+
+    var info = document.createElement('div');
+    info.innerHTML =
+      '<div style="font-size:1.25rem;font-weight:800;line-height:1.2">' + title + '</div>' +
+      '<div style="font-size:.85rem;opacity:.9;margin-top:3px">' + subtitle + '</div>' +
+      (note ? '<div style="font-size:.78rem;opacity:.75;margin-top:4px">' + note + '</div>' : '');
+
+    hdr.appendChild(logo);
+    hdr.appendChild(info);
+    return hdr;
+  }
+
+  function capture() {
+    var wrap = document.querySelector('.wrap');
+    if (!wrap) return Promise.reject(new Error('ไม่พบ .wrap element'));
+
+    // ซ่อน navigation chrome
+    var HIDE_SELS = ['.app-header', '.source-bar', '.filter-bar', '.app-foot'];
+    var hidden = [];
+    HIDE_SELS.forEach(function (sel) {
+      var el = document.querySelector(sel);
+      if (el) { hidden.push({ el: el, v: el.style.visibility, d: el.style.display }); el.style.display = 'none'; }
+    });
+
+    // ใส่ print-header แทน
+    var printHdr = buildPrintHeader();
+    wrap.insertBefore(printHdr, wrap.firstChild);
+
+    // ขยาย table ที่มี scroll ให้แสดงครบ
+    var tblWraps = wrap.querySelectorAll('.tbl-wrap');
+    var savedTbl = [];
+    tblWraps.forEach(function (el) {
+      savedTbl.push({ el: el, mh: el.style.maxHeight, ov: el.style.overflow });
       el.style.maxHeight = 'none';
       el.style.overflow = 'visible';
     });
 
     window.scrollTo(0, 0);
 
-    return window.html2canvas(document.body, {
-      scale: 2,
-      useCORS: true,
-      backgroundColor: '#f4f7f5',
-      logging: false,
-      ignoreElements: function (el) {
-        return el.classList && (el.classList.contains('modal-overlay') || el.classList.contains('toast-stack'));
-      }
+    return window.html2canvas(wrap, {
+      scale: 2, useCORS: true, backgroundColor: '#f4f7f5', logging: false,
+      ignoreElements: function (el) { return el.classList && el.classList.contains('modal-overlay'); }
     }).then(function (canvas) {
-      if (hdr) hdr.style.position = hdrPos;
-      saved.forEach(function (s) { s.el.style.maxHeight = s.mh; s.el.style.overflow = s.ov; });
+      // คืนค่าเดิม
+      wrap.removeChild(printHdr);
+      hidden.forEach(function (s) { s.el.style.display = s.d; s.el.style.visibility = s.v; });
+      savedTbl.forEach(function (s) { s.el.style.maxHeight = s.mh; s.el.style.overflow = s.ov; });
       return canvas;
+    }).catch(function (err) {
+      // คืนค่าแม้ error
+      if (document.getElementById('__print-hdr__')) wrap.removeChild(printHdr);
+      hidden.forEach(function (s) { s.el.style.display = s.d; });
+      savedTbl.forEach(function (s) { s.el.style.maxHeight = s.mh; s.el.style.overflow = s.ov; });
+      throw err;
     });
   }
 
@@ -66,7 +111,7 @@ var ExportImg = (function () {
       var doc = new window.jspdf.jsPDF({ orientation: 'landscape', unit: 'mm', format: 'a4' });
       var pw = doc.internal.pageSize.getWidth();   // 297 mm
       var ph = doc.internal.pageSize.getHeight();  // 210 mm
-      // scale image to fit page width; determine how many px = 1 page height
+      // ความสูงในหน่วย canvas px ที่พอดีหน้า A4 หนึ่งหน้า
       var pageHeightPx = Math.floor(c.width * ph / pw);
       var totalPages = Math.ceil(c.height / pageHeightPx);
 
