@@ -30,6 +30,7 @@
       <button class="btn btn-light btn-sm" id="btn-refresh">🔄 รีเฟรช</button>
       <button class="btn btn-light btn-sm" id="btn-manage">✏️ จัดการข้อมูล</button>
       <button class="btn btn-ppt" id="btn-export">📊 Export PowerPoint</button>
+      <button class="btn btn-light btn-sm" id="btn-export-img">🖼️ ส่งออก JPG/PDF</button>
     </div>
   </header>
 
@@ -192,6 +193,20 @@
     </div>
   </div>
 
+  <!-- Export Image modal -->
+  <div class="modal-overlay" id="modal-export-img">
+    <div class="modal" style="max-width:340px">
+      <div class="modal-head"><h3>🖼️ ส่งออกภาพ / PDF</h3><button class="x-close" data-close aria-label="ปิด">&times;</button></div>
+      <div class="modal-body">
+        <p style="margin-bottom:14px;color:var(--ink-soft)">ส่งออก Dashboard ปัจจุบัน (ตามตัวกรองที่เลือก) เป็นไฟล์ภาพหรือ PDF</p>
+        <div style="display:flex;gap:10px">
+          <button class="btn btn-primary" id="btn-dl-jpg" style="flex:1">⬇️ ดาวน์โหลด JPG</button>
+          <button class="btn btn-light" id="btn-dl-pdf" style="flex:1">📄 ดาวน์โหลด PDF</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
   <!-- Export modal -->
   <div class="modal-overlay" id="modal-export">
     <div class="modal">
@@ -222,6 +237,7 @@
   <script src="../assets/app.js"></script>
   <script src="../assets/editor.js"></script>
   <script src="../assets/ppt.js"></script>
+  <script src="../assets/export-img.js"></script>
   <script>
   (function () {
     'use strict';
@@ -469,6 +485,21 @@
         loadData(!!cfg.sheetId);
       });
       U.el('btn-export').addEventListener('click', function () { openModal('modal-export'); });
+      U.el('btn-export-img').addEventListener('click', function () { openModal('modal-export-img'); });
+      U.el('btn-dl-jpg').addEventListener('click', function () {
+        var btn = U.el('btn-dl-jpg'); btn.disabled = true; btn.textContent = '⏳ กำลังสร้าง…';
+        ExportImg.jpg('CPF_OE_2569').then(function () {
+          closeModal('modal-export-img'); U.toast('ดาวน์โหลด JPG สำเร็จ', 'ok');
+        }).catch(function (e) { U.toast('Export ไม่สำเร็จ: ' + e.message, 'err'); })
+          .then(function () { btn.disabled = false; btn.textContent = '⬇️ ดาวน์โหลด JPG'; });
+      });
+      U.el('btn-dl-pdf').addEventListener('click', function () {
+        var btn = U.el('btn-dl-pdf'); btn.disabled = true; btn.textContent = '⏳ กำลังสร้าง…';
+        ExportImg.pdf('CPF_OE_2569').then(function () {
+          closeModal('modal-export-img'); U.toast('ดาวน์โหลด PDF สำเร็จ', 'ok');
+        }).catch(function (e) { U.toast('Export ไม่สำเร็จ: ' + e.message, 'err'); })
+          .then(function () { btn.disabled = false; btn.textContent = '📄 ดาวน์โหลด PDF'; });
+      });
       U.el('btn-do-export').addEventListener('click', doExport);
       U.el('btn-connect').addEventListener('click', openConnect);
       U.el('btn-manage').addEventListener('click', openManage);
