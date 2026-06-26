@@ -51,11 +51,11 @@ var ExportImg = (function () {
     if (imgSrc) {
       var img = document.createElement('img');
       img.src = imgSrc;
-      img.style.cssText = 'width:100%;height:auto;max-height:200px;object-fit:contain;display:block';
+      img.style.cssText = 'width:100%;height:200px;object-fit:contain;display:block';
       wrap.appendChild(img);
     } else {
       wrap.appendChild(mk('div',
-        'height:100px;background:#f3f4f6;border-radius:8px;display:flex;align-items:center;justify-content:center;font-size:11px;color:' + MUTED,
+        'height:200px;background:#f3f4f6;border-radius:8px;display:flex;align-items:center;justify-content:center;font-size:11px;color:' + MUTED,
         'ไม่มีข้อมูล'
       ));
     }
