@@ -31,6 +31,7 @@
       <button class="btn btn-light btn-sm" id="btn-manage">✏️ จัดการข้อมูล</button>
       <button class="btn btn-ppt" id="btn-export">📊 Export PowerPoint</button>
       <button class="btn btn-light btn-sm" id="btn-export-img">🖼️ ส่งออก JPG/PDF</button>
+      <button class="btn btn-light btn-sm" id="btn-export-data">📋 ส่งออก Excel</button>
     </div>
   </header>
 
@@ -506,6 +507,15 @@
           .then(function () { btn.disabled = false; btn.textContent = '📄 ดาวน์โหลด PDF'; });
       });
       U.el('btn-do-export').addEventListener('click', doExport);
+      U.el('btn-export-data').addEventListener('click', function () {
+        if (!filtered.length) { U.toast('ไม่มีข้อมูลตามตัวกรอง', 'err'); return; }
+        var headers = ['เดือน', 'หมวดหมู่', 'ประเภท', 'กลุ่ม', 'รายละเอียด', 'จำนวนเงิน (บาท)', 'ผู้ยืม'];
+        var rows = filtered.map(function (r) {
+          return [r.month, r.category || '', r.type || '', r.group || '', r.detail || '', r.amount, r.borrower || ''];
+        });
+        U.exportExcel(headers, rows, 'CPF_OE_' + U.fileDate() + '.xlsx');
+        U.toast('ดาวน์โหลด Excel สำเร็จ', 'ok');
+      });
       U.el('tb-adv').addEventListener('click', function (e) {
         var tr = e.target.closest('tr[data-raw-idx]'); if (!tr) return;
         var idx = parseInt(tr.getAttribute('data-raw-idx'), 10);
