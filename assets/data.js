@@ -196,7 +196,7 @@
         if (tm) { month = tm; break; }
       }
     }
-    if (!month) throw new Error('ฟอร์มสวัสดิการไม่พบ "เดือน" (ใส่รูปแบบ 2569-01 หรือชื่อเดือนไทยในชีต)');
+    if (!month) return null; // ไม่ใช่ฟอร์ม wide ที่สมบูรณ์ → ให้ normalizeAny fallback ไป long format
 
     // รวมข้อความหัวจากแถว headIdx และแถวถัดไป (รองรับหัว 2 ชั้น เช่น OT)
     var h1 = (rows[headIdx] || []).map(cellStr);
@@ -376,9 +376,8 @@
       { month: "2569-04", category: "ค่าซักผ้าชุดพนักงานาไซโล", type: "ค่าใช้จ่าย", group: "คงที่", detail: "", amount: 24000, borrower: "" },
       { month: "2569-04", category: "ค่าใช้จ่ายสำนักงาน", type: "ค่าใช้จ่าย", group: "แปรผัน", detail: "", amount: 32124, borrower: "" }
     ];
-    var out = { records: recs, source: 'sample', count: recs.length };
-    _cache.oe = JSON.parse(JSON.stringify(out));
-    return out;
+    _cache.oe = { records: recs, source: 'sample', count: recs.length };
+    return JSON.parse(JSON.stringify(_cache.oe));
   }
 
   function sampleWelfare() {
@@ -514,9 +513,8 @@
       { month: "2569-05", employee: "นายนพดล วงษ์ตา", position: "พนักงานรักษาความปลอดภัย", wtype: "OT", amount: 61, note: "ชั่วโมง" },
       { month: "2569-05", employee: "นายกริช ภักดี", position: "พนักงานรักษาความปลอดภัย", wtype: "OT", amount: 55, note: "ชั่วโมง" }
     ];
-    var out = { records: recs, source: 'sample', count: recs.length };
-    _cache.welfare = JSON.parse(JSON.stringify(out));
-    return out;
+    _cache.welfare = { records: recs, source: 'sample', count: recs.length };
+    return JSON.parse(JSON.stringify(_cache.welfare));
   }
 
   function sample(kind) { return kind === 'welfare' ? sampleWelfare() : sampleOE(); }
