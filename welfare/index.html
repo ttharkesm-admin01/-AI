@@ -24,14 +24,14 @@
     </div>
     <div class="spacer"></div>
     <div class="header-actions">
-      <a class="btn btn-ghost btn-sm" href="../">🏠 หน้าหลัก</a>
-      <a class="btn btn-ghost btn-sm" href="../oe/">💰 OE</a>
-      <button class="btn btn-ghost btn-sm" id="btn-connect">🔗 เชื่อม Google Sheets</button>
-      <button class="btn btn-light btn-sm" id="btn-refresh">🔄 รีเฟรช</button>
-      <button class="btn btn-light btn-sm" id="btn-manage">✏️ จัดการข้อมูล</button>
-      <button class="btn btn-ppt" id="btn-export">📊 Export PowerPoint</button>
-      <button class="btn btn-light btn-sm" id="btn-export-img">🖼️ ส่งออก JPG/PDF</button>
-      <button class="btn btn-light btn-sm" id="btn-export-data">📋 ส่งออก Excel</button>
+      <a class="btn btn-ghost btn-sm gi-home" href="../">หน้าหลัก</a>
+      <a class="btn btn-ghost btn-sm gi-coins" href="../oe/">OE</a>
+      <button class="btn btn-ghost btn-sm gi-link" id="btn-connect">เชื่อม Google Sheets</button>
+      <button class="btn btn-light btn-sm gi-refresh" id="btn-refresh">รีเฟรช</button>
+      <button class="btn btn-light btn-sm gi-edit" id="btn-manage">จัดการข้อมูล</button>
+      <button class="btn btn-ppt gi-ppt" id="btn-export">Export PowerPoint</button>
+      <button class="btn btn-light btn-sm gi-image" id="btn-export-img">ส่งออก JPG/PDF</button>
+      <button class="btn btn-light btn-sm gi-table" id="btn-export-data">ส่งออก Excel</button>
     </div>
   </header>
 
@@ -68,22 +68,22 @@
 
     <div class="kpi-grid">
       <div class="kpi">
-        <div class="k-label">🏥 ค่ารักษาพยาบาล</div>
+        <div class="k-label"><span class="ic gi-medical"></span> ค่ารักษาพยาบาล</div>
         <div class="k-value" id="kpi-med">–</div>
         <div class="k-sub" id="kpi-med-sub"></div>
       </div>
       <div class="kpi b">
-        <div class="k-label">🚗 เบี้ยเลี้ยง & สวัสดิการอื่นๆ</div>
+        <div class="k-label"><span class="ic gi-car"></span> เบี้ยเลี้ยง & สวัสดิการอื่นๆ</div>
         <div class="k-value" id="kpi-allow">–</div>
         <div class="k-sub" id="kpi-allow-sub"></div>
       </div>
       <div class="kpi amber">
-        <div class="k-label">📦 รวมทั้งสิ้น</div>
+        <div class="k-label"><span class="ic gi-package"></span> รวมทั้งสิ้น</div>
         <div class="k-value" id="kpi-total">–</div>
         <div class="k-sub" id="kpi-total-sub"></div>
       </div>
       <div class="kpi teal">
-        <div class="k-label">👥 พนักงานที่ได้รับ</div>
+        <div class="k-label"><span class="ic gi-users"></span> พนักงานที่ได้รับ</div>
         <div class="k-value" id="kpi-emp">–</div>
         <div class="k-sub" id="kpi-emp-sub"></div>
       </div>
@@ -92,7 +92,7 @@
     <div class="panels">
       <!-- ซ้าย: ค่ารักษาพยาบาล -->
       <section class="panel">
-        <div class="panel-head"><div class="p-icon">🏥</div><h2>ค่ารักษาพยาบาล</h2></div>
+        <div class="panel-head"><div class="p-icon"><span class="ic gi-medical"></span></div><h2>ค่ารักษาพยาบาล</h2></div>
         <div class="panel-body">
           <div class="mini-kpis">
             <div class="mini"><div class="m-label">รวมค่ารักษา</div><div class="m-value" id="m-med-total">–</div></div>
@@ -119,7 +119,7 @@
 
       <!-- ขวา: เบี้ยเลี้ยง + อื่นๆ -->
       <section class="panel blue">
-        <div class="panel-head"><div class="p-icon">🚗</div><h2>เบี้ยเลี้ยง &amp; สวัสดิการอื่นๆ</h2></div>
+        <div class="panel-head"><div class="p-icon"><span class="ic gi-car"></span></div><h2>เบี้ยเลี้ยง &amp; สวัสดิการอื่นๆ</h2></div>
         <div class="panel-body">
           <div class="mini-kpis">
             <div class="mini"><div class="m-label">รวมทั้งหมด</div><div class="m-value" id="m-allow-total">–</div></div>
@@ -148,7 +148,7 @@
     <!-- Big pivot table -->
     <div class="card-block">
       <div class="cardb-head">
-        <h2>📋 สวัสดิการรายคน × เดือน</h2>
+        <h2><span class="ic gi-clipboard"></span> สวัสดิการรายคน × เดือน</h2>
         <div class="pivot-tools">
           <select id="pivot-month" class="pivot-ctrl" aria-label="เลือกเดือนที่แสดงในตาราง"></select>
           <select id="pivot-top" class="pivot-ctrl" aria-label="จำนวนแถวที่แสดง">
@@ -168,7 +168,7 @@
 
     <!-- OT (ชั่วโมงล่วงเวลา) -->
     <div class="card-block" id="ot-block" style="display:none">
-      <div class="cardb-head"><h2>⏱️ OT — ชั่วโมงล่วงเวลา</h2><span class="src-info" id="ot-note"></span></div>
+      <div class="cardb-head"><h2><span class="ic gi-clock"></span> OT — ชั่วโมงล่วงเวลา</h2><span class="src-info" id="ot-note"></span></div>
       <div class="cardb-body pad">
         <div class="mini-kpis">
           <div class="mini"><div class="m-label">OT รวม</div><div class="m-value" id="ot-total">–</div></div>
@@ -203,7 +203,7 @@
   <!-- Connect modal -->
   <div class="modal-overlay" id="modal-connect">
     <div class="modal">
-      <div class="modal-head"><h3>🔗 เชื่อมต่อ Google Sheets</h3><button class="x-close" data-close aria-label="ปิด">&times;</button></div>
+      <div class="modal-head"><h3><span class="ic gi-link"></span> เชื่อมต่อ Google Sheets</h3><button class="x-close" data-close aria-label="ปิด">&times;</button></div>
       <div class="modal-body">
         <div class="field" style="margin-bottom:12px">
           <label for="in-sheet">ลิงก์ Google Sheets หรือ Sheet ID</label>
@@ -224,7 +224,7 @@
         </div>
         <div style="margin-top:14px;border-top:1px dashed var(--line);padding-top:14px">
           <p style="margin-bottom:8px">หรือใช้ไฟล์ Excel แทน:</p>
-          <button class="btn btn-light btn-sm" id="btn-upload">📁 อัปโหลดไฟล์ Excel (.xlsx)</button>
+          <button class="btn btn-light btn-sm gi-upload" id="btn-upload">อัปโหลดไฟล์ Excel (.xlsx)</button>
           <input type="file" id="file-input" accept=".xlsx,.xls" style="display:none" />
         </div>
       </div>
@@ -238,12 +238,12 @@
   <!-- Export Image modal -->
   <div class="modal-overlay" id="modal-export-img">
     <div class="modal" style="max-width:340px">
-      <div class="modal-head"><h3>🖼️ ส่งออกภาพ / PDF</h3><button class="x-close" data-close aria-label="ปิด">&times;</button></div>
+      <div class="modal-head"><h3><span class="ic gi-image"></span> ส่งออกภาพ / PDF</h3><button class="x-close" data-close aria-label="ปิด">&times;</button></div>
       <div class="modal-body">
         <p style="margin-bottom:14px;color:var(--ink-soft)">ส่งออก Dashboard ปัจจุบัน (ตามตัวกรองที่เลือก) เป็นไฟล์ภาพหรือ PDF</p>
         <div style="display:flex;gap:10px">
-          <button class="btn btn-primary" id="btn-dl-jpg" style="flex:1">⬇️ ดาวน์โหลด JPG</button>
-          <button class="btn btn-light" id="btn-dl-pdf" style="flex:1">📄 ดาวน์โหลด PDF</button>
+          <button class="btn btn-primary gi-download" id="btn-dl-jpg" style="flex:1">ดาวน์โหลด JPG</button>
+          <button class="btn btn-light gi-pdf" id="btn-dl-pdf" style="flex:1">ดาวน์โหลด PDF</button>
         </div>
       </div>
     </div>
@@ -252,7 +252,7 @@
   <!-- Export modal -->
   <div class="modal-overlay" id="modal-export">
     <div class="modal">
-      <div class="modal-head"><h3>📊 Export PowerPoint</h3><button class="x-close" data-close aria-label="ปิด">&times;</button></div>
+      <div class="modal-head"><h3><span class="ic gi-ppt"></span> Export PowerPoint</h3><button class="x-close" data-close aria-label="ปิด">&times;</button></div>
       <div class="modal-body">
         <p>สร้างไฟล์ <strong>.pptx</strong> สรุป Dashboard สวัสดิการ ตามตัวกรองปัจจุบัน จำนวน 5 สไลด์:</p>
         <ul class="slide-list">
@@ -265,7 +265,7 @@
       </div>
       <div class="modal-foot">
         <button class="btn btn-light" data-close>ยกเลิก</button>
-        <button class="btn btn-ppt" id="btn-do-export">⬇️ ดาวน์โหลด .pptx</button>
+        <button class="btn btn-ppt gi-download" id="btn-do-export">ดาวน์โหลด .pptx</button>
       </div>
     </div>
   </div>
@@ -573,11 +573,11 @@
         });
       }
 
-      var btn = U.el('btn-do-export'); btn.disabled = true; btn.textContent = '⏳ กำลังสร้าง…';
+      var btn = U.el('btn-do-export'); btn.disabled = true; btn.textContent = 'กำลังสร้าง…';
       PPT.export(deck).then(function () {
         App.closeModal('modal-export'); U.toast('ดาวน์โหลดไฟล์ PowerPoint สำเร็จ', 'ok');
       }).catch(function (e) { U.toast('Export ไม่สำเร็จ: ' + e.message, 'err'); })
-        .then(function () { btn.disabled = false; btn.textContent = '⬇️ ดาวน์โหลด .pptx'; });
+        .then(function () { btn.disabled = false; btn.textContent = 'ดาวน์โหลด .pptx'; });
     }
 
     // โดนัทสำหรับ export: ใช้ canvas จัตุรัสถ้ามี (app.js ใหม่) ไม่งั้น fallback วิธีเดิม กัน throw ตอน SW cache ยังไม่อัปเดต
@@ -697,18 +697,18 @@
       U.el('btn-export').addEventListener('click', function () { App.openModal('modal-export'); });
       U.el('btn-export-img').addEventListener('click', function () { App.openModal('modal-export-img'); });
       U.el('btn-dl-jpg').addEventListener('click', function () {
-        var btn = U.el('btn-dl-jpg'); btn.disabled = true; btn.textContent = '⏳ กำลังสร้าง…';
+        var btn = U.el('btn-dl-jpg'); btn.disabled = true; btn.textContent = 'กำลังสร้าง…';
         Promise.resolve().then(function () { return ExportImg.jpg('CPF_สวัสดิการ_2569', collectWelfareData()); }).then(function () {
           App.closeModal('modal-export-img'); U.toast('ดาวน์โหลด JPG สำเร็จ', 'ok');
         }).catch(function (e) { U.toast('Export ไม่สำเร็จ: ' + ((e && e.message) || e), 'err'); })
-          .then(function () { btn.disabled = false; btn.textContent = '⬇️ ดาวน์โหลด JPG'; });
+          .then(function () { btn.disabled = false; btn.textContent = 'ดาวน์โหลด JPG'; });
       });
       U.el('btn-dl-pdf').addEventListener('click', function () {
-        var btn = U.el('btn-dl-pdf'); btn.disabled = true; btn.textContent = '⏳ กำลังสร้าง…';
+        var btn = U.el('btn-dl-pdf'); btn.disabled = true; btn.textContent = 'กำลังสร้าง…';
         Promise.resolve().then(function () { return ExportImg.pdf('CPF_สวัสดิการ_2569', collectWelfareData()); }).then(function () {
           App.closeModal('modal-export-img'); U.toast('ดาวน์โหลด PDF สำเร็จ', 'ok');
         }).catch(function (e) { U.toast('Export ไม่สำเร็จ: ' + ((e && e.message) || e), 'err'); })
-          .then(function () { btn.disabled = false; btn.textContent = '📄 ดาวน์โหลด PDF'; });
+          .then(function () { btn.disabled = false; btn.textContent = 'ดาวน์โหลด PDF'; });
       });
       U.el('btn-do-export').addEventListener('click', doExport);
       U.el('btn-export-data').addEventListener('click', function () {
