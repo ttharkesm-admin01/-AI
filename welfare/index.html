@@ -610,7 +610,7 @@
             { label: 'จำนวนครั้ง', value: med.length + ' ครั้ง' },
             { label: 'เดือนสูงสุด', value: medPeak ? U.monthLabel(medPeak.key) + '  ' + U.fmt(medPeak.value) + ' บาท' : '–' }
           ],
-          sectionA: { title: 'A) สัดส่วนรายเดือน', chartImg: charts['c-med-donut'] ? charts['c-med-donut'].toBase64Image('image/png', 1) : null },
+          sectionA: { title: 'A) สัดส่วนรายเดือน', chartImg: App.chartSquareImage(charts['c-med-donut']) },
           sectionB: { title: 'B) ค่ารักษาพยาบาลรายเดือน', chartImg: charts['c-med-bar'] ? charts['c-med-bar'].toBase64Image('image/png', 1) : null },
           sectionC: {
             title: 'C) Top พนักงาน (ค่ารักษา)',
@@ -626,7 +626,7 @@
             { label: 'ประเภทสูงสุด', value: typePairs[0] ? typePairs[0].key : '–' },
             { label: 'เดือนสูงสุด', value: allowPeak ? U.monthLabel(allowPeak.key) + '  ' + U.fmt(allowPeak.value) + ' บาท' : '–' }
           ],
-          sectionA: { title: 'A) สัดส่วนตามประเภท', chartImg: charts['c-allow-donut'] ? charts['c-allow-donut'].toBase64Image('image/png', 1) : null },
+          sectionA: { title: 'A) สัดส่วนตามประเภท', chartImg: App.chartSquareImage(charts['c-allow-donut']) },
           sectionB: { title: 'B) เบี้ยเลี้ยง & อื่นๆ รายเดือน', chartImg: charts['c-allow-bar'] ? charts['c-allow-bar'].toBase64Image('image/png', 1) : null },
           sectionC: {
             title: 'C) Top 3 เบี้ยเลี้ยง (พนักงาน)',

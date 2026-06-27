@@ -51,11 +51,11 @@ var ExportImg = (function () {
     if (imgSrc) {
       var img = document.createElement('img');
       img.src = imgSrc;
-      img.style.cssText = 'width:100%;height:185px;object-fit:fill;display:block;border-radius:4px';
+      img.style.cssText = 'width:100%;height:210px;object-fit:contain;display:block;background:#fff;border:1px solid #eef0f2;border-radius:6px';
       wrap.appendChild(img);
     } else {
       wrap.appendChild(mk('div',
-        'height:185px;background:#f3f4f6;border-radius:8px;display:flex;align-items:center;justify-content:center;font-size:11px;color:' + MUTED,
+        'height:210px;background:#f3f4f6;border-radius:8px;display:flex;align-items:center;justify-content:center;font-size:11px;color:' + MUTED,
         'ไม่มีข้อมูล'
       ));
     }
@@ -105,8 +105,8 @@ var ExportImg = (function () {
     });
     panel.appendChild(mkRow);
 
-    // Row 1: charts — donut (1fr) | bar (1.6fr) wider cells → charts get full width
-    var chartRow = mk('div', 'display:grid;grid-template-columns:1fr 1.6fr;gap:8px;padding:10px 10px 6px');
+    // Row 1: charts — สองช่องเท่ากัน (สมมาตร) ใช้ object-fit:contain คงสัดส่วนกราฟ
+    var chartRow = mk('div', 'display:grid;grid-template-columns:1fr 1fr;gap:10px;padding:10px 10px 6px');
     chartRow.appendChild(chartCell(p.sectionA.title, p.sectionA.chartImg));
     chartRow.appendChild(chartCell(p.sectionB.title, p.sectionB.chartImg));
     panel.appendChild(chartRow);
@@ -139,7 +139,7 @@ var ExportImg = (function () {
       chartWrap.appendChild(mk('div', 'font-size:10px;font-weight:700;color:#374151;margin-bottom:5px', 'OT รายเดือน (ชม.)'));
       var ci = document.createElement('img');
       ci.src = ot.chartImg;
-      ci.style.cssText = 'width:100%;height:155px;object-fit:fill;display:block;border-radius:4px';
+      ci.style.cssText = 'width:100%;height:180px;object-fit:contain;display:block;background:#fff;border:1px solid #eef0f2;border-radius:6px';
       chartWrap.appendChild(ci);
       body.appendChild(chartWrap);
     }
