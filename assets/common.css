@@ -232,6 +232,13 @@ table.data tfoot td { padding: 9px 11px; border-top: 2px solid var(--cpf); font-
   display: flex; align-items: center; gap: 10px; justify-content: space-between; flex-wrap: wrap;
 }
 .card-block .cardb-head h2 { font-size: 1rem; font-weight: 700; color: var(--cpf-dark); }
+.pivot-tools { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+.pivot-ctrl {
+  font-family: inherit; font-size: .8rem; color: var(--ink);
+  padding: 5px 9px; border: 1px solid var(--line); border-radius: 8px;
+  background: #fff; cursor: pointer; transition: border-color .15s ease;
+}
+.pivot-ctrl:hover { border-color: var(--cpf-light); }
 .card-block .cardb-body { padding: 0; }
 .card-block .cardb-body.pad { padding: 14px 16px; }
 
