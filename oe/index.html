@@ -419,6 +419,12 @@
         .then(function () { btn.disabled = false; btn.textContent = '⬇️ ดาวน์โหลด .pptx'; });
     }
 
+    // โดนัทสำหรับ export: ใช้ canvas จัตุรัสถ้ามี (app.js ใหม่) ไม่งั้น fallback วิธีเดิม กัน throw ตอน SW cache ยังไม่อัปเดต
+    function donutImg(chart) {
+      if (!chart) return null;
+      return App.chartSquareImage ? App.chartSquareImage(chart) : chart.toBase64Image('image/png', 1);
+    }
+
     function collectExportData() {
       var d = _lastAgg; if (!d) return {};
       var exp = d.exp, adv = d.adv, totalExp = d.totalExp, totalAdv = d.totalAdv, grand = d.grand;
@@ -448,7 +454,7 @@
             { label: 'แปรผัน', value: U.fmt(variable) + ' บาท' },
             { label: 'เดือนสูงสุด', value: peak ? U.monthLabel(peak.key) + '  ' + U.fmt(peak.value) + ' บาท' : '–' }
           ],
-          sectionA: { title: 'A) สัดส่วนค่าใช้จ่ายตามประเภท', chartImg: App.chartSquareImage(charts['c-exp-donut']) },
+          sectionA: { title: 'A) สัดส่วนค่าใช้จ่ายตามประเภท', chartImg: donutImg(charts['c-exp-donut']) },
           sectionB: { title: 'B) ค่าใช้จ่ายรายเดือน', chartImg: charts['c-exp-bar'] ? charts['c-exp-bar'].toBase64Image('image/png', 1) : null },
           sectionC: {
             title: 'C) ค่าใช้จ่ายสูงสุด 5 อันดับ',
@@ -464,7 +470,7 @@
             { label: 'ผู้ยืม', value: advByBorrower.length + ' คน' },
             { label: 'เดือนสูงสุด', value: advPeak ? U.monthLabel(advPeak.key) + '  ' + U.fmt(advPeak.value) + ' บาท' : '–' }
           ],
-          sectionA: { title: 'A) สัดส่วนเงินยืมรายเดือน', chartImg: App.chartSquareImage(charts['c-adv-donut']) },
+          sectionA: { title: 'A) สัดส่วนเงินยืมรายเดือน', chartImg: donutImg(charts['c-adv-donut']) },
           sectionB: { title: 'B) เงินยืมทดรองรายเดือน', chartImg: charts['c-adv-bar'] ? charts['c-adv-bar'].toBase64Image('image/png', 1) : null },
           sectionC: {
             title: 'C) สรุปตามผู้ยืม',
@@ -494,16 +500,16 @@
       U.el('btn-export-img').addEventListener('click', function () { App.openModal('modal-export-img'); });
       U.el('btn-dl-jpg').addEventListener('click', function () {
         var btn = U.el('btn-dl-jpg'); btn.disabled = true; btn.textContent = '⏳ กำลังสร้าง…';
-        ExportImg.jpg('CPF_OE_2569', collectExportData()).then(function () {
+        Promise.resolve().then(function () { return ExportImg.jpg('CPF_OE_2569', collectExportData()); }).then(function () {
           App.closeModal('modal-export-img'); U.toast('ดาวน์โหลด JPG สำเร็จ', 'ok');
-        }).catch(function (e) { U.toast('Export ไม่สำเร็จ: ' + e.message, 'err'); })
+        }).catch(function (e) { U.toast('Export ไม่สำเร็จ: ' + ((e && e.message) || e), 'err'); })
           .then(function () { btn.disabled = false; btn.textContent = '⬇️ ดาวน์โหลด JPG'; });
       });
       U.el('btn-dl-pdf').addEventListener('click', function () {
         var btn = U.el('btn-dl-pdf'); btn.disabled = true; btn.textContent = '⏳ กำลังสร้าง…';
-        ExportImg.pdf('CPF_OE_2569', collectExportData()).then(function () {
+        Promise.resolve().then(function () { return ExportImg.pdf('CPF_OE_2569', collectExportData()); }).then(function () {
           App.closeModal('modal-export-img'); U.toast('ดาวน์โหลด PDF สำเร็จ', 'ok');
-        }).catch(function (e) { U.toast('Export ไม่สำเร็จ: ' + e.message, 'err'); })
+        }).catch(function (e) { U.toast('Export ไม่สำเร็จ: ' + ((e && e.message) || e), 'err'); })
           .then(function () { btn.disabled = false; btn.textContent = '📄 ดาวน์โหลด PDF'; });
       });
       U.el('btn-do-export').addEventListener('click', doExport);
