@@ -250,6 +250,22 @@ var ExportImg = (function () {
     });
   }
 
+  /* เติมขอบขาวให้ canvas เป็นสัดส่วน A4 แนวนอน (297:210) พอดี — รูปต้นฉบับวางกึ่งกลาง
+     คงขนาด/สัดส่วนกราฟ-ตัวอักษรเดิมเป๊ะ (ไม่ยืด) แค่เพิ่มขอบข้าง → output เป็น A4 แนวนอนจริง
+     เลี่ยงอาการตัวอักษรยืดตอนนำรูป/PDF ที่เกือบจัตุรัสไปพิมพ์บนหน้าแนวนอน */
+  var A4_RATIO = 297 / 210;
+  function padToLandscapeA4(src) {
+    var w = src.width, h = src.height, W, H;
+    if (w / h >= A4_RATIO) { W = w; H = Math.round(w / A4_RATIO); }
+    else { H = h; W = Math.round(h * A4_RATIO); }
+    var cv = document.createElement('canvas');
+    cv.width = W; cv.height = H;
+    var ctx = cv.getContext('2d');
+    ctx.fillStyle = '#ffffff'; ctx.fillRect(0, 0, W, H);
+    ctx.drawImage(src, Math.round((W - w) / 2), Math.round((H - h) / 2));
+    return cv;
+  }
+
   /* ── public API ──────────────────────────────────────────── */
   function jpg(prefix, cfg) {
     return loadScript(H2C_URL)
@@ -257,7 +273,7 @@ var ExportImg = (function () {
       .then(function (c) {
         var a = document.createElement('a');
         a.download = prefix + '_' + today() + '.jpg';
-        a.href = c.toDataURL('image/jpeg', 0.92);
+        a.href = padToLandscapeA4(c).toDataURL('image/jpeg', 0.92);
         a.click();
       });
   }
@@ -268,20 +284,11 @@ var ExportImg = (function () {
         return Promise.all([captureDOM(buildReportDOM(cfg)), loadScript(PDF_URL)]);
       })
       .then(function (results) {
-        var c = results[0];
+        var c = padToLandscapeA4(results[0]);   // canvas = สัดส่วน A4 แนวนอนพอดี → ใส่เต็มหน้าเดียวไม่ยืด
         var doc = new window.jspdf.jsPDF({ orientation: 'landscape', unit: 'mm', format: 'a4' });
         var pw = doc.internal.pageSize.getWidth();   // 297 mm
         var ph = doc.internal.pageSize.getHeight();  // 210 mm
-        var pageHeightPx = Math.floor(c.width * ph / pw);
-        var totalPages = Math.ceil(c.height / pageHeightPx);
-        for (var i = 0; i < totalPages; i++) {
-          if (i > 0) doc.addPage();
-          var sliceH = Math.min(pageHeightPx, c.height - i * pageHeightPx);
-          var slice = document.createElement('canvas');
-          slice.width = c.width; slice.height = sliceH;
-          slice.getContext('2d').drawImage(c, 0, i * pageHeightPx, c.width, sliceH, 0, 0, c.width, sliceH);
-          doc.addImage(slice.toDataURL('image/jpeg', 0.92), 'JPEG', 0, 0, pw, sliceH * pw / c.width);
-        }
+        doc.addImage(c.toDataURL('image/jpeg', 0.92), 'JPEG', 0, 0, pw, ph);
         doc.save(prefix + '_' + today() + '.pdf');
       });
   }
