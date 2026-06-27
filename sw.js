@@ -6,7 +6,7 @@
    - ไม่แตะคำขอ Google Sheets (docs.google.com) — ให้แอปจัดการแคชข้อมูลเอง
    *** เปลี่ยนโค้ดแอปแล้วให้เพิ่มเลข CACHE_VERSION เพื่อบังคับอัปเดตแคช ***
    ============================================================ */
-var CACHE_VERSION = 'cpf-v9';
+var CACHE_VERSION = 'cpf-v10';
 var CORE = [
   './',
   './index.html',

@@ -448,7 +448,7 @@
             { label: 'แปรผัน', value: U.fmt(variable) + ' บาท' },
             { label: 'เดือนสูงสุด', value: peak ? U.monthLabel(peak.key) + '  ' + U.fmt(peak.value) + ' บาท' : '–' }
           ],
-          sectionA: { title: 'A) สัดส่วนค่าใช้จ่ายตามประเภท', chartImg: charts['c-exp-donut'] ? charts['c-exp-donut'].toBase64Image('image/png', 1) : null },
+          sectionA: { title: 'A) สัดส่วนค่าใช้จ่ายตามประเภท', chartImg: App.chartSquareImage(charts['c-exp-donut']) },
           sectionB: { title: 'B) ค่าใช้จ่ายรายเดือน', chartImg: charts['c-exp-bar'] ? charts['c-exp-bar'].toBase64Image('image/png', 1) : null },
           sectionC: {
             title: 'C) ค่าใช้จ่ายสูงสุด 5 อันดับ',
@@ -464,7 +464,7 @@
             { label: 'ผู้ยืม', value: advByBorrower.length + ' คน' },
             { label: 'เดือนสูงสุด', value: advPeak ? U.monthLabel(advPeak.key) + '  ' + U.fmt(advPeak.value) + ' บาท' : '–' }
           ],
-          sectionA: { title: 'A) สัดส่วนเงินยืมรายเดือน', chartImg: charts['c-adv-donut'] ? charts['c-adv-donut'].toBase64Image('image/png', 1) : null },
+          sectionA: { title: 'A) สัดส่วนเงินยืมรายเดือน', chartImg: App.chartSquareImage(charts['c-adv-donut']) },
           sectionB: { title: 'B) เงินยืมทดรองรายเดือน', chartImg: charts['c-adv-bar'] ? charts['c-adv-bar'].toBase64Image('image/png', 1) : null },
           sectionC: {
             title: 'C) สรุปตามผู้ยืม',

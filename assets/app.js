@@ -81,6 +81,28 @@
     });
   }
 
+  /** สำหรับ export infographic: re-render โดนัทลง canvas จัตุรัส
+      เพื่อให้รูปที่ได้เต็มช่อง ไม่มีขอบว่างซ้าย-ขวาที่ Chart.js เว้นไว้ตอนวาดใน canvas แนวกว้าง */
+  function chartSquareImage(chart, size) {
+    if (!global.Chart || !chart) return null;
+    size = size || 380;
+    var cv = document.createElement('canvas');
+    cv.width = size; cv.height = size;
+    var src = chart.config;
+    var tmp = new Chart(cv, {
+      type: src.type,
+      data: JSON.parse(JSON.stringify(src.data)),
+      options: {
+        responsive: false, maintainAspectRatio: false, animation: false,
+        cutout: (src.options && src.options.cutout) || '58%',
+        plugins: { legend: { position: 'bottom', labels: { boxWidth: 12 } }, tooltip: { enabled: false } }
+      }
+    });
+    var url = tmp.toBase64Image('image/png', 1);
+    tmp.destroy();
+    return url;
+  }
+
   /* ---------------- Modal ---------------- */
   function openModal(id) {
     var ov = U.el(id);
@@ -124,6 +146,7 @@
     applyChartDefaults: applyChartDefaults,
     drawDoughnut: drawDoughnut,
     drawBar: drawBar,
+    chartSquareImage: chartSquareImage,
     openModal: openModal,
     closeModal: closeModal,
     installModalKeytrap: installModalKeytrap,
