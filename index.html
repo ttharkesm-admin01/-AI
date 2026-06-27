@@ -69,6 +69,12 @@
     .card .stats { display: flex; gap: 26px; padding-top: 16px; border-top: 1px solid #EEF1ED; }
     .card .stats .v { font-size: 21px; font-weight: 700; color: #16221C; letter-spacing: -.3px; }
     .card .stats .l { font-size: 11.5px; color: #8A938C; margin-top: 2px; }
+    /* ไอคอนหัวการ์ด (inline SVG รับสีจาก currentColor) */
+    .card .ico-badge { width: 46px; height: 46px; border-radius: 13px; display: grid; place-items: center; flex: none; }
+    .card .ico-badge svg { width: 24px; height: 24px; }
+    .card.oe .ico-badge { color: #00833E; background: #E7F2EB; }
+    .card.welfare .ico-badge { color: #9A7B1F; background: #F6EFD9; }
+    .card .tag { margin-bottom: 10px; }
 
     /* ---- footer note ---- */
     .note {
@@ -119,10 +125,11 @@
     <div class="cards">
       <a class="card oe" href="./oe/">
         <div class="row">
-          <span class="tag">Operating Expense</span>
+          <span class="ico-badge" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="8" cy="8" r="6"/><path d="M18.09 10.37A6 6 0 1 1 10.34 18"/><path d="M7 6h1v4"/><path d="m16.71 13.88.7.71-2.82 2.82"/></svg></span>
           <span class="arrow">→</span>
         </div>
         <div>
+          <span class="tag">Operating Expense</span>
           <div class="title">Dashboard OE ค่าใช้จ่าย</div>
           <p class="desc">ค่าใช้จ่ายบริการสำนักงาน แยกหมวดคงที่ / แปรผัน พร้อมเงินยืมทดรอง รายเดือน Top 5 และ Insights</p>
         </div>
@@ -134,10 +141,11 @@
 
       <a class="card welfare" href="./welfare/">
         <div class="row">
-          <span class="tag">Employee Welfare</span>
+          <span class="ico-badge" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M22 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg></span>
           <span class="arrow">→</span>
         </div>
         <div>
+          <span class="tag">Employee Welfare</span>
           <div class="title">Dashboard สวัสดิการ</div>
           <p class="desc">สวัสดิการพนักงาน 22 คน — ค่ารักษาพยาบาล เบี้ยเลี้ยง ค่าน้ำมัน ค่าที่พัก และ OT พร้อมตารางรายคน × เดือน</p>
         </div>

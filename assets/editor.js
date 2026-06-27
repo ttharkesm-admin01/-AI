@@ -64,20 +64,20 @@
     ov.id = 'modal-editor';
     ov.innerHTML =
       '<div class="modal modal-wide">' +
-        '<div class="modal-head"><h3>✏️ จัดการข้อมูล (เพิ่ม / แก้ไข / ลบ)</h3>' +
+        '<div class="modal-head"><h3><span class="ic gi-edit"></span> จัดการข้อมูล (เพิ่ม / แก้ไข / ลบ)</h3>' +
           '<button class="x-close" id="ed-close" aria-label="ปิด">&times;</button></div>' +
         '<div class="modal-body">' +
           '<div id="ed-sheet-link" class="help-block" style="margin-bottom:12px"></div>' +
           '<div class="ed-tools">' +
-            '<span class="ed-tools-label">📦 สำรอง / นำเข้า:</span>' +
-            '<button class="btn btn-light btn-sm" id="ed-exp-xlsx">⬇️ Excel</button>' +
-            '<button class="btn btn-light btn-sm" id="ed-exp-csv">⬇️ CSV</button>' +
-            '<button class="btn btn-light btn-sm" id="ed-imp">📤 นำเข้าไฟล์</button>' +
+            '<span class="ed-tools-label"><span class="ic gi-package"></span> สำรอง / นำเข้า:</span>' +
+            '<button class="btn btn-light btn-sm gi-download" id="ed-exp-xlsx">Excel</button>' +
+            '<button class="btn btn-light btn-sm gi-download" id="ed-exp-csv">CSV</button>' +
+            '<button class="btn btn-light btn-sm gi-import" id="ed-imp">นำเข้าไฟล์</button>' +
             '<input type="file" id="ed-imp-file" accept=".xlsx,.xls,.csv" style="display:none" />' +
           '</div>' +
           '<div class="ed-grid">' +
             '<div class="ed-formwrap">' +
-              '<div class="cb-title" id="ed-form-title">➕ เพิ่มรายการใหม่</div>' +
+              '<div class="cb-title" id="ed-form-title"><span class="ic gi-plus"></span> เพิ่มรายการใหม่</div>' +
               '<div id="ed-form" class="ed-fields"></div>' +
               '<div class="ed-form-actions">' +
                 '<button class="btn btn-primary btn-sm" id="ed-save-row">เพิ่มรายการ</button>' +
@@ -99,7 +99,7 @@
               '<div class="ed-bulk">' +
                 '<label><input type="checkbox" id="ed-selall" /> เลือกทั้งหมด</label>' +
                 '<span id="ed-selinfo"></span>' +
-                '<button class="btn btn-light btn-sm" id="ed-delsel" disabled>🗑️ ลบที่เลือก</button>' +
+                '<button class="btn btn-light btn-sm gi-trash" id="ed-delsel" disabled>ลบที่เลือก</button>' +
               '</div>' +
               '<div class="tbl-wrap" style="max-height:330px;overflow:auto">' +
                 '<table class="data"><thead><tr><th class="ed-cbcol"></th><th>#</th><th>เดือน</th>' +
@@ -112,8 +112,8 @@
           '</div>' +
         '</div>' +
         '<div class="modal-foot">' +
-          '<button class="btn btn-light" id="ed-clear-local">↩️ ล้างข้อมูลที่แก้ไข (ใช้ข้อมูลต้นทาง)</button>' +
-          '<button class="btn btn-primary" id="ed-save-all">💾 บันทึกทั้งหมด</button>' +
+          '<button class="btn btn-light gi-undo" id="ed-clear-local">ล้างข้อมูลที่แก้ไข (ใช้ข้อมูลต้นทาง)</button>' +
+          '<button class="btn btn-primary gi-save" id="ed-save-all">บันทึกทั้งหมด</button>' +
         '</div>' +
       '</div>';
     document.body.appendChild(ov);
@@ -210,7 +210,7 @@
 
     fillForm(state.editIdx >= 0 ? state.work[state.editIdx] : {});
     var editing = state.editIdx >= 0;
-    U.el('ed-form-title').textContent = editing ? '✏️ แก้ไขรายการ #' + (state.editIdx + 1) : '➕ เพิ่มรายการใหม่';
+    U.el('ed-form-title').innerHTML = editing ? '<span class="ic gi-edit"></span> แก้ไขรายการ #' + (state.editIdx + 1) : '<span class="ic gi-plus"></span> เพิ่มรายการใหม่';
     U.el('ed-save-row').textContent = editing ? 'บันทึกการแก้ไข' : 'เพิ่มรายการ';
   }
 
@@ -294,9 +294,9 @@
         '<td>' + App.esc(rowTag(r)) + '</td>' +
         '<td class="num">' + U.fmt(r.amount) + '</td>' +
         '<td class="ed-actions">' +
-          '<button class="btn btn-light btn-sm" data-ed="edit" data-idx="' + i + '" title="แก้ไข">✏️</button> ' +
-          '<button class="btn btn-light btn-sm" data-ed="dup" data-idx="' + i + '" title="ทำซ้ำ">⧉</button> ' +
-          '<button class="btn btn-light btn-sm" data-ed="del" data-idx="' + i + '" title="ลบ">🗑️</button>' +
+          '<button class="btn btn-light btn-sm gi-edit" data-ed="edit" data-idx="' + i + '" title="แก้ไข" aria-label="แก้ไข"></button> ' +
+          '<button class="btn btn-light btn-sm gi-copy" data-ed="dup" data-idx="' + i + '" title="ทำซ้ำ" aria-label="ทำซ้ำ"></button> ' +
+          '<button class="btn btn-light btn-sm gi-trash" data-ed="del" data-idx="' + i + '" title="ลบ" aria-label="ลบ"></button>' +
         '</td></tr>';
     }).join('') : '<tr><td colspan="7" class="empty">' +
       (state.search ? 'ไม่พบรายการที่ค้นหา' : 'ยังไม่มีรายการ — เพิ่มทางซ้าย') + '</td></tr>';
