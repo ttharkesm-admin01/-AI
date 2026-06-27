@@ -85,6 +85,18 @@
       .hero h1 { font-size: 25px; }
       .cards { grid-template-columns: 1fr; }
     }
+
+    /* โฟกัสด้วยคีย์บอร์ดให้เห็นชัด (a11y) */
+    .card:focus-visible { outline: 3px solid #FFB300; outline-offset: 3px; }
+    /* เคารพการตั้งค่าผู้ใช้ที่ลดการเคลื่อนไหว */
+    @media (prefers-reduced-motion: reduce) {
+      *, *::before, *::after {
+        animation-duration: .001ms !important;
+        transition-duration: .001ms !important;
+      }
+      .card:hover { transform: none; }
+      .card:hover .arrow { transform: none; }
+    }
   </style>
 </head>
 <body>

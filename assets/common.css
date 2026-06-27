@@ -209,7 +209,7 @@ table.data thead th {
   text-align: left; padding: 9px 11px; white-space: nowrap; position: sticky; top: 0;
 }
 .panel.blue table.data thead th, table.data.blue thead th { background: var(--blue-pale); color: var(--blue-dark); }
-table.data tbody td { padding: 8px 11px; border-top: 1px solid var(--line); }
+table.data tbody td { padding: 8px 11px; border-top: 1px solid var(--line); transition: background-color .15s ease; }
 table.data tbody tr:hover { background: var(--cpf-pale); }
 .panel.blue table.data tbody tr:hover, table.data.blue tbody tr:hover { background: var(--blue-pale); }
 table.data td.num, table.data th.num { text-align: right; font-variant-numeric: tabular-nums; white-space: nowrap; }
@@ -274,7 +274,8 @@ table.data tfoot td { padding: 9px 11px; border-top: 2px solid var(--cpf); font-
 .modal-body { padding: 18px 20px; }
 .modal-body p { color: var(--ink-soft); font-size: .9rem; margin-bottom: 12px; }
 .modal-foot { padding: 14px 20px; border-top: 1px solid var(--line); display: flex; gap: 10px; justify-content: flex-end; }
-.x-close { background: none; border: none; font-size: 22px; cursor: pointer; color: var(--muted); line-height: 1; }
+.x-close { background: none; border: none; font-size: 22px; cursor: pointer; color: var(--muted); line-height: 1; transition: color .15s ease; }
+.x-close:hover { color: var(--ink); }
 
 .slide-list { list-style: none; display: flex; flex-direction: column; gap: 8px; }
 .slide-list li {
@@ -308,6 +309,7 @@ table.data tfoot td { padding: 9px 11px; border-top: 2px solid var(--cpf); font-
 /* ---------- Footer ---------- */
 .app-foot { text-align: center; color: var(--muted); font-size: .8rem; padding: 22px; }
 .app-foot a { color: var(--cpf); }
+.app-foot a:hover { text-decoration: underline; }
 
 /* ---------- Responsive ---------- */
 @media (max-width: 980px) {
