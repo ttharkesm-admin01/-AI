@@ -149,7 +149,15 @@
     <div class="card-block">
       <div class="cardb-head">
         <h2>📋 สวัสดิการรายคน × เดือน</h2>
-        <span class="src-info" id="pivot-note"></span>
+        <div class="pivot-tools">
+          <select id="pivot-month" class="pivot-ctrl" aria-label="เลือกเดือนที่แสดงในตาราง"></select>
+          <select id="pivot-top" class="pivot-ctrl" aria-label="จำนวนแถวที่แสดง">
+            <option value="0">แสดงทั้งหมด</option>
+            <option value="10">Top 10</option>
+            <option value="20">Top 20</option>
+          </select>
+          <span class="src-info" id="pivot-note"></span>
+        </div>
       </div>
       <div class="cardb-body">
         <div class="tbl-wrap" style="max-height:480px;overflow:auto">
@@ -277,7 +285,7 @@
     var MEDICAL = 'ค่ารักษาพยาบาล';
     var OTTYPE = 'OT';
     var ALL_TYPES = ['ค่ารักษาพยาบาล', 'เบี้ยเลี้ยง', 'ค่าน้ำมัน', 'ค่าที่พัก', 'สวัสดิการอื่นๆ'];
-    var raw = [], filtered = [], charts = {}, _lastAgg = null;
+    var raw = [], filtered = [], charts = {}, _lastAgg = null, _pivotSrc = [];
     var debouncedRender = App.debounce(render, 120);
     var dash = App.dashboardSetup(KIND, {
       getRaw: function () { return raw; },
@@ -432,17 +440,42 @@
       return { months: monthsArr, rows: rows, colTotals: colTotals, grand: grand };
     }
 
+    // เก็บ records ล่าสุดไว้ให้ปุ่มคุมมุมมอง (เดือน/Top N) วาดตารางใหม่ได้โดยไม่ต้อง render ทั้งหน้า
     function renderPivot(records) {
-      var p = buildPivot(records);
-      U.el('pivot-note').textContent = p.rows.length + ' คน • ' + p.months.length + ' เดือน';
+      _pivotSrc = records;
+      fillPivotMonths();
+      drawPivot();
+    }
+
+    // เติมตัวเลือกเดือนใน dropdown ตามเดือนที่มีข้อมูลจริง · คงค่าที่ผู้ใช้เลือกไว้ถ้ายังมีอยู่
+    function fillPivotMonths() {
+      var sel = U.el('pivot-month'), prev = sel.value;
+      var months = U.uniqSorted(_pivotSrc.map(function (r) { return r.month; }));
+      sel.innerHTML = '<option value="">ทุกเดือน</option>' +
+        months.map(function (m) { return '<option value="' + m + '">' + U.monthLabel(m) + '</option>'; }).join('');
+      sel.value = (prev && months.indexOf(prev) >= 0) ? prev : '';
+    }
+
+    // วาดตาราง pivot ตามมุมมองที่เลือก (คุมเฉพาะตารางนี้ ไม่กระทบ KPI/กราฟ/export)
+    function drawPivot() {
+      var selMonth = U.el('pivot-month').value;     // '' = ทุกเดือน
+      var topN = +U.el('pivot-top').value;          // 0 = ทั้งหมด
+      var src = selMonth ? _pivotSrc.filter(function (r) { return r.month === selMonth; }) : _pivotSrc;
+      var p = buildPivot(src);
+      var rows = topN > 0 ? p.rows.slice(0, topN) : p.rows;
+      var hidden = p.rows.length - rows.length;
+
+      U.el('pivot-note').textContent =
+        (hidden > 0 ? rows.length + '/' + p.rows.length : p.rows.length) + ' คน • ' + p.months.length + ' เดือน';
       U.el('pivot-head').innerHTML = '<tr><th>พนักงาน</th><th>ตำแหน่ง</th>' +
         p.months.map(function (m) { return '<th class="num">' + U.monthLabel(m) + '</th>'; }).join('') +
         '<th class="num">รวม</th></tr>';
-      U.el('pivot-body').innerHTML = p.rows.length ? p.rows.map(function (r) {
+      U.el('pivot-body').innerHTML = rows.length ? rows.map(function (r) {
         return '<tr><td>' + App.esc(r.employee) + '</td><td>' + App.esc(r.position || '-') + '</td>' +
           p.months.map(function (m) { return '<td class="num">' + (r.m[m] ? U.fmt(r.m[m]) : '-') + '</td>'; }).join('') +
           '<td class="num"><strong>' + U.fmt(r.total) + '</strong></td></tr>';
       }).join('') : App.emptyRow(p.months.length + 3);
+      // footer = รวมทุกคนจริง (ไม่ใช่เฉพาะแถวที่ Top N แสดง)
       U.el('pivot-foot').innerHTML = p.rows.length ? '<tr><td colspan="2">รวมทุกคน</td>' +
         p.months.map(function (m) { return '<td class="num">' + U.fmt(p.colTotals[m] || 0) + '</td>'; }).join('') +
         '<td class="num">' + U.fmt(p.grand) + '</td></tr>' : '';
@@ -656,6 +689,7 @@
     function bindEvents() {
       dash.bindCommonEvents();
       ['f-month', 'f-emp', 'f-type'].forEach(function (id) { U.el(id).addEventListener('change', debouncedRender); });
+      ['pivot-month', 'pivot-top'].forEach(function (id) { U.el(id).addEventListener('change', drawPivot); });
       U.el('btn-reset').addEventListener('click', function () {
         ['f-year', 'f-emp', 'f-type'].forEach(function (id) { U.el(id).value = ''; });
         dash.buildMonthFilter(); U.el('f-month').value = ''; render();
