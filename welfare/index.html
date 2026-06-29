@@ -487,17 +487,17 @@
       var peakMonth = U.toSortedPairs(U.groupSum(all, 'month', 'amount'))[0];
       var avg = empCount ? Math.round(grand / empCount) : 0;
       var cards = [
-        { cls: '', icon: '🏥', title: 'พนักงานค่ารักษาสูงสุด', text: topMedEmp ? App.esc(topMedEmp.key) : '–', sub: topMedEmp ? U.fmt(topMedEmp.value) + ' ฿' : 'ไม่มีรายการ' },
-        { cls: 'b', icon: '💵', title: 'ประเภทสวัสดิการสูงสุด', text: topType ? App.esc(topType.key) : '–', sub: topType ? U.fmt(topType.value) + ' ฿' : '' },
-        { cls: 'teal', icon: '📈', title: 'เดือนจ่ายสวัสดิการสูงสุด', text: peakMonth ? U.monthLabelFull(peakMonth.key) : '–', sub: peakMonth ? U.fmt(peakMonth.value) + ' ฿' : '' },
-        { cls: 'amber', icon: '👤', title: 'เฉลี่ยต่อคน', text: U.fmt(avg) + ' ฿', sub: 'จาก ' + empCount + ' คน' }
+        { cls: '', icon: 'gi-medical', title: 'พนักงานค่ารักษาสูงสุด', text: topMedEmp ? App.esc(topMedEmp.key) : '–', sub: topMedEmp ? U.fmt(topMedEmp.value) + ' ฿' : 'ไม่มีรายการ' },
+        { cls: 'b', icon: 'gi-coins', title: 'ประเภทสวัสดิการสูงสุด', text: topType ? App.esc(topType.key) : '–', sub: topType ? U.fmt(topType.value) + ' ฿' : '' },
+        { cls: 'teal', icon: 'gi-trending', title: 'เดือนจ่ายสวัสดิการสูงสุด', text: peakMonth ? U.monthLabelFull(peakMonth.key) : '–', sub: peakMonth ? U.fmt(peakMonth.value) + ' ฿' : '' },
+        { cls: 'amber', icon: 'gi-user', title: 'เฉลี่ยต่อคน', text: U.fmt(avg) + ' ฿', sub: 'จาก ' + empCount + ' คน' }
       ];
       if (otHours > 0) {
         var otPeople = otRecs ? U.uniqSorted(otRecs.map(function (r) { return r.employee; })).length : 0;
-        cards.push({ cls: 'b', icon: '⏱️', title: 'OT รวม (ชั่วโมง)', text: U.fmt(otHours) + ' ชม.', sub: otPeople + ' คนมี OT' });
+        cards.push({ cls: 'b', icon: 'gi-clock', title: 'OT รวม (ชั่วโมง)', text: U.fmt(otHours) + ' ชม.', sub: otPeople + ' คนมี OT' });
       }
       U.el('insights').innerHTML = cards.map(function (c) {
-        return '<div class="insight ' + c.cls + '"><div class="i-icon">' + c.icon + '</div>' +
+        return '<div class="insight ' + c.cls + '"><div class="i-icon"><span class="ic ' + c.icon + '"></span></div>' +
           '<div class="i-title">' + c.title + '</div><div class="i-text">' + c.text +
           (c.sub ? ' <small>' + c.sub + '</small>' : '') + '</div></div>';
       }).join('');
@@ -636,10 +636,10 @@
         title: 'แดชบอร์ดสรุปค่าใช้จ่ายสวัสดิการพนักงาน',
         subtitle: 'โรงงานผลิตอาหารสัตว์ธารเกษม (CPF)  |  ประจำปีงบประมาณ พ.ศ. 2569  (' + periodStr + ')',
         kpis: [
-          { icon: '🏥', label: 'ค่ารักษาพยาบาล', value: U.fmt(totalMed), unit: 'บาท', sub: U.pct(totalMed, grand) + '% ของทั้งหมด' },
-          { icon: '🚗', label: 'เบี้ยเลี้ยง & อื่นๆ', value: U.fmt(totalAllow), unit: 'บาท', sub: U.pct(totalAllow, grand) + '% ของทั้งหมด' },
-          { icon: '📦', label: 'รวมทั้งสิ้น', value: U.fmt(grand), unit: 'บาท', sub: 'เฉลี่ย ' + U.fmt(avg) + ' ฿/คน' },
-          { icon: '👥', label: 'พนักงานที่ได้รับ', value: String(empCount), unit: 'คน', sub: 'สวัสดิการปีงบประมาณ 2569' }
+          { iconKey: 'medical', label: 'ค่ารักษาพยาบาล', value: U.fmt(totalMed), unit: 'บาท', sub: U.pct(totalMed, grand) + '% ของทั้งหมด' },
+          { iconKey: 'car', label: 'เบี้ยเลี้ยง & อื่นๆ', value: U.fmt(totalAllow), unit: 'บาท', sub: U.pct(totalAllow, grand) + '% ของทั้งหมด' },
+          { iconKey: 'package', label: 'รวมทั้งสิ้น', value: U.fmt(grand), unit: 'บาท', sub: 'เฉลี่ย ' + U.fmt(avg) + ' ฿/คน' },
+          { iconKey: 'users', label: 'พนักงานที่ได้รับ', value: String(empCount), unit: 'คน', sub: 'สวัสดิการปีงบประมาณ 2569' }
         ],
         leftPanel: {
           title: 'ค่ารักษาพยาบาล',

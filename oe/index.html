@@ -357,13 +357,13 @@
       var topBorrower = U.toSortedPairs(U.groupSum(adv, 'borrower', 'amount'))[0];
 
       var cards = [
-        { cls: '', icon: '💸', title: 'หมวดใช้จ่ายสูงสุด', text: topCat ? App.esc(topCat.key) : '–', sub: topCat ? U.fmt(topCat.value) + ' ฿' : '' },
-        { cls: 'amber', icon: '⚖️', title: 'สัดส่วน คงที่ : แปรผัน', text: U.pct(fixed, totalExp) + '% : ' + U.pct(variable, totalExp) + '%', sub: 'คงที่ ' + U.fmtShort(fixed) + ' / แปรผัน ' + U.fmtShort(variable) },
-        { cls: 'teal', icon: '📈', title: 'เดือนใช้จ่ายสูงสุด', text: peak ? U.monthLabelFull(peak.key) : '–', sub: peak ? U.fmt(peak.value) + ' ฿' : '' },
-        { cls: 'b', icon: '🤝', title: 'ผู้ยืมทดรองสูงสุด', text: topBorrower ? App.esc(topBorrower.key) : '–', sub: topBorrower ? U.fmt(topBorrower.value) + ' ฿' : 'ไม่มีรายการ' }
+        { cls: '', icon: 'gi-pie', title: 'หมวดใช้จ่ายสูงสุด', text: topCat ? App.esc(topCat.key) : '–', sub: topCat ? U.fmt(topCat.value) + ' ฿' : '' },
+        { cls: 'amber', icon: 'gi-scale', title: 'สัดส่วน คงที่ : แปรผัน', text: U.pct(fixed, totalExp) + '% : ' + U.pct(variable, totalExp) + '%', sub: 'คงที่ ' + U.fmtShort(fixed) + ' / แปรผัน ' + U.fmtShort(variable) },
+        { cls: 'teal', icon: 'gi-trending', title: 'เดือนใช้จ่ายสูงสุด', text: peak ? U.monthLabelFull(peak.key) : '–', sub: peak ? U.fmt(peak.value) + ' ฿' : '' },
+        { cls: 'b', icon: 'gi-wallet', title: 'ผู้ยืมทดรองสูงสุด', text: topBorrower ? App.esc(topBorrower.key) : '–', sub: topBorrower ? U.fmt(topBorrower.value) + ' ฿' : 'ไม่มีรายการ' }
       ];
       U.el('insights').innerHTML = cards.map(function (c) {
-        return '<div class="insight ' + c.cls + '"><div class="i-icon">' + c.icon + '</div>' +
+        return '<div class="insight ' + c.cls + '"><div class="i-icon"><span class="ic ' + c.icon + '"></span></div>' +
           '<div class="i-title">' + c.title + '</div><div class="i-text">' + c.text +
           (c.sub ? ' <small>' + c.sub + '</small>' : '') + '</div></div>';
       }).join('');
@@ -441,10 +441,10 @@
         title: 'แดชบอร์ดสรุปค่าใช้จ่ายและเงินยืมทดรอง',
         subtitle: 'โรงงานผลิตอาหารสัตว์ธารเกษม (CPF)  |  ประจำปีงบประมาณ พ.ศ. 2569  (' + periodStr + ')',
         kpis: [
-          { icon: '💰', label: 'ค่าใช้จ่าย OE รวม', value: U.fmt(totalExp), unit: 'บาท', sub: U.fmtShort(totalExp) },
-          { icon: '🤝', label: 'เงินยืมทดรองรวม', value: U.fmt(totalAdv), unit: 'บาท', sub: adv.length + ' รายการ' },
-          { icon: '📦', label: 'รวมทั้งสิ้น', value: U.fmt(grand), unit: 'บาท', sub: 'OE ' + U.pct(totalExp, grand) + '% • ยืม ' + U.pct(totalAdv, grand) + '%' },
-          { icon: '🗂️', label: 'จำนวนรายการ', value: String(exp.length + adv.length), unit: 'รายการ', sub: 'ค่าใช้จ่าย ' + exp.length + ' / เงินยืม ' + adv.length }
+          { iconKey: 'coins', label: 'ค่าใช้จ่าย OE รวม', value: U.fmt(totalExp), unit: 'บาท', sub: U.fmtShort(totalExp) },
+          { iconKey: 'wallet', label: 'เงินยืมทดรองรวม', value: U.fmt(totalAdv), unit: 'บาท', sub: adv.length + ' รายการ' },
+          { iconKey: 'package', label: 'รวมทั้งสิ้น', value: U.fmt(grand), unit: 'บาท', sub: 'OE ' + U.pct(totalExp, grand) + '% • ยืม ' + U.pct(totalAdv, grand) + '%' },
+          { iconKey: 'layers', label: 'จำนวนรายการ', value: String(exp.length + adv.length), unit: 'รายการ', sub: 'ค่าใช้จ่าย ' + exp.length + ' / เงินยืม ' + adv.length }
         ],
         leftPanel: {
           title: 'ค่าใช้จ่าย',
