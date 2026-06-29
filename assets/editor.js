@@ -41,7 +41,7 @@
 
   var TMONTHS = ['มกราคม', 'กุมภาพันธ์', 'มีนาคม', 'เมษายน', 'พฤษภาคม', 'มิถุนายน',
     'กรกฎาคม', 'สิงหาคม', 'กันยายน', 'ตุลาคม', 'พฤศจิกายน', 'ธันวาคม'];
-  var UNSAVED_MSG = 'มีการแก้ไขที่ยังไม่ได้กด 💾 บันทึกทั้งหมด — ปิดโดยไม่บันทึก?';
+  var UNSAVED_MSG = 'มีการแก้ไขที่ยังไม่ได้กด "บันทึกทั้งหมด" — ปิดโดยไม่บันทึก?';
 
   var state = {
     kind: null, work: [], editIdx: -1, onApply: null, onReset: null,
@@ -437,10 +437,10 @@
     state.editIdx = fi;
     state.onApply = opts.onApply;
     state.onReset = opts.onReset;
-    state.search = ''; state.sortKey = 'month'; state.sortDir = 'asc';
+    state.search = (opts.search || '').trim(); state.sortKey = 'month'; state.sortDir = 'asc';
     state.selected = {}; state.dirty = false;
     ensureModal();
-    U.el('ed-search').value = '';
+    U.el('ed-search').value = state.search;
     U.el('ed-sort').value = 'month-asc';
     renderSheetLink();
     renderForm();

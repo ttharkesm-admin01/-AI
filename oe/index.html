@@ -324,7 +324,7 @@
       var top5 = U.toSortedPairs(agg.byCat).slice(0, 5);
       var tb = U.el('tb-top5');
       tb.innerHTML = top5.length ? top5.map(function (p) {
-        return '<tr><td>' + App.esc(p.key) + '</td><td class="num">' + U.fmt(p.value) +
+        return '<tr class="ed-rowlink" data-term="' + App.esc(p.key) + '" title="คลิกเพื่อแก้ไขรายการในหมวดนี้"><td>' + App.esc(p.key) + '</td><td class="num">' + U.fmt(p.value) +
           '</td><td class="num">' + U.pct(p.value, totalExp) + '%</td></tr>';
       }).join('') : App.emptyRow(3);
     }
@@ -526,6 +526,12 @@
         var tr = e.target.closest('tr[data-raw-idx]'); if (!tr) return;
         var idx = parseInt(tr.getAttribute('data-raw-idx'), 10);
         if (idx >= 0) dash.openManage(idx);
+      });
+      // คลิกแถวตารางยอดรวม (หมวด) → เปิด editor กรองเฉพาะหมวดนั้น
+      U.el('tb-top5').addEventListener('click', function (e) {
+        var tr = e.target.closest('tr[data-term]'); if (!tr) return;
+        var term = tr.getAttribute('data-term');
+        if (term) dash.openManage(-1, term);
       });
     }
 
