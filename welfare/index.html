@@ -382,7 +382,7 @@
       var byEmp = U.toSortedPairs(U.groupSum(otRecs, 'employee', 'amount')).slice(0, 10);
       var posOf = {}; otRecs.forEach(function (r) { posOf[r.employee] = r.position; });
       U.el('tb-ot').innerHTML = byEmp.length ? byEmp.map(function (p) {
-        return '<tr><td>' + App.esc(p.key) + '</td><td>' + App.esc(posOf[p.key] || '-') + '</td><td class="num">' + U.fmt(p.value) + '</td></tr>';
+        return '<tr class="ed-rowlink" data-term="' + App.esc(p.key) + '" title="คลิกเพื่อแก้ไขรายการของพนักงานคนนี้"><td>' + App.esc(p.key) + '</td><td>' + App.esc(posOf[p.key] || '-') + '</td><td class="num">' + U.fmt(p.value) + '</td></tr>';
       }).join('') : App.emptyRow(3);
     }
 
@@ -400,7 +400,7 @@
       var byEmp = U.toSortedPairs(U.groupSum(med, 'employee', 'amount')).slice(0, 8);
       var posOf = {}; med.forEach(function (r) { posOf[r.employee] = r.position; });
       U.el('tb-med').innerHTML = byEmp.length ? byEmp.map(function (p) {
-        return '<tr><td>' + App.esc(p.key) + '</td><td>' + App.esc(posOf[p.key] || '-') + '</td><td class="num">' + U.fmt(p.value) + '</td></tr>';
+        return '<tr class="ed-rowlink" data-term="' + App.esc(p.key) + '" title="คลิกเพื่อแก้ไขรายการของพนักงานคนนี้"><td>' + App.esc(p.key) + '</td><td>' + App.esc(posOf[p.key] || '-') + '</td><td class="num">' + U.fmt(p.value) + '</td></tr>';
       }).join('') : App.emptyRow(3);
     }
 
@@ -419,7 +419,7 @@
       drawBar('c-allow-bar', monthsArr.map(U.monthLabel), monthsArr.map(function (m) { return byMonth[m]; }), '#1565C0', 'เบี้ยเลี้ยง & อื่นๆ');
 
       U.el('tb-type').innerHTML = typePairs.length ? typePairs.map(function (p) {
-        return '<tr><td>' + App.esc(p.key) + '</td><td class="num">' + U.fmt(p.value) + '</td><td class="num">' + U.pct(p.value, totalAllow) + '%</td></tr>';
+        return '<tr class="ed-rowlink" data-term="' + App.esc(p.key) + '" title="คลิกเพื่อแก้ไขรายการประเภทนี้"><td>' + App.esc(p.key) + '</td><td class="num">' + U.fmt(p.value) + '</td><td class="num">' + U.pct(p.value, totalAllow) + '%</td></tr>';
       }).join('') : App.emptyRow(3);
     }
 
@@ -471,7 +471,7 @@
         p.months.map(function (m) { return '<th class="num">' + U.monthLabel(m) + '</th>'; }).join('') +
         '<th class="num">รวม</th></tr>';
       U.el('pivot-body').innerHTML = rows.length ? rows.map(function (r) {
-        return '<tr><td>' + App.esc(r.employee) + '</td><td>' + App.esc(r.position || '-') + '</td>' +
+        return '<tr class="ed-rowlink" data-term="' + App.esc(r.employee) + '" title="คลิกเพื่อแก้ไขรายการของพนักงานคนนี้"><td>' + App.esc(r.employee) + '</td><td>' + App.esc(r.position || '-') + '</td>' +
           p.months.map(function (m) { return '<td class="num">' + (r.m[m] ? U.fmt(r.m[m]) : '-') + '</td>'; }).join('') +
           '<td class="num"><strong>' + U.fmt(r.total) + '</strong></td></tr>';
       }).join('') : App.emptyRow(p.months.length + 3);
@@ -719,6 +719,14 @@
         });
         U.exportExcel(headers, rows, 'CPF_Welfare_' + U.fileDate() + '.xlsx');
         U.toast('ดาวน์โหลด Excel สำเร็จ', 'ok');
+      });
+      // คลิกแถวตารางยอดรวม → เปิด editor กรองด้วยชื่อพนักงาน/ประเภทของแถวนั้น
+      ['tb-med', 'tb-ot', 'tb-type', 'pivot-body'].forEach(function (id) {
+        U.el(id).addEventListener('click', function (e) {
+          var tr = e.target.closest('tr[data-term]'); if (!tr) return;
+          var term = tr.getAttribute('data-term');
+          if (term) dash.openManage(-1, term);
+        });
       });
     }
 

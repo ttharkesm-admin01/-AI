@@ -217,10 +217,11 @@
       App.openModal('modal-connect');
     }
 
-    function openManage(focusIndex) {
+    function openManage(focusIndex, search) {
       DataEditor.open({
         kind: kind, records: cfg.getRaw(),
         focusIndex: (typeof focusIndex === 'number' ? focusIndex : -1),
+        search: (typeof search === 'string' ? search : ''),
         onApply: function (records) {
           onLoaded({ records: records, source: 'local', count: records.length });
           U.toast('บันทึกข้อมูลแล้ว (เก็บในเบราว์เซอร์นี้)', 'ok');
