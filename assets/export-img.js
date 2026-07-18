@@ -6,7 +6,7 @@ var ExportImg = (function () {
   var PDF_URL = 'https://cdn.jsdelivr.net/npm/jspdf@2.5.1/dist/jspdf.umd.min.js';
 
   var FONT = "'Sarabun','Segoe UI',Tahoma,sans-serif";
-  var G = '#2E7D32', GD = '#1B5E20';
+  var G = '#2E7D32', GD = '#1B5E20', GL = '#E8F5E9', GB = '#C8E6C9';
   var INK = '#1f2937', MUTED = '#6b7280', LINE = '#e5e7eb';
 
   /* ── utils ───────────────────────────────────────────────── */
@@ -38,14 +38,14 @@ var ExportImg = (function () {
     layers: '<path d="m12.83 2.18a2 2 0 0 0-1.66 0L2.6 6.08a1 1 0 0 0 0 1.83l8.58 3.91a2 2 0 0 0 1.66 0l8.58-3.9a1 1 0 0 0 0-1.83Z"/><path d="m22 17.65-9.17 4.16a2 2 0 0 1-1.66 0L2 17.65"/><path d="m22 12.65-9.17 4.16a2 2 0 0 1-1.66 0L2 12.65"/>',
     medical: '<path d="M19 14c1.49-1.46 3-3.21 3-5.5A5.5 5.5 0 0 0 16.5 3c-1.76 0-3 .5-4.5 2-1.5-1.5-2.74-2-4.5-2A5.5 5.5 0 0 0 2 8.5c0 2.29 1.49 4.04 3 5.5l7 7Z"/><path d="M3.22 12H9.5l.5-1 2 4.5 2-7 1.5 3.5h5.27"/>',
     car: '<path d="M19 17h2c.6 0 1-.4 1-1v-3c0-.9-.7-1.7-1.5-1.9C18.7 10.6 16 10 16 10s-1.3-1.4-2.2-2.3c-.5-.4-1.1-.7-1.8-.7H5c-.6 0-1.1.4-1.4.9l-1.5 2.8C1.4 11.3 1 12.1 1 13v3c0 .6.4 1 1 1h2"/><circle cx="7" cy="17" r="2"/><path d="M9 17h6"/><circle cx="17" cy="17" r="2"/>',
-    users: '<path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M22 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/>',
-    star: '<path d="M11.525 2.295a.53.53 0 0 1 .95 0l2.31 4.679a2.123 2.123 0 0 0 1.595 1.16l5.166.756a.53.53 0 0 1 .294.904l-3.736 3.638a2.123 2.123 0 0 0-.611 1.878l.882 5.14a.53.53 0 0 1-.771.56l-4.618-2.428a2.122 2.122 0 0 0-1.973 0L6.396 21.01a.53.53 0 0 1-.77-.56l.881-5.139a2.122 2.122 0 0 0-.611-1.879L2.16 9.795a.53.53 0 0 1 .294-.906l5.165-.755a2.122 2.122 0 0 0 1.597-1.16z"/>'
+    users: '<path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M22 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/>'
   };
-  function iconSvg(key, color) {
+  function iconSvg(key, color, size) {
     var p = ICONS[key];
     if (!p) return '';
-    return '<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="' + (color || MUTED) +
-      '" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-2px;margin-right:3px">' + p + '</svg>';
+    size = size || 13;
+    return '<svg width="' + size + '" height="' + size + '" viewBox="0 0 24 24" fill="none" stroke="' + (color || MUTED) +
+      '" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-2px">' + p + '</svg>';
   }
 
   function today() {
@@ -53,15 +53,20 @@ var ExportImg = (function () {
   }
 
   /* ── sub-components ──────────────────────────────────────── */
+  /* การ์ด KPI สไตล์อ้างอิง: กล่องไอคอนเขียวอ่อนซ้าย + label/ค่าใหญ่ขวา */
   function kpiBox(k) {
     var fontSize = k.value.length > 9 ? '18px' : k.value.length > 6 ? '21px' : '24px';
-    return mk('div',
-      'background:#fff;border:1.5px solid ' + LINE + ';border-radius:12px;padding:12px 16px',
-      '<div style="font-size:11px;color:' + MUTED + ';margin-bottom:4px">' + iconSvg(k.iconKey) + esc(k.label) + '</div>' +
+    var box = mk('div',
+      'background:#fff;border:1.5px solid ' + GB + ';border-radius:12px;padding:11px 14px;display:flex;align-items:center;gap:10px');
+    box.appendChild(mk('div',
+      'width:38px;height:38px;border-radius:10px;background:' + GL + ';display:flex;align-items:center;justify-content:center;flex:none',
+      iconSvg(k.iconKey, G, 20)));
+    box.appendChild(mk('div', 'min-width:0',
+      '<div style="font-size:11px;color:' + MUTED + ';margin-bottom:2px">' + esc(k.label) + '</div>' +
       '<div style="font-size:' + fontSize + ';font-weight:800;color:' + GD + ';letter-spacing:-.3px;line-height:1.1">' +
         k.value + ' <span style="font-size:12px;font-weight:500;color:' + INK + '">' + k.unit + '</span></div>' +
-      (k.sub ? '<div style="font-size:10.5px;color:' + MUTED + ';margin-top:3px">' + k.sub + '</div>' : '')
-    );
+      (k.sub ? '<div style="font-size:10px;color:' + MUTED + ';margin-top:2px">' + k.sub + '</div>' : '')));
+    return box;
   }
 
   function chartCell(title, imgSrc) {
@@ -81,24 +86,37 @@ var ExportImg = (function () {
     return wrap;
   }
 
-  function tableCell(title, heads, rows, color) {
+  /* ตารางในแผง — opts (optional): { rank:true เพิ่มคอลัมน์ "ลำดับ", foot:[label, value] แถวรวมท้ายตาราง } */
+  function tableCell(title, heads, rows, color, opts) {
+    opts = opts || {};
     var wrap = mk('div', 'min-width:0');
     wrap.appendChild(mk('div', 'font-size:10px;font-weight:700;color:#374151;margin-bottom:5px;line-height:1.3', title));
     if (!rows || !rows.length) {
       wrap.appendChild(mk('div', 'font-size:10px;color:' + MUTED + ';padding:6px', 'ไม่มีข้อมูล'));
       return wrap;
     }
+    var allHeads = opts.rank ? ['ลำดับ'].concat(heads) : heads;
+    var labelCol = opts.rank ? 1 : 0; // คอลัมน์ข้อความ (ชิดซ้าย) — ก่อนหน้า = ลำดับ (กึ่งกลาง), หลัง = ตัวเลข (ชิดขวา)
+    function alignOf(i) { return i < labelCol ? 'center' : i === labelCol ? 'left' : 'right'; }
     var tbl = '<table style="width:100%;border-collapse:collapse;font-size:10px">';
     tbl += '<thead><tr style="background:' + color + '">' +
-      heads.map(function (h, i) {
-        return '<th style="padding:4px 6px;color:#fff;font-weight:600;text-align:' + (i > 0 ? 'right' : 'left') + ';white-space:nowrap">' + esc(h) + '</th>';
+      allHeads.map(function (h, i) {
+        return '<th style="padding:4px 6px;color:#fff;font-weight:600;text-align:' + alignOf(i) + ';white-space:nowrap">' + esc(h) + '</th>';
       }).join('') + '</tr></thead><tbody>';
     rows.forEach(function (row, ri) {
+      var cells = opts.rank ? [String(ri + 1)].concat(row) : row;
       tbl += '<tr style="background:' + (ri % 2 === 0 ? '#f9fafb' : '#fff') + '">' +
-        row.map(function (cell, ci) {
-          return '<td style="padding:4px 6px;border-bottom:1px solid #f3f4f6;text-align:' + (ci > 0 ? 'right' : 'left') + ';max-width:110px;overflow:hidden;white-space:nowrap;text-overflow:ellipsis">' + esc(cell) + '</td>';
+        cells.map(function (cell, ci) {
+          var extra = ci === labelCol ? 'max-width:150px;overflow:hidden;text-overflow:ellipsis;' : '';
+          var weight = ci < labelCol ? 'font-weight:700;color:' + GD + ';' : '';
+          return '<td style="padding:4px 6px;border-bottom:1px solid #f3f4f6;text-align:' + alignOf(ci) + ';white-space:nowrap;' + extra + weight + '">' + esc(cell) + '</td>';
         }).join('') + '</tr>';
     });
+    if (opts.foot) {
+      tbl += '<tr style="background:' + GL + '">' +
+        '<td colspan="' + (allHeads.length - 1) + '" style="padding:5px 6px;font-weight:800;color:' + GD + '">' + esc(opts.foot[0]) + '</td>' +
+        '<td style="padding:5px 6px;font-weight:800;color:' + GD + ';text-align:right;white-space:nowrap">' + esc(opts.foot[1]) + '</td></tr>';
+    }
     tbl += '</tbody></table>';
     wrap.insertAdjacentHTML('beforeend', tbl);
     return wrap;
@@ -107,9 +125,9 @@ var ExportImg = (function () {
   function buildPanel(p) {
     var panel = mk('div', 'border:1.5px solid ' + LINE + ';border-radius:12px;overflow:hidden');
 
-    // header badge
+    // header badge — จัดกึ่งกลางตามดีไซน์อ้างอิง
     panel.appendChild(mk('div',
-      'background:' + p.color + ';color:#fff;padding:8px 14px;font-size:14px;font-weight:700',
+      'background:' + p.color + ';color:#fff;padding:8px 14px;font-size:14px;font-weight:700;text-align:center',
       p.title
     ));
 
@@ -119,7 +137,7 @@ var ExportImg = (function () {
       mkRow.appendChild(mk('div',
         'padding:9px 12px;flex:1' + (i < p.miniKpis.length - 1 ? ';border-right:1px solid ' + LINE : ''),
         '<div style="font-size:10px;color:' + MUTED + ';margin-bottom:2px">' + esc(m.label) + '</div>' +
-        '<div style="font-size:12.5px;font-weight:700;color:' + INK + '">' + esc(m.value) + '</div>'
+        '<div style="font-size:12.5px;font-weight:700;color:' + GD + '">' + esc(m.value) + '</div>'
       ));
     });
     panel.appendChild(mkRow);
@@ -130,9 +148,9 @@ var ExportImg = (function () {
     chartRow.appendChild(chartCell(p.sectionB.title, p.sectionB.chartImg));
     panel.appendChild(chartRow);
 
-    // Row 2: table — full panel width
+    // Row 2: table — full panel width (sectionC เป็น opts เอง: รองรับ rank/foot)
     var tableRow = mk('div', 'padding:0 10px 10px');
-    tableRow.appendChild(tableCell(p.sectionC.title, p.sectionC.heads, p.sectionC.rows, p.color));
+    tableRow.appendChild(tableCell(p.sectionC.title, p.sectionC.heads, p.sectionC.rows, p.color, p.sectionC));
     panel.appendChild(tableRow);
 
     return panel;
@@ -200,9 +218,9 @@ var ExportImg = (function () {
       'width:1200px;background:#fff;font-family:' + FONT + ';color:' + INK + ';padding:26px 30px;box-sizing:border-box;line-height:1.5'
     );
 
-    // ─ Title
-    var titleWrap = mk('div', 'margin-bottom:16px;padding-bottom:10px;border-bottom:3px solid ' + G);
-    titleWrap.appendChild(mk('div', 'font-size:24px;font-weight:800;color:' + GD + ';line-height:1.2', cfg.title));
+    // ─ Title — จัดกึ่งกลาง + เส้นคู่ใต้หัว ตามดีไซน์อ้างอิง
+    var titleWrap = mk('div', 'margin-bottom:14px;padding-bottom:10px;border-bottom:4px double ' + G + ';text-align:center');
+    titleWrap.appendChild(mk('div', 'font-size:26px;font-weight:800;color:' + GD + ';line-height:1.2', cfg.title));
     titleWrap.appendChild(mk('div', 'font-size:12px;color:' + MUTED + ';margin-top:4px', cfg.subtitle));
     root.appendChild(titleWrap);
 
@@ -221,19 +239,19 @@ var ExportImg = (function () {
       root.appendChild(buildOTSection(cfg.otSection));
     }
 
-    // ─ Insights
+    // ─ Insights — แถวล่าง: วงกลมตัวเลขเขียวเข้ม + ข้อความ (ตามดีไซน์อ้างอิง)
     if (cfg.insights && cfg.insights.length) {
-      var insWrap = mk('div', 'background:#fffde7;border:1.5px solid #f9a825;border-radius:10px;padding:10px 14px;margin-top:12px');
-      insWrap.appendChild(mk('div', 'font-size:12px;font-weight:800;color:#e65100;margin-bottom:7px', iconSvg('star', '#e65100') + 'ประเด็นสำคัญ'));
       var cols = Math.min(cfg.insights.length, 4);
-      var insGrid = mk('div', 'display:grid;grid-template-columns:repeat(' + cols + ',1fr);gap:10px');
+      var insGrid = mk('div', 'display:grid;grid-template-columns:repeat(' + cols + ',1fr);gap:12px;margin-top:14px;padding-top:12px;border-top:1.5px solid ' + LINE);
       cfg.insights.forEach(function (ins) {
-        insGrid.appendChild(mk('div', 'font-size:11px;color:' + INK + ';line-height:1.55',
-          '<span style="background:#e65100;color:#fff;border-radius:4px;padding:1px 5px;font-size:10px;font-weight:700;margin-right:5px">' + esc(ins.num) + '</span>' + esc(ins.text)
-        ));
+        var item = mk('div', 'display:flex;align-items:flex-start;gap:8px');
+        item.appendChild(mk('div',
+          'width:26px;height:26px;border-radius:50%;background:' + GD + ';color:#fff;font-size:13px;font-weight:800;display:flex;align-items:center;justify-content:center;flex:none',
+          esc(ins.num)));
+        item.appendChild(mk('div', 'font-size:11px;color:' + INK + ';line-height:1.5;padding-top:3px', esc(ins.text)));
+        insGrid.appendChild(item);
       });
-      insWrap.appendChild(insGrid);
-      root.appendChild(insWrap);
+      root.appendChild(insGrid);
     }
 
     // ─ Footnote
@@ -286,13 +304,13 @@ var ExportImg = (function () {
   }
 
   /* ── public API ──────────────────────────────────────────── */
-  function jpg(prefix, cfg) {
+  function png(prefix, cfg) {
     return loadScript(H2C_URL)
       .then(function () { return captureDOM(buildReportDOM(cfg)); })
       .then(function (c) {
         var a = document.createElement('a');
-        a.download = prefix + '_' + today() + '.jpg';
-        a.href = padToLandscapeA4(c).toDataURL('image/jpeg', 0.92);
+        a.download = prefix + '_' + today() + '.png';
+        a.href = padToLandscapeA4(c).toDataURL('image/png');
         a.click();
       });
   }
@@ -312,5 +330,6 @@ var ExportImg = (function () {
       });
   }
 
-  return { jpg: jpg, pdf: pdf };
+  // jpg คงไว้เป็น alias ของ png — กันหน้าเก่าใน SW cache ที่ยังเรียก ExportImg.jpg พังตอน cache mismatch
+  return { png: png, jpg: png, pdf: pdf };
 })();

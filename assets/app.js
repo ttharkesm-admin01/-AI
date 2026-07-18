@@ -82,20 +82,52 @@
   }
 
   /** สำหรับ export infographic: re-render โดนัทลง canvas จัตุรัส
-      เพื่อให้รูปที่ได้เต็มช่อง ไม่มีขอบว่างซ้าย-ขวาที่ Chart.js เว้นไว้ตอนวาดใน canvas แนวกว้าง */
-  function chartSquareImage(chart, size) {
+      เพื่อให้รูปที่ได้เต็มช่อง ไม่มีขอบว่างซ้าย-ขวาที่ Chart.js เว้นไว้ตอนวาดใน canvas แนวกว้าง
+      colors (ถ้ามี): override สีชิ้นโดนัทเฉพาะในรูป export — array สี หรือชื่อ palette ('green') */
+  function chartSquareImage(chart, size, colors) {
     if (!global.Chart || !chart) return null;
     size = size || 380;
     var cv = document.createElement('canvas');
     cv.width = size; cv.height = size;
     var src = chart.config;
+    var data = JSON.parse(JSON.stringify(src.data));
+    if (colors) data.datasets.forEach(function (ds) {
+      ds.backgroundColor = (typeof colors === 'string') ? U.palette(colors, ds.data.length) : colors;
+    });
     var tmp = new Chart(cv, {
       type: src.type,
-      data: JSON.parse(JSON.stringify(src.data)),
+      data: data,
       options: {
         responsive: false, maintainAspectRatio: false, animation: false,
         cutout: (src.options && src.options.cutout) || '58%',
         plugins: { legend: { position: 'bottom', labels: { boxWidth: 12 } }, tooltip: { enabled: false } }
+      }
+    });
+    var url = tmp.toBase64Image('image/png', 1);
+    tmp.destroy();
+    return url;
+  }
+
+  /** สำหรับ export infographic: re-render กราฟแท่งลง canvas ออฟสกรีน
+      พร้อม override สีให้เข้าธีมรายงาน (ไม่กระทบกราฟบนจอ) */
+  function chartBarImage(chart, color, w, h) {
+    if (!global.Chart || !chart) return null;
+    var cv = document.createElement('canvas');
+    cv.width = w || 760; cv.height = h || 420;
+    var data = JSON.parse(JSON.stringify(chart.config.data));
+    if (color) data.datasets.forEach(function (ds) { ds.backgroundColor = color; });
+    var tmp = new Chart(cv, {
+      type: 'bar',
+      plugins: [barValueLabel],
+      data: data,
+      options: {
+        responsive: false, maintainAspectRatio: false, animation: false,
+        layout: { padding: { top: 18 } },
+        plugins: { legend: { display: false }, tooltip: { enabled: false } },
+        scales: {
+          x: { grid: { display: false } },
+          y: { beginAtZero: true, ticks: { callback: function (v) { return U.fmtShort(v); } } }
+        }
       }
     });
     var url = tmp.toBase64Image('image/png', 1);
@@ -149,6 +181,7 @@
     drawDoughnut: drawDoughnut,
     drawBar: drawBar,
     chartSquareImage: chartSquareImage,
+    chartBarImage: chartBarImage,
     openModal: openModal,
     closeModal: closeModal,
     installModalKeytrap: installModalKeytrap,
