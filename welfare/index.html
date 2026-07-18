@@ -496,6 +496,13 @@
         var otPeople = otRecs ? U.uniqSorted(otRecs.map(function (r) { return r.employee; })).length : 0;
         cards.push({ cls: 'b', icon: 'gi-clock', title: 'OT รวม (ชั่วโมง)', text: U.fmtHours(otHours) + ' ชม.', sub: otPeople + ' คนมี OT' });
       }
+      // เทียบเดือนก่อน (MoM — เฉพาะยอดเงินสวัสดิการ ไม่รวม OT) แสดงเมื่อช่วงที่กรองมี >= 2 เดือน
+      var mom = U.momChange(U.groupSum(all, 'month', 'amount'));
+      if (mom) cards.push({
+        cls: mom.pct >= 0 ? 'amber' : '', icon: 'gi-trending', title: 'สวัสดิการเทียบเดือนก่อน',
+        text: (mom.pct >= 0 ? '+' : '') + mom.pct + '%',
+        sub: U.monthLabel(mom.from) + ' ' + U.fmtShort(mom.fromV) + ' → ' + U.monthLabel(mom.to) + ' ' + U.fmtShort(mom.toV)
+      });
       U.el('insights').innerHTML = cards.map(function (c) {
         return '<div class="insight ' + c.cls + '"><div class="i-icon"><span class="ic ' + c.icon + '"></span></div>' +
           '<div class="i-title">' + c.title + '</div><div class="i-text">' + c.text +
@@ -683,12 +690,17 @@
           }
         },
         otSection: otSection,
-        insights: [
-          { num: 1, text: 'ค่ารักษาพยาบาล ' + U.pct(totalMed, grand) + '% ของสวัสดิการทั้งหมด' + (topMedEmp[0] ? ' • ' + topMedEmp[0].key + ' สูงสุด ' + U.fmt(topMedEmp[0].value) + ' ฿' : '') },
-          { num: 2, text: 'เบี้ยเลี้ยงสูงสุด: ' + (topBaiLiang[0] ? topBaiLiang[0].key + ' ' + U.fmt(topBaiLiang[0].value) + ' บาท' : '–') },
-          { num: 3, text: 'เดือนจ่ายสวัสดิการสูงสุด: ' + (medPeak || allowPeak ? U.monthLabelFull((medPeak || allowPeak).key) : '–') },
-          { num: 4, text: 'เฉลี่ยต่อคน ' + U.fmt(avg) + ' บาท  จาก ' + empCount + ' คน' + (otRecs.length ? '  •  OT รวม ' + U.fmtHours(U.sumBy(otRecs, 'amount')) + ' ชม.' : '') }
-        ],
+        insights: (function () {
+          var arr = [
+            { num: 1, text: 'ค่ารักษาพยาบาล ' + U.pct(totalMed, grand) + '% ของสวัสดิการทั้งหมด' + (topMedEmp[0] ? ' • ' + topMedEmp[0].key + ' สูงสุด ' + U.fmt(topMedEmp[0].value) + ' ฿' : '') },
+            { num: 2, text: 'เบี้ยเลี้ยงสูงสุด: ' + (topBaiLiang[0] ? topBaiLiang[0].key + ' ' + U.fmt(topBaiLiang[0].value) + ' บาท' : '–') },
+            { num: 3, text: 'เดือนจ่ายสวัสดิการสูงสุด: ' + (medPeak || allowPeak ? U.monthLabelFull((medPeak || allowPeak).key) : '–') },
+            { num: 4, text: 'เฉลี่ยต่อคน ' + U.fmt(avg) + ' บาท  จาก ' + empCount + ' คน' + (otRecs.length ? '  •  OT รวม ' + U.fmtHours(U.sumBy(otRecs, 'amount')) + ' ชม.' : '') }
+          ];
+          var mom = U.momChange(U.groupSum(money, 'month', 'amount'));
+          if (mom) arr.push({ num: 5, text: 'สวัสดิการ ' + U.monthLabel(mom.to) + ' ' + (mom.pct >= 0 ? 'เพิ่มขึ้น ' : 'ลดลง ') + Math.abs(mom.pct) + '% จาก ' + U.monthLabel(mom.from) + ' (' + U.fmt(mom.fromV) + ' → ' + U.fmt(mom.toV) + ' บาท)' });
+          return arr;
+        })(),
         footnote: '① หมายเหตุ: สรุปข้อมูลจากระบบ Dashboard CPF ธารเกษม  •  สร้างเมื่อ ' + new Date().toLocaleDateString('th-TH', { dateStyle: 'long' })
       };
     }
