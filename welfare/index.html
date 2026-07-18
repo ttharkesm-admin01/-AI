@@ -585,9 +585,9 @@
       if (!chart) return null;
       return App.chartSquareImage ? App.chartSquareImage(chart, null, colors || 'green') : chart.toBase64Image('image/png', 1);
     }
-    function barImg(chart, color) {
+    function barImg(chart, color, w, h) {
       if (!chart) return null;
-      return App.chartBarImage ? App.chartBarImage(chart, color || '#2E7D32') : chart.toBase64Image('image/png', 1);
+      return App.chartBarImage ? App.chartBarImage(chart, color || '#2E7D32', w, h) : chart.toBase64Image('image/png', 1);
     }
 
     function collectWelfareData() {
@@ -626,7 +626,7 @@
         otSection = {
           title: 'OT Top 3 (ชั่วโมง)',
           totalHours: U.fmtHours(U.sumBy(otRecs, 'amount')) + ' ชม.',
-          chartImg: barImg(charts['c-ot-bar'], '#6A1B9A'),
+          chartImg: barImg(charts['c-ot-bar'], '#6A1B9A', 1420, 360),
           months: otMonths.map(function (mc) { return { code: mc, label: U.monthLabel(mc) }; }),
           rows: otTop3.map(function (emp) {
             var bm = {};
