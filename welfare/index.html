@@ -372,17 +372,17 @@
       var total = U.sumBy(otRecs, 'amount');
       var empCnt = U.uniqSorted(otRecs.map(function (r) { return r.employee; })).length;
 
-      U.el('ot-total').textContent = U.fmt(total) + ' ชม.';
+      U.el('ot-total').textContent = U.fmtHours(total) + ' ชม.';
       U.el('ot-emp').textContent = empCnt;
       U.el('ot-peak').textContent = peak ? U.monthLabel(peak.key) : '–';
-      U.el('ot-note').textContent = U.fmt(total) + ' ชม. • ' + empCnt + ' คน';
+      U.el('ot-note').textContent = U.fmtHours(total) + ' ชม. • ' + empCnt + ' คน';
 
       drawBar('c-ot-bar', monthsArr.map(U.monthLabel), monthsArr.map(function (m) { return byMonth[m]; }), '#6A1B9A', 'OT (ชม.)', 'ชม.');
 
       var byEmp = U.toSortedPairs(U.groupSum(otRecs, 'employee', 'amount')).slice(0, 10);
       var posOf = {}; otRecs.forEach(function (r) { posOf[r.employee] = r.position; });
       U.el('tb-ot').innerHTML = byEmp.length ? byEmp.map(function (p) {
-        return '<tr class="ed-rowlink" data-term="' + App.esc(p.key) + '" title="คลิกเพื่อแก้ไขรายการของพนักงานคนนี้"><td>' + App.esc(p.key) + '</td><td>' + App.esc(posOf[p.key] || '-') + '</td><td class="num">' + U.fmt(p.value) + '</td></tr>';
+        return '<tr class="ed-rowlink" data-term="' + App.esc(p.key) + '" title="คลิกเพื่อแก้ไขรายการของพนักงานคนนี้"><td>' + App.esc(p.key) + '</td><td>' + App.esc(posOf[p.key] || '-') + '</td><td class="num">' + U.fmtHours(p.value) + '</td></tr>';
       }).join('') : App.emptyRow(3);
     }
 
@@ -494,7 +494,7 @@
       ];
       if (otHours > 0) {
         var otPeople = otRecs ? U.uniqSorted(otRecs.map(function (r) { return r.employee; })).length : 0;
-        cards.push({ cls: 'b', icon: 'gi-clock', title: 'OT รวม (ชั่วโมง)', text: U.fmt(otHours) + ' ชม.', sub: otPeople + ' คนมี OT' });
+        cards.push({ cls: 'b', icon: 'gi-clock', title: 'OT รวม (ชั่วโมง)', text: U.fmtHours(otHours) + ' ชม.', sub: otPeople + ' คนมี OT' });
       }
       U.el('insights').innerHTML = cards.map(function (c) {
         return '<div class="insight ' + c.cls + '"><div class="i-icon"><span class="ic ' + c.icon + '"></span></div>' +
@@ -567,9 +567,9 @@
           image: PPT.chartImage(charts['c-ot-bar']),
           table: {
             headColor: '6A1B9A', head: ['พนักงาน', 'ชม.'], align: ['left', 'right'], widths: [4.0, 2.0],
-            rows: topOT.map(function (p) { return [p.key, U.fmt(p.value)]; })
+            rows: topOT.map(function (p) { return [p.key, U.fmtHours(p.value)]; })
           },
-          note: 'OT รวมทั้งสิ้น ' + U.fmt(otTotal) + ' ชั่วโมง (แยกจากยอดเงิน)'
+          note: 'OT รวมทั้งสิ้น ' + U.fmtHours(otTotal) + ' ชั่วโมง (แยกจากยอดเงิน)'
         });
       }
 
@@ -620,14 +620,14 @@
           .sort(function (a, b) { return b.total - a.total; })
           .slice(0, 3);
         otSection = {
-          title: '⏰ OT Top 3 (ชั่วโมง)',
-          totalHours: U.fmt(U.sumBy(otRecs, 'amount')) + ' ชม.',
+          title: 'OT Top 3 (ชั่วโมง)',
+          totalHours: U.fmtHours(U.sumBy(otRecs, 'amount')) + ' ชม.',
           chartImg: charts['c-ot-bar'] ? charts['c-ot-bar'].toBase64Image('image/png', 1) : null,
           months: otMonths.map(function (mc) { return { code: mc, label: U.monthLabel(mc) }; }),
           rows: otTop3.map(function (emp) {
             var bm = {};
-            otMonths.forEach(function (mc) { bm[mc] = emp.byMonth[mc] ? U.fmt(emp.byMonth[mc]) : ''; });
-            return { name: emp.name, position: emp.position, total: U.fmt(emp.total) + ' ชม.', byMonth: bm };
+            otMonths.forEach(function (mc) { bm[mc] = emp.byMonth[mc] ? U.fmtHours(emp.byMonth[mc]) : ''; });
+            return { name: emp.name, position: emp.position, total: U.fmtHours(emp.total) + ' ชม.', byMonth: bm };
           })
         };
       }
@@ -679,7 +679,7 @@
           { num: 1, text: 'ค่ารักษาพยาบาล ' + U.pct(totalMed, grand) + '% ของสวัสดิการทั้งหมด' + (topMedEmp[0] ? ' • ' + topMedEmp[0].key + ' สูงสุด ' + U.fmt(topMedEmp[0].value) + ' ฿' : '') },
           { num: 2, text: 'เบี้ยเลี้ยงสูงสุด: ' + (topBaiLiang[0] ? topBaiLiang[0].key + ' ' + U.fmt(topBaiLiang[0].value) + ' บาท' : '–') },
           { num: 3, text: 'เดือนจ่ายสวัสดิการสูงสุด: ' + (medPeak || allowPeak ? U.monthLabelFull((medPeak || allowPeak).key) : '–') },
-          { num: 4, text: 'เฉลี่ยต่อคน ' + U.fmt(avg) + ' บาท  จาก ' + empCount + ' คน' + (otRecs.length ? '  •  OT รวม ' + U.fmt(U.sumBy(otRecs, 'amount')) + ' ชม.' : '') }
+          { num: 4, text: 'เฉลี่ยต่อคน ' + U.fmt(avg) + ' บาท  จาก ' + empCount + ' คน' + (otRecs.length ? '  •  OT รวม ' + U.fmtHours(U.sumBy(otRecs, 'amount')) + ' ชม.' : '') }
         ],
         footnote: '① หมายเหตุ: สรุปข้อมูลจากระบบ Dashboard CPF ธารเกษม  •  สร้างเมื่อ ' + new Date().toLocaleDateString('th-TH', { dateStyle: 'long' })
       };

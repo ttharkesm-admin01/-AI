@@ -30,6 +30,13 @@
   /** จัดรูปแบบเงินบาท ("1,234,567 ฿") */
   function fmtBaht(n) { return fmt(n) + ' ฿'; }
 
+  /** จำนวนชั่วโมง OT — คงทศนิยมไม่เกิน 2 ตำแหน่ง (12.23 -> "12.23", 46 -> "46")
+      ต่างจาก fmt ที่ปัดเป็นจำนวนเต็ม (ใช้กับเงินเท่านั้น) */
+  function fmtHours(n) {
+    n = Math.round(parseNumber(n) * 100) / 100;
+    return n.toLocaleString('en-US', { maximumFractionDigits: 2 });
+  }
+
   /** ย่อจำนวนเงินเป็น K/M ("1,280,000" -> "1.28M") สำหรับ KPI */
   function fmtShort(n) {
     n = parseNumber(n);
@@ -176,7 +183,7 @@
 
   global.U = {
     TH_MONTH_FULL: TH_MONTH_FULL, TH_MONTH_ABBR: TH_MONTH_ABBR,
-    parseNumber: parseNumber, fmt: fmt, fmtBaht: fmtBaht, fmtShort: fmtShort, pct: pct,
+    parseNumber: parseNumber, fmt: fmt, fmtBaht: fmtBaht, fmtHours: fmtHours, fmtShort: fmtShort, pct: pct,
     yearOf: yearOf, monthNumOf: monthNumOf, monthLabel: monthLabel, monthLabelFull: monthLabelFull,
     cmpMonth: cmpMonth, uniqSorted: uniqSorted, sumBy: sumBy, groupSum: groupSum, toSortedPairs: toSortedPairs,
     palette: palette, PALETTE_GREEN: PALETTE_GREEN, PALETTE_BLUE: PALETTE_BLUE, PALETTE_MIX: PALETTE_MIX,
