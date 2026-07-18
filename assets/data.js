@@ -30,7 +30,7 @@
     }
   };
 
-  var MONTH_RE = /^\s*\d{4}\s*-\s*\d{1,2}/;
+  var MONTH_RE = /^\s*(\d{4})\s*-\s*(\d{1,2})(?!\d)/;
 
   /* ชื่อเดือนไทย (เต็ม/ย่อ) -> เลขเดือน 1–12 */
   var THAI_MONTHS = [
@@ -151,14 +151,15 @@
       var cells = rows[r] || [];
       var first = (cells[0] == null ? '' : String(cells[0])).trim();
       // ข้ามแถวหัวตาราง / แถวว่าง / แถวที่ไม่ใช่รหัสเดือน
-      if (!MONTH_RE.test(first)) continue;
+      var fm = first.match(MONTH_RE);
+      if (!fm) continue;
       var rec = {};
       sc.cols.forEach(function (name, idx) {
         var v = cells[idx];
         rec[name] = (v == null ? '' : String(v)).trim();
       });
-      // ทำให้เป็นรูปแบบ YYYY-MM เสมอ (pad เลขเดือน 1 หลัก -> 2 หลัก) เพื่อให้เรียงลำดับถูกต้อง
-      rec.month = rec.month.replace(/\s+/g, '').replace(/-(\d)$/, '-0$1');
+      // เก็บเฉพาะส่วน YYYY-MM ที่ match (ตัดข้อความปนท้ายเซลล์ทิ้ง) + pad เลขเดือนเป็น 2 หลัก
+      rec.month = fm[1] + '-' + (fm[2].length < 2 ? '0' + fm[2] : fm[2]);
       rec.amount = U.parseNumber(cells[sc.amountIndex]);
       if (rec.amount <= 0) continue; // ตัดแถวยอด 0
       out.push(rec);
