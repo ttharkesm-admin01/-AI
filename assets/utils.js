@@ -91,6 +91,17 @@
     return arr.reduce(function (s, r) { return s + parseNumber(r[field]); }, 0);
   }
 
+  /** เทียบเดือนล่าสุดกับเดือนก่อนหน้า จาก map {month: total}
+      -> { from, to, fromV, toV, pct } (pct = % เปลี่ยนแปลง มีเครื่องหมาย) หรือ null ถ้ามี < 2 เดือน */
+  function momChange(byMonth) {
+    var ms = Object.keys(byMonth || {}).sort();
+    if (ms.length < 2) return null;
+    var from = ms[ms.length - 2], to = ms[ms.length - 1];
+    var fromV = parseNumber(byMonth[from]), toV = parseNumber(byMonth[to]);
+    if (fromV <= 0) return null;
+    return { from: from, to: to, fromV: fromV, toV: toV, pct: Math.round((toV - fromV) / fromV * 1000) / 10 };
+  }
+
   /** จัดกลุ่มผลรวมตาม key -> { key: total } */
   function groupSum(arr, keyField, valField) {
     var out = {};
@@ -185,7 +196,7 @@
     TH_MONTH_FULL: TH_MONTH_FULL, TH_MONTH_ABBR: TH_MONTH_ABBR,
     parseNumber: parseNumber, fmt: fmt, fmtBaht: fmtBaht, fmtHours: fmtHours, fmtShort: fmtShort, pct: pct,
     yearOf: yearOf, monthNumOf: monthNumOf, monthLabel: monthLabel, monthLabelFull: monthLabelFull,
-    cmpMonth: cmpMonth, uniqSorted: uniqSorted, sumBy: sumBy, groupSum: groupSum, toSortedPairs: toSortedPairs,
+    cmpMonth: cmpMonth, uniqSorted: uniqSorted, sumBy: sumBy, groupSum: groupSum, toSortedPairs: toSortedPairs, momChange: momChange,
     palette: palette, PALETTE_GREEN: PALETTE_GREEN, PALETTE_BLUE: PALETTE_BLUE, PALETTE_MIX: PALETTE_MIX,
     $: $, $$: $$, el: el, fillSelect: fillSelect, toast: toast,
     exportExcel: exportExcel, fileDate: fileDate
