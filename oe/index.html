@@ -243,6 +243,10 @@
   (function () {
     'use strict';
     var KIND = 'oe';
+    // shim กันหน้าใหม่เจอ utils.js เก่าจากแคช SW ช่วงรอยต่อ deploy (one refresh behind)
+    // — ฟีเจอร์ที่พึ่งฟังก์ชันใหม่จะถูกซ่อนแทนที่จะ throw ทั้งหน้า
+    if (!U.momChange) U.momChange = function () { return null; };
+    if (!U.fmtHours) U.fmtHours = U.fmt;
     var raw = [], filtered = [], charts = {}, _lastAgg = null;
     var debouncedRender = App.debounce(render, 120);
     var dash = App.dashboardSetup(KIND, {
