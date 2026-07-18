@@ -11,11 +11,13 @@
   'use strict';
   var U = global.U;
 
-  /* ---- plugin วาดค่าตัวเลขไว้บนยอดแท่ง (อ่านได้ทันทีไม่ต้อง hover) ---- */
+  /* ---- plugin วาดค่าตัวเลขไว้บนยอดแท่ง (อ่านได้ทันทีไม่ต้อง hover)
+         ฟอนต์ override ได้ผ่าน options.plugins.barValueLabel.font (ใช้ตอน export) ---- */
   var barValueLabel = {
     id: 'barValueLabel',
     afterDatasetsDraw: function (chart) {
       var ctx = chart.ctx;
+      var opt = (chart.options.plugins && chart.options.plugins.barValueLabel) || {};
       chart.data.datasets.forEach(function (ds, di) {
         var meta = chart.getDatasetMeta(di);
         meta.data.forEach(function (elm, i) {
@@ -23,7 +25,7 @@
           if (!v) return;
           ctx.save();
           ctx.fillStyle = '#374151';
-          ctx.font = '600 11px Sarabun';
+          ctx.font = opt.font || '600 11px Sarabun';
           ctx.textAlign = 'center';
           ctx.textBaseline = 'bottom';
           ctx.fillText(U.fmtShort(v), elm.x, elm.y - 4);
@@ -86,7 +88,7 @@
       colors (ถ้ามี): override สีชิ้นโดนัทเฉพาะในรูป export — array สี หรือชื่อ palette ('green') */
   function chartSquareImage(chart, size, colors) {
     if (!global.Chart || !chart) return null;
-    size = size || 380;
+    size = size || 460;
     var cv = document.createElement('canvas');
     cv.width = size; cv.height = size;
     var src = chart.config;
@@ -100,7 +102,10 @@
       options: {
         responsive: false, maintainAspectRatio: false, animation: false,
         cutout: (src.options && src.options.cutout) || '58%',
-        plugins: { legend: { position: 'bottom', labels: { boxWidth: 12 } }, tooltip: { enabled: false } }
+        plugins: {
+          legend: { position: 'bottom', labels: { boxWidth: 16, padding: 12, font: { size: 16 } } },
+          tooltip: { enabled: false }
+        }
       }
     });
     var url = tmp.toBase64Image('image/png', 1);
@@ -109,11 +114,13 @@
   }
 
   /** สำหรับ export infographic: re-render กราฟแท่งลง canvas ออฟสกรีน
-      พร้อม override สีให้เข้าธีมรายงาน (ไม่กระทบกราฟบนจอ) */
+      พร้อม override สีให้เข้าธีมรายงาน (ไม่กระทบกราฟบนจอ)
+      ค่า default 530×420 = สัดส่วนเดียวกับช่องกราฟใน report (265×210) → ภาพเต็มช่อง ไม่โดนย่อทิ้ง
+      ฟอนต์ตัวเลขขยายตามสเกล export ให้อ่านชัดในไฟล์ PNG */
   function chartBarImage(chart, color, w, h) {
     if (!global.Chart || !chart) return null;
     var cv = document.createElement('canvas');
-    cv.width = w || 760; cv.height = h || 420;
+    cv.width = w || 530; cv.height = h || 420;
     var data = JSON.parse(JSON.stringify(chart.config.data));
     if (color) data.datasets.forEach(function (ds) { ds.backgroundColor = color; });
     var tmp = new Chart(cv, {
@@ -122,11 +129,14 @@
       data: data,
       options: {
         responsive: false, maintainAspectRatio: false, animation: false,
-        layout: { padding: { top: 18 } },
-        plugins: { legend: { display: false }, tooltip: { enabled: false } },
+        layout: { padding: { top: 26 } },
+        plugins: {
+          legend: { display: false }, tooltip: { enabled: false },
+          barValueLabel: { font: '600 17px Sarabun' }
+        },
         scales: {
-          x: { grid: { display: false } },
-          y: { beginAtZero: true, ticks: { callback: function (v) { return U.fmtShort(v); } } }
+          x: { grid: { display: false }, ticks: { font: { size: 14 } } },
+          y: { beginAtZero: true, ticks: { font: { size: 13 }, callback: function (v) { return U.fmtShort(v); } } }
         }
       }
     });
