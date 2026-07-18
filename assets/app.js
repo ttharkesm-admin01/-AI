@@ -86,9 +86,18 @@
   /** สำหรับ export infographic: re-render โดนัทลง canvas จัตุรัส
       เพื่อให้รูปที่ได้เต็มช่อง ไม่มีขอบว่างซ้าย-ขวาที่ Chart.js เว้นไว้ตอนวาดใน canvas แนวกว้าง
       colors (ถ้ามี): override สีชิ้นโดนัทเฉพาะในรูป export — array สี หรือชื่อ palette ('green') */
+  /* สีชิ้นโดนัทอ่อนหรือเข้ม — ใช้เลือกสีตัวหนังสือ % บนชิ้นให้ตัดกัน */
+  function isLightColor(hex) {
+    var m = /^#?([0-9a-f]{6})$/i.exec(String(hex || ''));
+    if (!m) return false;
+    var n = parseInt(m[1], 16);
+    var lum = 0.299 * (n >> 16 & 255) + 0.587 * (n >> 8 & 255) + 0.114 * (n & 255);
+    return lum > 150;
+  }
+
   function chartSquareImage(chart, size, colors) {
     if (!global.Chart || !chart) return null;
-    size = size || 460;
+    size = size || 520;
     var cv = document.createElement('canvas');
     cv.width = size; cv.height = size;
     var src = chart.config;
@@ -96,14 +105,71 @@
     if (colors) data.datasets.forEach(function (ds) {
       ds.backgroundColor = (typeof colors === 'string') ? U.palette(colors, ds.data.length) : colors;
     });
+    var ds0 = data.datasets[0] || { data: [] };
+    var total = (ds0.data || []).reduce(function (a, b) { return a + (+b || 0); }, 0);
+    function sliceColor(i) {
+      return Array.isArray(ds0.backgroundColor) ? ds0.backgroundColor[i % ds0.backgroundColor.length] : ds0.backgroundColor;
+    }
+
+    /* รายละเอียดโดนัทเฉพาะรูป export: % บนชิ้นที่กว้างพอ + ยอดรวมกลางวง
+       (โดนัท export ทุกตัวเป็นยอดเงิน — หน่วย "บาท") */
+    var donutDetail = {
+      id: 'donutDetail',
+      afterDatasetsDraw: function (c) {
+        var ctx = c.ctx;
+        var meta = c.getDatasetMeta(0);
+        meta.data.forEach(function (arc, i) {
+          var v = +ds0.data[i] || 0;
+          if (!v || !total || v / total < 0.07) return; // ชิ้นเล็กเกิน — ดูจาก legend แทน
+          var pos = arc.tooltipPosition(true);
+          ctx.save();
+          ctx.fillStyle = isLightColor(sliceColor(i)) ? '#1B5E20' : '#fff';
+          ctx.font = '700 15px Sarabun';
+          ctx.textAlign = 'center';
+          ctx.textBaseline = 'middle';
+          ctx.fillText(U.pct(v, total) + '%', pos.x, pos.y);
+          ctx.restore();
+        });
+        var x = (c.chartArea.left + c.chartArea.right) / 2;
+        var y = (c.chartArea.top + c.chartArea.bottom) / 2;
+        ctx.save();
+        ctx.textAlign = 'center';
+        ctx.textBaseline = 'middle';
+        ctx.fillStyle = '#6b7280'; ctx.font = '600 14px Sarabun';
+        ctx.fillText('รวม', x, y - 23);
+        ctx.fillStyle = '#1B5E20'; ctx.font = '800 24px Sarabun';
+        ctx.fillText(U.fmt(total), x, y);
+        ctx.fillStyle = '#6b7280'; ctx.font = '600 13px Sarabun';
+        ctx.fillText('บาท', x, y + 21);
+        ctx.restore();
+      }
+    };
+
     var tmp = new Chart(cv, {
       type: src.type,
       data: data,
+      plugins: [donutDetail],
       options: {
         responsive: false, maintainAspectRatio: false, animation: false,
         cutout: (src.options && src.options.cutout) || '58%',
         plugins: {
-          legend: { position: 'bottom', labels: { boxWidth: 16, padding: 12, font: { size: 16 } } },
+          legend: {
+            position: 'bottom',
+            labels: {
+              boxWidth: 14, padding: 10, font: { size: 14 },
+              // legend บอกครบทุกชิ้น: ชื่อ + จำนวนเงิน + (%)
+              generateLabels: function (c) {
+                var d = c.data;
+                return (d.labels || []).map(function (l, i) {
+                  var v = +d.datasets[0].data[i] || 0;
+                  return {
+                    text: l + ' ' + U.fmt(v) + ' (' + U.pct(v, total) + '%)',
+                    fillStyle: sliceColor(i), strokeStyle: '#fff', lineWidth: 0, hidden: false, index: i
+                  };
+                });
+              }
+            }
+          },
           tooltip: { enabled: false }
         }
       }
