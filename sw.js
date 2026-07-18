@@ -6,7 +6,7 @@
    - ไม่แตะคำขอ Google Sheets (docs.google.com) — ให้แอปจัดการแคชข้อมูลเอง
    *** เปลี่ยนโค้ดแอปแล้วให้เพิ่มเลข CACHE_VERSION เพื่อบังคับอัปเดตแคช ***
    ============================================================ */
-var CACHE_VERSION = 'cpf-v17';
+var CACHE_VERSION = 'cpf-v18';
 var CORE = [
   './',
   './index.html',
@@ -53,7 +53,11 @@ self.addEventListener('fetch', function (e) {
         caches.open(CACHE_VERSION).then(function (c) { c.put(req, copy); });
         return res;
       }).catch(function () {
-        return caches.match(req).then(function (c) { return c || caches.match('./index.html'); });
+        // precache เก็บ key เป็น .../index.html — คำขอแบบโฟลเดอร์ (เช่น /oe/) ต้องเติม index.html
+        // ให้เจอหน้าใต้โฟลเดอร์นั้นก่อน ค่อยตกไปหน้า landing เป็นทางเลือกสุดท้าย
+        return caches.match(req)
+          .then(function (c) { return c || caches.match(new URL('./index.html', req.url).href); })
+          .then(function (c) { return c || caches.match('./index.html'); });
       })
     );
     return;

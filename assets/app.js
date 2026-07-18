@@ -107,7 +107,9 @@
   function openModal(id) {
     var ov = U.el(id);
     ov.classList.add('open');
-    var f = ov.querySelector('input, button, select, textarea, [tabindex]');
+    // โฟกัสช่องกรอก/ปุ่มใน body ก่อน — ไม่ให้ตกที่ปุ่มปิด × ใน header
+    var f = ov.querySelector('.modal-body input, .modal-body select, .modal-body textarea, .modal-body button') ||
+      ov.querySelector('input, button, select, textarea, [tabindex]');
     if (f) f.focus();
   }
   function closeModal(id) { U.el(id).classList.remove('open'); }

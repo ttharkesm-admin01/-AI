@@ -78,6 +78,15 @@ test('Welfare wide: อ่านเดือนชื่อไทย + OT รว
   assert.strictEqual(recs.filter(r => r.employee === 'นายสมชาย ทองดี' && r.wtype === 'เบี้ยเลี้ยง')[0].amount, 1500);
 });
 
+test('normalize: ตัดข้อความปนท้ายรหัสเดือน / ข้ามเดือนรูปแบบผิด', () => {
+  const recs = DS.normalizeAny('oe', [
+    ['2569-01 หมายเหตุ', 'ค่าไฟฟ้า', 'ค่าใช้จ่าย', 'แปรผัน', '', '100', ''],  // ข้อความปนท้าย -> ตัดทิ้ง
+    ['2569-123', 'ค่าน้ำ', 'ค่าใช้จ่าย', 'แปรผัน', '', '100', ''],            // เลขเดือน 3 หลัก -> ไม่ใช่เดือน ข้าม
+  ]);
+  assert.strictEqual(recs.length, 1);
+  assert.strictEqual(recs[0].month, '2569-01', 'ต้องเก็บเฉพาะส่วน YYYY-MM');
+});
+
 test('parseCSV: รองรับ field ที่มี comma อยู่ใน quote', () => {
   const rows = DS.parseCSV('a,"x,y",c\n');
   assert.deepStrictEqual(rows[0], ['a', 'x,y', 'c']);

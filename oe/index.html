@@ -329,10 +329,18 @@
       }).join('') : App.emptyRow(3);
     }
 
+    var NO_BORROWER = '(ไม่ระบุผู้ยืม)';
+    // รวมยอดตามผู้ยืม โดย map ค่าว่างเป็นป้าย "(ไม่ระบุผู้ยืม)" — กัน KPI/insight/รายงานแสดงค่าว่างเปล่า
+    function borrowerPairs(adv) {
+      var m = U.groupSum(adv, 'borrower', 'amount');
+      if (m[''] != null) { m[NO_BORROWER] = (m[NO_BORROWER] || 0) + m['']; delete m['']; }
+      return U.toSortedPairs(m);
+    }
+
     function renderAdvances(adv, totalAdv) {
       var byMonth = U.groupSum(adv, 'month', 'amount');
       var monthsArr = Object.keys(byMonth).sort();
-      var byBorrower = U.toSortedPairs(U.groupSum(adv, 'borrower', 'amount'));
+      var byBorrower = borrowerPairs(adv);
 
       U.el('m-adv-total').textContent = U.fmtShort(totalAdv);
       U.el('m-adv-count').textContent = adv.length;
@@ -354,7 +362,7 @@
       var fixed = agg.fixed;
       var variable = totalExp - fixed;
       var peak = U.toSortedPairs(agg.byMonth)[0];
-      var topBorrower = U.toSortedPairs(U.groupSum(adv, 'borrower', 'amount'))[0];
+      var topBorrower = borrowerPairs(adv)[0];
 
       var cards = [
         { cls: '', icon: 'gi-pie', title: 'หมวดใช้จ่ายสูงสุด', text: topCat ? App.esc(topCat.key) : '–', sub: topCat ? U.fmt(topCat.value) + ' ฿' : '' },
@@ -431,7 +439,7 @@
       var fixed = d.agg.fixed, variable = totalExp - fixed;
       var top5 = U.toSortedPairs(d.agg.byCat).slice(0, 5);
       var peak = U.toSortedPairs(d.agg.byMonth)[0];
-      var advByBorrower = U.toSortedPairs(U.groupSum(adv, 'borrower', 'amount'));
+      var advByBorrower = borrowerPairs(adv);
       var advPeak = U.toSortedPairs(U.groupSum(adv, 'month', 'amount'))[0];
       var ms = U.uniqSorted(filtered.map(function (r) { return r.month; }));
       var periodStr = !ms.length ? 'ปีงบประมาณ พ.ศ. 2569' :
@@ -479,7 +487,7 @@
           }
         },
         insights: [
-          { num: 1, text: 'ค่าใช้จ่ายรวมสูงกว่าเงินยืมทดรอง ' + (totalAdv > 0 ? (totalExp / totalAdv).toFixed(1) : '–') + ' เท่า ของยอดรวมทั้งหมด' },
+          { num: 1, text: totalAdv > 0 ? 'ค่าใช้จ่ายรวมสูงกว่าเงินยืมทดรอง ' + (totalExp / totalAdv).toFixed(1) + ' เท่า' : 'ช่วงที่เลือกไม่มีรายการเงินยืมทดรอง' },
           { num: 2, text: 'สัดส่วนคงที่ตามสัญญา ' + U.pct(fixed, totalExp) + '% ของค่าใช้จ่ายทั้งหมด' },
           { num: 3, text: 'เดือนค่าใช้จ่ายสูงสุด: ' + (peak ? U.monthLabelFull(peak.key) + ' ' + U.fmt(peak.value) + ' บาท' : '–') },
           { num: 4, text: 'ผู้ยืมทดรองสูงสุด: ' + (advByBorrower[0] ? advByBorrower[0].key + ' ' + U.fmt(advByBorrower[0].value) + ' บาท' : 'ไม่มีรายการ') }

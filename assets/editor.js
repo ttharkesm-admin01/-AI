@@ -87,7 +87,7 @@
             '<div class="ed-listwrap">' +
               '<div class="cb-title">รายการทั้งหมด (<span id="ed-count">0</span>)</div>' +
               '<div class="ed-listbar">' +
-                '<input type="search" id="ed-search" placeholder="🔍 ค้นหา…" autocomplete="off" />' +
+                '<input type="search" id="ed-search" placeholder="ค้นหา…" autocomplete="off" />' +
                 '<select id="ed-sort">' +
                   '<option value="month-asc">เดือน เก่า→ใหม่</option>' +
                   '<option value="month-desc">เดือน ใหม่→เก่า</option>' +
@@ -257,7 +257,7 @@
     else state.work.push(rec);
     state.editIdx = -1; state.dirty = true;
     renderForm(); renderList();
-    U.toast('บันทึกลงตารางชั่วคราวแล้ว — อย่าลืมกด 💾 บันทึกทั้งหมด', 'ok');
+    U.toast('บันทึกลงตารางชั่วคราวแล้ว — อย่าลืมกด "บันทึกทั้งหมด"', 'ok');
   }
 
   /* ---------- ค้นหา + เรียงลำดับ (สร้าง view ที่อ้างอิง index จริงใน work) ---------- */
@@ -292,7 +292,7 @@
         '<td>' + U.monthLabel(r.month) + '</td>' +
         '<td>' + App.esc(rowLabel(r)) + '</td>' +
         '<td>' + App.esc(rowTag(r)) + '</td>' +
-        '<td class="num">' + U.fmt(r.amount) + '</td>' +
+        '<td class="num">' + ((state.kind === 'welfare' && r.wtype === 'OT') ? U.fmtHours(r.amount) : U.fmt(r.amount)) + '</td>' +
         '<td class="ed-actions">' +
           '<button class="btn btn-light btn-sm gi-edit" data-ed="edit" data-idx="' + i + '" title="แก้ไข" aria-label="แก้ไข"></button> ' +
           '<button class="btn btn-light btn-sm gi-copy" data-ed="dup" data-idx="' + i + '" title="ทำซ้ำ" aria-label="ทำซ้ำ"></button> ' +
@@ -312,7 +312,7 @@
       else sumMoney += (+o.r.amount || 0);
     });
     var s = 'แสดง ' + view.length + ' จาก ' + state.work.length + ' รายการ · รวม ' + U.fmt(sumMoney) + ' ฿';
-    if (state.kind === 'welfare' && otH > 0) s += ' · OT ' + U.fmt(otH) + ' ชม.';
+    if (state.kind === 'welfare' && otH > 0) s += ' · OT ' + U.fmtHours(otH) + ' ชม.';
     U.el('ed-summary').textContent = s;
   }
 
@@ -344,12 +344,12 @@
     var box = U.el('ed-sheet-link');
     if (cfg.sheetId) {
       var url = 'https://docs.google.com/spreadsheets/d/' + cfg.sheetId + '/edit';
-      box.innerHTML = '🔗 ต้องการให้ <strong>หลายคนแก้พร้อมกันแบบเรียลไทม</strong>? แก้ที่ต้นทางได้เลย: ' +
+      box.innerHTML = 'ต้องการให้ <strong>หลายคนแก้พร้อมกันแบบเรียลไทม</strong>? แก้ที่ต้นทางได้เลย: ' +
         '<a href="' + App.esc(url) + '" target="_blank" rel="noopener">เปิด Google Sheets ↗</a>' +
-        '<br><small>แก้ในชีตแล้วกด “🔄 รีเฟรช” ที่แดชบอร์ด ทุกเครื่องจะเห็นพร้อมกัน · ส่วนการแก้ด้านล่างนี้เก็บเฉพาะในเบราว์เซอร์นี้</small>';
+        '<br><small>แก้ในชีตแล้วกดปุ่ม “รีเฟรช” ที่แดชบอร์ด ทุกเครื่องจะเห็นพร้อมกัน · ส่วนการแก้ด้านล่างนี้เก็บเฉพาะในเบราว์เซอร์นี้</small>';
     } else {
-      box.innerHTML = '💡 การแก้ด้านล่างนี้เก็บไว้<strong>เฉพาะในเบราว์เซอร์นี้</strong> (เครื่องอื่นไม่เห็น). ' +
-        'อยากให้<strong>หลายคนเห็นพร้อมกันแบบเรียลไทม</strong> ให้กด “🔗 เชื่อม Google Sheets” แล้วแก้ข้อมูลในชีตแทน';
+      box.innerHTML = 'การแก้ด้านล่างนี้เก็บไว้<strong>เฉพาะในเบราว์เซอร์นี้</strong> (เครื่องอื่นไม่เห็น). ' +
+        'อยากให้<strong>หลายคนเห็นพร้อมกันแบบเรียลไทม</strong> ให้กดปุ่ม “เชื่อม Google Sheets” แล้วแก้ข้อมูลในชีตแทน';
     }
   }
 
@@ -396,7 +396,7 @@
       state.work = records.map(function (r) { return Object.assign({}, r); });
       state.editIdx = -1; state.selected = {}; state.dirty = true;
       renderForm(); renderList();
-      U.toast('นำเข้า ' + records.length + ' รายการแล้ว — ตรวจสอบแล้วกด 💾 บันทึกทั้งหมด', 'ok');
+      U.toast('นำเข้า ' + records.length + ' รายการแล้ว — ตรวจสอบแล้วกด "บันทึกทั้งหมด"', 'ok');
     };
     if (/\.csv$/i.test(file.name)) {
       file.text().then(function (t) { done(DS.normalizeAny(state.kind, DS.parseCSV(t))); })
