@@ -149,6 +149,14 @@
       </section>
     </div>
 
+    <!-- แนวโน้มรายเดือน (แสดงเมื่อมี >= 2 เดือน) -->
+    <div class="card-block" id="trend-block" style="display:none">
+      <div class="cardb-head"><h2><span class="ic gi-trending"></span> แนวโน้มรายเดือน</h2><span class="src-info" id="trend-note"></span></div>
+      <div class="cardb-body pad">
+        <div class="chart-wrap" style="height:300px"><canvas id="c-trend"></canvas></div>
+      </div>
+    </div>
+
     <!-- Insights -->
     <div class="section-title">ข้อสังเกตสำคัญ (Insights)</div>
     <div class="insights" id="insights"></div>
@@ -308,7 +316,23 @@
 
       renderExpenses(exp, totalExp, agg);
       renderAdvances(adv, totalAdv);
+      renderTrend(agg, adv);
       renderInsights(exp, adv, totalExp, totalAdv, agg);
+    }
+
+    // กราฟเส้นแนวโน้มรายเดือน (ค่าใช้จ่าย vs เงินยืม) — ซ่อนเมื่อมี < 2 เดือน
+    // guard App.drawLine กัน app.js เก่าจากแคช SW ช่วงรอยต่อ deploy
+    function renderTrend(agg, adv) {
+      var block = U.el('trend-block');
+      var advBM = U.groupSum(adv, 'month', 'amount');
+      var months = U.uniqSorted(Object.keys(agg.byMonth).concat(Object.keys(advBM)));
+      if (months.length < 2 || !App.drawLine) { block.style.display = 'none'; return; }
+      block.style.display = '';
+      U.el('trend-note').textContent = months.length + ' เดือน';
+      App.drawLine(charts, 'c-trend', months.map(U.monthLabel), [
+        { label: 'ค่าใช้จ่าย OE', data: months.map(function (m) { return agg.byMonth[m] || 0; }), color: '#2E7D32' },
+        { label: 'เงินยืมทดรอง', data: months.map(function (m) { return advBM[m] || 0; }), color: '#1565C0' }
+      ]);
     }
 
     function renderExpenses(exp, totalExp, agg) {
@@ -411,22 +435,22 @@
             layout: 'kpi', title: 'สรุปภาพรวม (KPI)',
             items: [
               { label: 'ค่าใช้จ่าย OE รวม', value: U.fmt(totalExp) + ' ฿', color: '2E7D32' },
-              { label: 'เงินยืมทดรอง', value: U.fmt(totalAdv) + ' ฿', color: '1565C0' },
-              { label: 'รวมทั้งสิ้น', value: U.fmt(grand) + ' ฿', color: 'F9A825' },
-              { label: 'จำนวนหมวดหมู่', value: String(d.cats.length), color: '00897B' }
+              { label: 'เงินยืมทดรอง', value: U.fmt(totalAdv) + ' ฿', color: '1B5E20' },
+              { label: 'รวมทั้งสิ้น', value: U.fmt(grand) + ' ฿', color: '43A047' },
+              { label: 'จำนวนหมวดหมู่', value: String(d.cats.length), color: '2E7D32' }
             ],
             note: ['ช่วงเวลา: ' + period, 'สัดส่วนคงที่:แปรผัน = ' + U.pct(fixed, totalExp) + '% : ' + U.pct(totalExp - fixed, totalExp) + '%', 'แหล่งข้อมูล: ' + (src === 'sheets' ? 'Google Sheets' : src === 'excel' ? 'ไฟล์ Excel' : 'ข้อมูลตัวอย่าง')]
           },
           {
             layout: 'imageTable', title: 'ค่าใช้จ่าย: สัดส่วน & Top 5',
-            image: PPT.chartImage(charts['c-exp-donut']),
+            image: pptDonut(charts['c-exp-donut'], ['#1B5E20', '#81C784']),
             table: { head: ['หมวดหมู่', 'จำนวนเงิน (฿)'], align: ['left', 'right'], widths: [3.7, 2.3], rows: top5.map(function (p) { return [p.key, U.fmt(p.value)]; }) }
           },
-          { layout: 'image', title: 'ค่าใช้จ่าย OE รายเดือน', image: PPT.chartImage(charts['c-exp-bar']), caption: 'หน่วย: บาท • ' + period },
+          { layout: 'image', title: 'ค่าใช้จ่าย OE รายเดือน', image: pptBar(charts['c-exp-bar']), caption: 'หน่วย: บาท • ' + period },
           {
-            layout: 'imageTable', title: 'เงินยืมทดรอง', color: '1565C0',
-            image: PPT.chartImage(charts['c-adv-bar']),
-            table: { headColor: '1565C0', head: ['เดือน', 'ผู้ยืม', 'จำนวนเงิน'], align: ['left', 'left', 'right'], widths: [1.2, 2.9, 1.9], rows: advRows.map(function (r) { return [U.monthLabel(r.month), r.borrower || '-', U.fmt(r.amount)]; }) }
+            layout: 'imageTable', title: 'เงินยืมทดรอง',
+            image: pptBar(charts['c-adv-bar']),
+            table: { head: ['เดือน', 'ผู้ยืม', 'จำนวนเงิน'], align: ['left', 'left', 'right'], widths: [1.2, 2.9, 1.9], rows: advRows.map(function (r) { return [U.monthLabel(r.month), r.borrower || '-', U.fmt(r.amount)]; }) }
           }
         ]
       };
@@ -443,10 +467,13 @@
       if (!chart) return null;
       return App.chartSquareImage ? App.chartSquareImage(chart, null, colors || 'green') : chart.toBase64Image('image/png', 1);
     }
-    function barImg(chart, color) {
+    function barImg(chart, color, w, h) {
       if (!chart) return null;
-      return App.chartBarImage ? App.chartBarImage(chart, color || '#2E7D32') : chart.toBase64Image('image/png', 1);
+      return App.chartBarImage ? App.chartBarImage(chart, color || '#2E7D32', w, h) : chart.toBase64Image('image/png', 1);
     }
+    // เวอร์ชันสำหรับสไลด์ PPT (ต้องการ {image, ratio})
+    function pptDonut(chart, colors) { var i = donutImg(chart, colors); return i ? { image: i, ratio: 1 } : null; }
+    function pptBar(chart, color, w, h) { var i = barImg(chart, color, w, h); return i ? { image: i, ratio: (w || 530) / (h || 420) } : null; }
 
     function collectExportData() {
       var d = _lastAgg; if (!d) return {};

@@ -49,9 +49,9 @@
 
   function band(slide, title, color) {
     slide.addShape('rect', { x: 0, y: 0, w: '100%', h: 0.85, fill: { color: color || C.green }, shadow: BAR_SHADOW });
-    slide.addShape('rect', { x: 0, y: 0.85, w: '100%', h: 0.06, fill: { color: C.amber } });
-    // จุดสีเล็ก ๆ หน้าหัวข้อ ให้ดูมีดีไซน์
-    slide.addShape('roundRect', { x: 0.45, y: 0.30, w: 0.25, h: 0.25, rectRadius: 0.05, fill: { color: C.amber } });
+    slide.addShape('rect', { x: 0, y: 0.85, w: '100%', h: 0.06, fill: { color: C.greenLt } });
+    // จุดสีเล็ก ๆ หน้าหัวข้อ ให้ดูมีดีไซน์ (เขียวอ่อน — ธีมเขียวโมโนโทนเข้าชุดรายงาน PNG)
+    slide.addShape('roundRect', { x: 0.45, y: 0.30, w: 0.25, h: 0.25, rectRadius: 0.05, fill: { color: C.greenLt } });
     slide.addText(title || '', { x: 0.85, y: 0, w: 12.0, h: 0.85, color: C.white, fontFace: F, fontSize: 22, bold: true, valign: 'middle' });
   }
   function footer(slide, deck, page, total) {
@@ -103,7 +103,7 @@
       slide.addText('CPF', { x: 6.06, y: 1.15, w: 1.2, h: 1.2, color: C.white, fontFace: F, fontSize: 26, bold: true, align: 'center', valign: 'middle' });
       slide.addText(deck.org || 'CPF ธารเกษม', { x: 0.5, y: 2.55, w: 12.3, h: 0.5, color: C.greenLt, fontFace: F, fontSize: 20, bold: true, align: 'center' });
       slide.addText(sd.title || '', { x: 0.5, y: 3.05, w: 12.3, h: 1.0, color: C.white, fontFace: F, fontSize: 40, bold: true, align: 'center' });
-      slide.addShape('rect', { x: 5.67, y: 4.15, w: 2.0, h: 0.06, fill: { color: C.amber } });
+      slide.addShape('rect', { x: 5.67, y: 4.15, w: 2.0, h: 0.06, fill: { color: C.greenLt } });
       slide.addText(sd.subtitle || '', { x: 0.5, y: 4.35, w: 12.3, h: 0.6, color: 'C8E6C9', fontFace: F, fontSize: 18, align: 'center' });
       slide.addText(sd.footer || '', { x: 0.5, y: 6.5, w: 12.3, h: 0.5, color: '9CCC9F', fontFace: F, fontSize: 12, align: 'center' });
       return;
