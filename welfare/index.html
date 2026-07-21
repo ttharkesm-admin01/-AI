@@ -191,6 +191,14 @@
       </div>
     </div>
 
+    <!-- แนวโน้มรายเดือน (แสดงเมื่อมี >= 2 เดือน) -->
+    <div class="card-block" id="trend-block" style="display:none">
+      <div class="cardb-head"><h2><span class="ic gi-trending"></span> แนวโน้มรายเดือน</h2><span class="src-info" id="trend-note"></span></div>
+      <div class="cardb-body pad">
+        <div class="chart-wrap" style="height:300px"><canvas id="c-trend"></canvas></div>
+      </div>
+    </div>
+
     <div class="section-title">ข้อสังเกตสำคัญ (Insights)</div>
     <div class="insights" id="insights"></div>
 
@@ -363,7 +371,24 @@
       renderAllowances(allow, totalAllow);
       renderPivot(money);
       renderOT(otRecs);
+      renderTrend(med, allow);
       renderInsights(med, allow, money, grand, empCount, otHours, otRecs);
+    }
+
+    // กราฟเส้นแนวโน้มรายเดือน (ค่ารักษา vs เบี้ยเลี้ยง&อื่นๆ — ยอดเงิน ไม่รวม OT) — ซ่อนเมื่อมี < 2 เดือน
+    // guard App.drawLine กัน app.js เก่าจากแคช SW ช่วงรอยต่อ deploy
+    function renderTrend(med, allow) {
+      var block = U.el('trend-block');
+      var medBM = U.groupSum(med, 'month', 'amount');
+      var allowBM = U.groupSum(allow, 'month', 'amount');
+      var months = U.uniqSorted(Object.keys(medBM).concat(Object.keys(allowBM)));
+      if (months.length < 2 || !App.drawLine) { block.style.display = 'none'; return; }
+      block.style.display = '';
+      U.el('trend-note').textContent = months.length + ' เดือน';
+      App.drawLine(charts, 'c-trend', months.map(U.monthLabel), [
+        { label: 'ค่ารักษาพยาบาล', data: months.map(function (m) { return medBM[m] || 0; }), color: '#2E7D32' },
+        { label: 'เบี้ยเลี้ยง & อื่นๆ', data: months.map(function (m) { return allowBM[m] || 0; }), color: '#1565C0' }
+      ]);
     }
 
     function renderOT(otRecs) {
@@ -539,21 +564,21 @@
             layout: 'kpi', title: 'สรุปภาพรวม (KPI)',
             items: [
               { label: 'ค่ารักษาพยาบาล', value: U.fmt(totalMed) + ' ฿', color: '2E7D32' },
-              { label: 'เบี้ยเลี้ยง & อื่นๆ', value: U.fmt(totalAllow) + ' ฿', color: '1565C0' },
-              { label: 'รวมทั้งสิ้น', value: U.fmt(grand) + ' ฿', color: 'F9A825' },
-              { label: 'พนักงานที่ได้รับ', value: String(empCount) + ' คน', color: '00897B' }
+              { label: 'เบี้ยเลี้ยง & อื่นๆ', value: U.fmt(totalAllow) + ' ฿', color: '1B5E20' },
+              { label: 'รวมทั้งสิ้น', value: U.fmt(grand) + ' ฿', color: '43A047' },
+              { label: 'พนักงานที่ได้รับ', value: String(empCount) + ' คน', color: '2E7D32' }
             ],
             note: ['ช่วงเวลา: ' + period, 'เฉลี่ยต่อคน: ' + U.fmt(empCount ? Math.round(grand / empCount) : 0) + ' บาท', 'แหล่งข้อมูล: ' + (src === 'sheets' ? 'Google Sheets' : src === 'excel' ? 'ไฟล์ Excel' : 'ข้อมูลตัวอย่าง')]
           },
           {
             layout: 'imageTable', title: 'ค่ารักษาพยาบาล',
-            image: PPT.chartImage(charts['c-med-bar']),
+            image: pptBar(charts['c-med-bar']),
             table: { head: ['พนักงาน', 'จำนวนเงิน'], align: ['left', 'right'], widths: [4.0, 2.0], rows: topMed.map(function (p) { return [p.key, U.fmt(p.value)]; }) }
           },
           {
-            layout: 'imageTable', title: 'เบี้ยเลี้ยง & สวัสดิการอื่นๆ', color: '1565C0',
-            image: PPT.chartImage(charts['c-allow-donut']),
-            table: { headColor: '1565C0', head: ['ประเภท', 'จำนวนเงิน', 'สัดส่วน'], align: ['left', 'right', 'right'], widths: [2.6, 1.9, 1.5], rows: typePairs.map(function (p) { return [p.key, U.fmt(p.value), U.pct(p.value, totalAllow) + '%']; }) }
+            layout: 'imageTable', title: 'เบี้ยเลี้ยง & สวัสดิการอื่นๆ',
+            image: pptDonut(charts['c-allow-donut']),
+            table: { head: ['ประเภท', 'จำนวนเงิน', 'สัดส่วน'], align: ['left', 'right', 'right'], widths: [2.6, 1.9, 1.5], rows: typePairs.map(function (p) { return [p.key, U.fmt(p.value), U.pct(p.value, totalAllow) + '%']; }) }
           },
           {
             layout: 'table', title: 'สวัสดิการรายคน × เดือน',
@@ -575,7 +600,7 @@
         var otTotal = U.sumBy(otRecs, 'amount');
         deck.slides.push({
           layout: 'imageTable', title: 'OT — ชั่วโมงล่วงเวลา', color: '6A1B9A',
-          image: PPT.chartImage(charts['c-ot-bar']),
+          image: pptBar(charts['c-ot-bar'], '#6A1B9A', 1420, 360),
           table: {
             headColor: '6A1B9A', head: ['พนักงาน', 'ชม.'], align: ['left', 'right'], widths: [4.0, 2.0],
             rows: topOT.map(function (p) { return [p.key, U.fmtHours(p.value)]; })
@@ -600,6 +625,9 @@
       if (!chart) return null;
       return App.chartBarImage ? App.chartBarImage(chart, color || '#2E7D32', w, h) : chart.toBase64Image('image/png', 1);
     }
+    // เวอร์ชันสำหรับสไลด์ PPT (ต้องการ {image, ratio})
+    function pptDonut(chart, colors) { var i = donutImg(chart, colors); return i ? { image: i, ratio: 1 } : null; }
+    function pptBar(chart, color, w, h) { var i = barImg(chart, color, w, h); return i ? { image: i, ratio: (w || 530) / (h || 420) } : null; }
 
     function collectWelfareData() {
       var d = _lastAgg; if (!d) return {};
