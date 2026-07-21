@@ -86,33 +86,6 @@
   /** สำหรับ export infographic: re-render โดนัทลง canvas จัตุรัส
       เพื่อให้รูปที่ได้เต็มช่อง ไม่มีขอบว่างซ้าย-ขวาที่ Chart.js เว้นไว้ตอนวาดใน canvas แนวกว้าง
       colors (ถ้ามี): override สีชิ้นโดนัทเฉพาะในรูป export — array สี หรือชื่อ palette ('green') */
-  /** กราฟเส้นหลายชุดข้อมูล — datasets: [{label, data, color}] */
-  function drawLine(charts, id, labels, datasets) {
-    if (!global.Chart) return;
-    var ctx = U.el(id); if (!ctx) return;
-    if (charts[id]) charts[id].destroy();
-    charts[id] = new Chart(ctx, {
-      type: 'line',
-      data: {
-        labels: labels,
-        datasets: datasets.map(function (d) {
-          return { label: d.label, data: d.data, borderColor: d.color, backgroundColor: d.color, tension: 0.3, pointRadius: 3, borderWidth: 2.5, fill: false };
-        })
-      },
-      options: {
-        responsive: true, maintainAspectRatio: false,
-        plugins: {
-          legend: { position: 'bottom' },
-          tooltip: { callbacks: { label: function (c) { return c.dataset.label + ': ' + U.fmt(c.parsed.y) + ' ฿'; } } }
-        },
-        scales: {
-          x: { grid: { display: false } },
-          y: { beginAtZero: true, ticks: { callback: function (v) { return U.fmtShort(v); } } }
-        }
-      }
-    });
-  }
-
   /* สีชิ้นโดนัทอ่อนหรือเข้ม — ใช้เลือกสีตัวหนังสือ % บนชิ้นให้ตัดกัน */
   function isLightColor(hex) {
     var m = /^#?([0-9a-f]{6})$/i.exec(String(hex || ''));
@@ -283,7 +256,6 @@
     applyChartDefaults: applyChartDefaults,
     drawDoughnut: drawDoughnut,
     drawBar: drawBar,
-    drawLine: drawLine,
     chartSquareImage: chartSquareImage,
     chartBarImage: chartBarImage,
     openModal: openModal,

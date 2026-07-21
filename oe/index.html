@@ -149,14 +149,6 @@
       </section>
     </div>
 
-    <!-- แนวโน้มรายเดือน (แสดงเมื่อมี >= 2 เดือน) -->
-    <div class="card-block" id="trend-block" style="display:none">
-      <div class="cardb-head"><h2><span class="ic gi-trending"></span> แนวโน้มรายเดือน</h2><span class="src-info" id="trend-note"></span></div>
-      <div class="cardb-body pad">
-        <div class="chart-wrap" style="height:300px"><canvas id="c-trend"></canvas></div>
-      </div>
-    </div>
-
     <!-- Insights -->
     <div class="section-title">ข้อสังเกตสำคัญ (Insights)</div>
     <div class="insights" id="insights"></div>
@@ -316,23 +308,7 @@
 
       renderExpenses(exp, totalExp, agg);
       renderAdvances(adv, totalAdv);
-      renderTrend(agg, adv);
       renderInsights(exp, adv, totalExp, totalAdv, agg);
-    }
-
-    // กราฟเส้นแนวโน้มรายเดือน (ค่าใช้จ่าย vs เงินยืม) — ซ่อนเมื่อมี < 2 เดือน
-    // guard App.drawLine กัน app.js เก่าจากแคช SW ช่วงรอยต่อ deploy
-    function renderTrend(agg, adv) {
-      var block = U.el('trend-block');
-      var advBM = U.groupSum(adv, 'month', 'amount');
-      var months = U.uniqSorted(Object.keys(agg.byMonth).concat(Object.keys(advBM)));
-      if (months.length < 2 || !App.drawLine) { block.style.display = 'none'; return; }
-      block.style.display = '';
-      U.el('trend-note').textContent = months.length + ' เดือน';
-      App.drawLine(charts, 'c-trend', months.map(U.monthLabel), [
-        { label: 'ค่าใช้จ่าย OE', data: months.map(function (m) { return agg.byMonth[m] || 0; }), color: '#2E7D32' },
-        { label: 'เงินยืมทดรอง', data: months.map(function (m) { return advBM[m] || 0; }), color: '#1565C0' }
-      ]);
     }
 
     function renderExpenses(exp, totalExp, agg) {

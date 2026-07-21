@@ -191,14 +191,6 @@
       </div>
     </div>
 
-    <!-- แนวโน้มรายเดือน (แสดงเมื่อมี >= 2 เดือน) -->
-    <div class="card-block" id="trend-block" style="display:none">
-      <div class="cardb-head"><h2><span class="ic gi-trending"></span> แนวโน้มรายเดือน</h2><span class="src-info" id="trend-note"></span></div>
-      <div class="cardb-body pad">
-        <div class="chart-wrap" style="height:300px"><canvas id="c-trend"></canvas></div>
-      </div>
-    </div>
-
     <div class="section-title">ข้อสังเกตสำคัญ (Insights)</div>
     <div class="insights" id="insights"></div>
 
@@ -371,24 +363,7 @@
       renderAllowances(allow, totalAllow);
       renderPivot(money);
       renderOT(otRecs);
-      renderTrend(med, allow);
       renderInsights(med, allow, money, grand, empCount, otHours, otRecs);
-    }
-
-    // กราฟเส้นแนวโน้มรายเดือน (ค่ารักษา vs เบี้ยเลี้ยง&อื่นๆ — ยอดเงิน ไม่รวม OT) — ซ่อนเมื่อมี < 2 เดือน
-    // guard App.drawLine กัน app.js เก่าจากแคช SW ช่วงรอยต่อ deploy
-    function renderTrend(med, allow) {
-      var block = U.el('trend-block');
-      var medBM = U.groupSum(med, 'month', 'amount');
-      var allowBM = U.groupSum(allow, 'month', 'amount');
-      var months = U.uniqSorted(Object.keys(medBM).concat(Object.keys(allowBM)));
-      if (months.length < 2 || !App.drawLine) { block.style.display = 'none'; return; }
-      block.style.display = '';
-      U.el('trend-note').textContent = months.length + ' เดือน';
-      App.drawLine(charts, 'c-trend', months.map(U.monthLabel), [
-        { label: 'ค่ารักษาพยาบาล', data: months.map(function (m) { return medBM[m] || 0; }), color: '#2E7D32' },
-        { label: 'เบี้ยเลี้ยง & อื่นๆ', data: months.map(function (m) { return allowBM[m] || 0; }), color: '#1565C0' }
-      ]);
     }
 
     function renderOT(otRecs) {
