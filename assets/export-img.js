@@ -241,7 +241,9 @@ var ExportImg = (function () {
 
     // ─ Insights — แถวล่าง: วงกลมตัวเลขเขียวเข้ม + ข้อความ (ตามดีไซน์อ้างอิง)
     if (cfg.insights && cfg.insights.length) {
-      var cols = Math.min(cfg.insights.length, 4);
+      // ปกติมี 4 ข้อ แต่ถ้าช่วงที่กรองมี >= 2 เดือนจะมีข้อ MoM เป็นข้อที่ 5
+      // — จำกัดไว้ที่ 4 คอลัมน์จะทำให้ข้อ 5 ตกไปอยู่แถวล่างลำพัง หน้ารายงานแหว่ง
+      var cols = Math.min(cfg.insights.length, 5);
       var insGrid = mk('div', 'display:grid;grid-template-columns:repeat(' + cols + ',1fr);gap:12px;margin-top:14px;padding-top:12px;border-top:1.5px solid ' + LINE);
       cfg.insights.forEach(function (ins) {
         var item = mk('div', 'display:flex;align-items:flex-start;gap:8px');
