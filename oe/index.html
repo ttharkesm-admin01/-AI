@@ -104,7 +104,7 @@
             <div class="mini"><div class="m-label">เดือนใช้จ่ายสูงสุด</div><div class="m-value" id="m-peak">–</div></div>
           </div>
           <div class="chart-block">
-            <div class="cb-title">สัดส่วน คงที่ vs แปรผัน</div>
+            <div class="cb-title">สัดส่วน คงที่ vs แปรผัน <span class="dq-note" id="exp-group-note"></span></div>
             <div class="chart-wrap short"><canvas id="c-exp-donut"></canvas></div>
           </div>
           <div class="chart-block">
@@ -322,6 +322,11 @@
       U.el('m-var').textContent = U.fmtShort(variable);
       U.el('m-peak').textContent = peak ? U.monthLabel(peak.key) : '–';
 
+      // รายการที่ไม่ได้กรอกกลุ่มจะถูกนับเป็น "แปรผัน" โดยปริยาย — บอกให้รู้ตัว ไม่ปล่อยเงียบ
+      var noGroup = U.sumBy(exp.filter(function (r) { return r.group !== 'คงที่' && r.group !== 'แปรผัน'; }), 'amount');
+      U.el('exp-group-note').textContent = noGroup > 0
+        ? '• ' + U.fmt(noGroup) + ' ฿ ยังไม่ระบุกลุ่ม (นับรวมในแปรผัน)' : '';
+
       drawDoughnut('c-exp-donut', ['คงที่', 'แปรผัน'], [fixed, variable], ['#2E7D32', '#F9A825']);
       drawBar('c-exp-bar', monthsArr.map(U.monthLabel), monthsArr.map(function (m) { return byMonth[m]; }), '#2E7D32', 'ค่าใช้จ่าย');
 
@@ -455,6 +460,7 @@
       var d = _lastAgg; if (!d) return {};
       var exp = d.exp, adv = d.adv, totalExp = d.totalExp, totalAdv = d.totalAdv, grand = d.grand;
       var fixed = d.agg.fixed, variable = totalExp - fixed;
+      var noGroup = U.sumBy(exp.filter(function (r) { return r.group !== 'คงที่' && r.group !== 'แปรผัน'; }), 'amount');
       var top5 = U.toSortedPairs(d.agg.byCat).slice(0, 5);
       var peak = U.toSortedPairs(d.agg.byMonth)[0];
       var advByBorrower = borrowerPairs(adv);
@@ -480,7 +486,7 @@
             { label: 'แปรผัน', value: U.fmt(variable) + ' บาท' },
             { label: 'เดือนสูงสุด', value: peak ? U.monthLabel(peak.key) + '  ' + U.fmt(peak.value) + ' บาท' : '–' }
           ],
-          sectionA: { title: 'A) สัดส่วนค่าใช้จ่ายตามประเภท', chartImg: donutImg(charts['c-exp-donut'], ['#1B5E20', '#81C784']) },
+          sectionA: { title: 'A) สัดส่วนค่าใช้จ่าย คงที่ vs แปรผัน', chartImg: donutImg(charts['c-exp-donut'], ['#1B5E20', '#81C784']) },
           sectionB: { title: 'B) ค่าใช้จ่ายรายเดือน', chartImg: barImg(charts['c-exp-bar']) },
           sectionC: {
             title: 'C) ค่าใช้จ่ายสูงสุด 5 อันดับ',
@@ -511,7 +517,11 @@
         },
         insights: (function () {
           var arr = [
-            { num: 1, text: totalAdv > 0 ? 'ค่าใช้จ่ายรวมสูงกว่าเงินยืมทดรอง ' + (totalExp / totalAdv).toFixed(1) + ' เท่า' : 'ช่วงที่เลือกไม่มีรายการเงินยืมทดรอง' },
+            // เทียบสัดส่วนให้ถูกทิศเสมอ — ถ้ากรองจนเงินยืมมากกว่าค่าใช้จ่าย ประโยคเดิมจะกลายเป็น "สูงกว่า 0.5 เท่า"
+            { num: 1, text: !totalAdv ? 'ช่วงที่เลือกไม่มีรายการเงินยืมทดรอง' :
+              !totalExp ? 'ช่วงที่เลือกมีเฉพาะเงินยืมทดรอง ' + U.fmt(totalAdv) + ' บาท' :
+              totalExp >= totalAdv ? 'ค่าใช้จ่ายรวมสูงกว่าเงินยืมทดรอง ' + (totalExp / totalAdv).toFixed(1) + ' เท่า' :
+              'เงินยืมทดรองสูงกว่าค่าใช้จ่ายรวม ' + (totalAdv / totalExp).toFixed(1) + ' เท่า' },
             { num: 2, text: 'สัดส่วนคงที่ตามสัญญา ' + U.pct(fixed, totalExp) + '% ของค่าใช้จ่ายทั้งหมด' },
             { num: 3, text: 'เดือนค่าใช้จ่ายสูงสุด: ' + (peak ? U.monthLabelFull(peak.key) + ' ' + U.fmt(peak.value) + ' บาท' : '–') },
             { num: 4, text: 'ผู้ยืมทดรองสูงสุด: ' + (advByBorrower[0] ? advByBorrower[0].key + ' ' + U.fmt(advByBorrower[0].value) + ' บาท' : 'ไม่มีรายการ') }
@@ -520,7 +530,8 @@
           if (mom) arr.push({ num: 5, text: 'ค่าใช้จ่าย ' + U.monthLabel(mom.to) + ' ' + (mom.pct >= 0 ? 'เพิ่มขึ้น ' : 'ลดลง ') + Math.abs(mom.pct) + '% จาก ' + U.monthLabel(mom.from) + ' (' + U.fmt(mom.fromV) + ' → ' + U.fmt(mom.toV) + ' บาท)' });
           return arr;
         })(),
-        footnote: '① หมายเหตุ: สรุปข้อมูลจากระบบ Dashboard CPF ธารเกษม  •  สร้างเมื่อ ' + new Date().toLocaleDateString('th-TH', { dateStyle: 'long' })
+        footnote: '① หมายเหตุ: สรุปข้อมูลจากระบบ Dashboard CPF ธารเกษม  •  สร้างเมื่อ ' + new Date().toLocaleDateString('th-TH', { dateStyle: 'long' }) +
+          (noGroup > 0 ? '  •  มีรายการยังไม่ระบุกลุ่ม ' + U.fmt(noGroup) + ' บาท (นับรวมในแปรผัน)' : '')
       };
     }
 

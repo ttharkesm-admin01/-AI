@@ -169,9 +169,10 @@
 
   /* ---------------- ฟอร์มสวัสดิการแบบกว้าง (wide) + OT ----------------
      ตารางแบบ 1 คน/แถว: คอลัมน์แยกตามประเภทสวัสดิการ + คอลัมน์ OT (ชั่วโมง)
-     - หาเดือนจากเซลล์ใดก็ได้ในชีต (รูปแบบ 25xx-xx)
-     - คอลัมน์ "ค่าจ้าง/ชม." + คอลัมน์ OT ที่หัวมีคำว่า "เท่า" -> คำนวณเงิน OT
-       เงิน OT = ค่าจ้าง/ชม. × Σ(ชั่วโมง × ตัวคูณ)  -> รวมเข้า "สวัสดิการอื่นๆ"
+     - หาเดือนจากเซลล์ใดก็ได้ในชีต (รูปแบบ 25xx-xx หรือชื่อเดือนไทย)
+     - คอลัมน์ OT = หัวมีคำว่า "เท่า" -> รวม "จำนวนชั่วโมง" ทุกอัตราเป็น record เดียว
+       (ไม่แปลงเป็นเงิน — OT แยกจากยอดเงินทุกที่ในระบบ) คอลัมน์ "ค่าจ้าง/ชม."
+       จึงถูกกันออกไม่ให้ถูกนับเป็นชั่วโมง OT
      คืน null ถ้าไม่ใช่ฟอร์มแบบนี้ (เพื่อให้ตกไปใช้ normalize ปกติ) */
   var WTYPES = ['ค่ารักษาพยาบาล', 'เบี้ยเลี้ยง', 'ค่าน้ำมัน', 'ค่าที่พัก', 'สวัสดิการอื่นๆ'];
   function cellStr(v) { return (v == null ? '' : String(v)).replace(/\s+/g, ' ').trim(); }
@@ -219,8 +220,14 @@
     }
     if (nameCol < 0 || !Object.keys(typeCols).length) return null;
 
+    /* หัวตารางมีได้ทั้ง 2 แถว (แถวล่าง = หน่วย/อัตรา เช่น "1 เท่า") และแถวเดียว
+       ถ้าแถวถัดจากหัวมีชื่อคนอยู่แล้ว = เป็นแถวข้อมูล ต้องเริ่มอ่านจากแถวนั้น
+       ไม่งั้นพนักงานคนแรกจะหายไปเงียบ ๆ */
+    var nextName = cellStr((rows[headIdx + 1] || [])[nameCol]);
+    var dataStart = (nextName && !/^รวม/.test(nextName)) ? headIdx + 1 : headIdx + 2;
+
     var out = [];
-    for (var r = headIdx + 2; r < rows.length; r++) {
+    for (var r = dataStart; r < rows.length; r++) {
       var cells = rows[r] || [];
       var name = cellStr(cells[nameCol]);
       if (!name || /^รวม/.test(name)) continue; // ข้ามแถวสรุป/ว่าง
@@ -355,27 +362,136 @@
 
   function sampleOE() {
     if (_cache.oe) return JSON.parse(JSON.stringify(_cache.oe));
-    // ข้อมูลจริง: ค่าใช้จ่าย OE โรงงานธารเกษม เดือน เม.ย. 2569 (2569-04)
-    // (แถวที่ไม่มีจำนวนเงินถูกตัดออกตามพฤติกรรม normalize)
+    /* ข้อมูลจริง: ค่าใช้จ่าย OE โรงงานธารเกษม ม.ค.–ก.ค. 2569 (แปลงจากตารางไขว้ หมวด × เดือน)
+       - ยอดรวมรายเดือนตรงกับต้นฉบับทุกคอลัมน์ (503,290 / 430,775 / 584,767 / 542,405 / 1,126,195 / 498,371 / 589,504)
+       - แถว "เงินยืมทดลอง" ในตารางค่าใช้จ่าย = ยอดรวมเงินยืมทดรองของเดือนนั้น -> type = เงินยืมทดรอง
+         ส่วนที่ตารางด้านล่างระบุผู้ยืมได้ (130,000) แยกเป็นรายการของตัวเอง ที่เหลือเป็นรายการไม่ระบุผู้ยืม
+       - "ค่าจ้างเหมาขนย้ายขยะภายในโรงงาน" ต้นฉบับเว้นช่องประเภทไว้ ผู้ใช้ยืนยันแล้วว่าเป็น "คงที่"
+       - *** ชื่อผู้ยืมเป็นนามสมมติ *** (repo Public — ห้าม commit ชื่อจริง) ข้อมูลจริงอยู่ใน Google Sheets ของผู้ใช้ */
     var recs = [
-      { month: "2569-04", category: "ค่าอาหารและเครื่องดื่ม - ค่าใช้จ่ายในการประชุม", type: "ค่าใช้จ่าย", group: "แปรผัน", detail: "", amount: 4386, borrower: "" },
-      { month: "2569-04", category: "ค่าของไหว้ตามประเพณี", type: "ค่าใช้จ่าย", group: "แปรผัน", detail: "", amount: 25835, borrower: "" },
-      { month: "2569-04", category: "ค่าจัดส่งเอกสารและพัสดุ ไปรษณีย์", type: "ค่าใช้จ่าย", group: "แปรผัน", detail: "", amount: 310, borrower: "" },
-      { month: "2569-04", category: "ค่าเหยื่อสด-Pest Control", type: "ค่าใช้จ่าย", group: "แปรผัน", detail: "", amount: 200, borrower: "" },
-      { month: "2569-04", category: "ค่าบำรุงสมาคมผู้ผลิตอาหารสัตว์ไทย", type: "ค่าใช้จ่าย", group: "แปรผัน", detail: "", amount: 128275, borrower: "" },
-      { month: "2569-04", category: "ค่าน้ำบาดาล", type: "ค่าใช้จ่าย", group: "แปรผัน", detail: "", amount: 30548, borrower: "" },
-      { month: "2569-04", category: "ค่าใบอนุญาต", type: "ค่าใช้จ่าย", group: "แปรผัน", detail: "", amount: 731, borrower: "" },
-      { month: "2569-04", category: "ค่ากิจกรรมชุมชน", type: "ค่าใช้จ่าย", group: "แปรผัน", detail: "", amount: 51106, borrower: "" },
-      { month: "2569-04", category: "เงินยืมทดรอง", type: "เงินยืมทดรอง", group: "", detail: "", amount: 104234, borrower: "" },
-      { month: "2569-04", category: "น้ำดื่มถังธารตะวัน", type: "ค่าใช้จ่าย", group: "แปรผัน", detail: "", amount: 15947, borrower: "" },
-      { month: "2569-04", category: "ค่าบริการ ซัก รีด", type: "ค่าใช้จ่าย", group: "แปรผัน", detail: "", amount: 2325, borrower: "" },
-      { month: "2569-04", category: "ค่าเครื่องบิน", type: "ค่าใช้จ่าย", group: "แปรผัน", detail: "", amount: 7200, borrower: "" },
-      { month: "2569-04", category: "ค่าอื่นๆ , เงินรางวัล,กิจกรรมชมรม", type: "ค่าใช้จ่าย", group: "แปรผัน", detail: "", amount: 8884, borrower: "" },
-      { month: "2569-04", category: "ค่าบริการจราจร และสายตรวจโรงงาน", type: "ค่าใช้จ่าย", group: "คงที่", detail: "", amount: 1500, borrower: "" },
-      { month: "2569-04", category: "ค่าบริการจ้างเหมา-งานสวน", type: "ค่าใช้จ่าย", group: "คงที่", detail: "", amount: 60800, borrower: "" },
-      { month: "2569-04", category: "งานจ้างเหมากำจัดสิ่งปฏิกูล", type: "ค่าใช้จ่าย", group: "คงที่", detail: "", amount: 24000, borrower: "" },
-      { month: "2569-04", category: "ค่าซักผ้าชุดพนักงานาไซโล", type: "ค่าใช้จ่าย", group: "คงที่", detail: "", amount: 24000, borrower: "" },
-      { month: "2569-04", category: "ค่าใช้จ่ายสำนักงาน", type: "ค่าใช้จ่าย", group: "แปรผัน", detail: "", amount: 32124, borrower: "" }
+      { "month": "2569-01", "category": "ค่าบริการจราจรและสายตรวจโรงงาน", "type": "ค่าใช้จ่าย", "group": "คงที่", "detail": "", "amount":1500, "borrower": "" },
+      { "month": "2569-01", "category": "ค่าจ้างเหมาดูแลสวน/ทำความสะอาดภายในโรงงาน", "type": "ค่าใช้จ่าย", "group": "คงที่", "detail": "", "amount":60800, "borrower": "" },
+      { "month": "2569-01", "category": "ค่าจ้างเหมาขนย้ายขยะภายในโรงงาน", "type": "ค่าใช้จ่าย", "group": "คงที่", "detail": "", "amount":20000, "borrower": "" },
+      { "month": "2569-01", "category": "ค่าซักชุดพนักงานขับรถไซโล", "type": "ค่าใช้จ่าย", "group": "คงที่", "detail": "", "amount":24000, "borrower": "" },
+      { "month": "2569-01", "category": "ค่าน้ำดื่มถังใส", "type": "ค่าใช้จ่าย", "group": "แปรผัน", "detail": "", "amount":23220, "borrower": "" },
+      { "month": "2569-01", "category": "งานจ้างเหมากำจัดสิ่งปฏิกูล", "type": "ค่าใช้จ่าย", "group": "แปรผัน", "detail": "", "amount":16000, "borrower": "" },
+      { "month": "2569-01", "category": "ค่าของไหว้ตามประเพณี", "type": "ค่าใช้จ่าย", "group": "แปรผัน", "detail": "", "amount":35610, "borrower": "" },
+      { "month": "2569-01", "category": "ค่าจัดส่งเอกสารและพัสดุ ไปรษณีย์", "type": "ค่าใช้จ่าย", "group": "แปรผัน", "detail": "", "amount":348, "borrower": "" },
+      { "month": "2569-01", "category": "ค่าเหยื่อสด-Pest Control", "type": "ค่าใช้จ่าย", "group": "แปรผัน", "detail": "", "amount":200, "borrower": "" },
+      { "month": "2569-01", "category": "ค่าน้ำบาดาล", "type": "ค่าใช้จ่าย", "group": "แปรผัน", "detail": "", "amount":31523, "borrower": "" },
+      { "month": "2569-01", "category": "ค่าบริการ ซัก รีด", "type": "ค่าใช้จ่าย", "group": "แปรผัน", "detail": "", "amount":2170, "borrower": "" },
+      { "month": "2569-01", "category": "ค่าเครื่องบิน", "type": "ค่าใช้จ่าย", "group": "แปรผัน", "detail": "", "amount":10600, "borrower": "" },
+      { "month": "2569-01", "category": "ค่าใช้จ่ายสำนักงาน (อุปกรณ์/ทำความสะอาด/อะไหล่ซ่อม)", "type": "ค่าใช้จ่าย", "group": "แปรผัน", "detail": "", "amount":101969, "borrower": "" },
+      { "month": "2569-01", "category": "เงินยืมทดรอง", "type": "เงินยืมทดรอง", "group": "", "detail": "ค่าอาหารและเครื่องดื่ม", "amount":30000, "borrower": "นางกาญจนา ศรีสุข" },
+      { "month": "2569-01", "category": "เงินยืมทดรอง", "type": "เงินยืมทดรอง", "group": "", "detail": "ค่าใช้จ่ายเบ็ดเตล็ด", "amount":10000, "borrower": "นายวิชัย พูนผล" },
+      { "month": "2569-01", "category": "เงินยืมทดรอง", "type": "เงินยืมทดรอง", "group": "", "detail": "", "amount":135350, "borrower": "" },
+      { "month": "2569-02", "category": "ค่าบริการจราจรและสายตรวจโรงงาน", "type": "ค่าใช้จ่าย", "group": "คงที่", "detail": "", "amount":1500, "borrower": "" },
+      { "month": "2569-02", "category": "ค่าจ้างเหมาดูแลสวน/ทำความสะอาดภายในโรงงาน", "type": "ค่าใช้จ่าย", "group": "คงที่", "detail": "", "amount":60800, "borrower": "" },
+      { "month": "2569-02", "category": "ค่าจ้างเหมาขนย้ายขยะภายในโรงงาน", "type": "ค่าใช้จ่าย", "group": "คงที่", "detail": "", "amount":20000, "borrower": "" },
+      { "month": "2569-02", "category": "ค่าซักชุดพนักงานขับรถไซโล", "type": "ค่าใช้จ่าย", "group": "คงที่", "detail": "", "amount":24000, "borrower": "" },
+      { "month": "2569-02", "category": "ค่าจ้างเหมารถตู้ (ครั้งคราว)", "type": "ค่าใช้จ่าย", "group": "แปรผัน", "detail": "", "amount":15205, "borrower": "" },
+      { "month": "2569-02", "category": "ค่าน้ำดื่มถังใส", "type": "ค่าใช้จ่าย", "group": "แปรผัน", "detail": "", "amount":15130, "borrower": "" },
+      { "month": "2569-02", "category": "งานจ้างเหมากำจัดสิ่งปฏิกูล", "type": "ค่าใช้จ่าย", "group": "แปรผัน", "detail": "", "amount":16000, "borrower": "" },
+      { "month": "2569-02", "category": "ค่าอาหารและเครื่องดื่ม - ค่าใช้จ่ายในการประชุม", "type": "ค่าใช้จ่าย", "group": "แปรผัน", "detail": "", "amount":39480, "borrower": "" },
+      { "month": "2569-02", "category": "ค่าของไหว้ตามประเพณี", "type": "ค่าใช้จ่าย", "group": "แปรผัน", "detail": "", "amount":19770, "borrower": "" },
+      { "month": "2569-02", "category": "ค่าจัดส่งเอกสารและพัสดุ ไปรษณีย์", "type": "ค่าใช้จ่าย", "group": "แปรผัน", "detail": "", "amount":148, "borrower": "" },
+      { "month": "2569-02", "category": "ค่ากิจกรรมชุมชน", "type": "ค่าใช้จ่าย", "group": "แปรผัน", "detail": "", "amount":46436, "borrower": "" },
+      { "month": "2569-02", "category": "ค่าบริการ ซัก รีด", "type": "ค่าใช้จ่าย", "group": "แปรผัน", "detail": "", "amount":1550, "borrower": "" },
+      { "month": "2569-02", "category": "ค่าอื่นๆ, เงินรางวัล, กิจกรรมชมรม", "type": "ค่าใช้จ่าย", "group": "แปรผัน", "detail": "", "amount":2098, "borrower": "" },
+      { "month": "2569-02", "category": "ค่าใช้จ่ายสำนักงาน (อุปกรณ์/ทำความสะอาด/อะไหล่ซ่อม)", "type": "ค่าใช้จ่าย", "group": "แปรผัน", "detail": "", "amount":53658, "borrower": "" },
+      { "month": "2569-02", "category": "เงินยืมทดรอง", "type": "เงินยืมทดรอง", "group": "", "detail": "ค่าใช้จ่ายเบ็ดเตล็ด", "amount":40000, "borrower": "นายวิชัย พูนผล" },
+      { "month": "2569-02", "category": "เงินยืมทดรอง", "type": "เงินยืมทดรอง", "group": "", "detail": "", "amount":75000, "borrower": "" },
+      { "month": "2569-03", "category": "ค่าบริการจราจรและสายตรวจโรงงาน", "type": "ค่าใช้จ่าย", "group": "คงที่", "detail": "", "amount":1500, "borrower": "" },
+      { "month": "2569-03", "category": "ค่าจ้างเหมาดูแลสวน/ทำความสะอาดภายในโรงงาน", "type": "ค่าใช้จ่าย", "group": "คงที่", "detail": "", "amount":60800, "borrower": "" },
+      { "month": "2569-03", "category": "ค่าจ้างเหมาขนย้ายขยะภายในโรงงาน", "type": "ค่าใช้จ่าย", "group": "คงที่", "detail": "", "amount":20000, "borrower": "" },
+      { "month": "2569-03", "category": "ค่าซักชุดพนักงานขับรถไซโล", "type": "ค่าใช้จ่าย", "group": "คงที่", "detail": "", "amount":24000, "borrower": "" },
+      { "month": "2569-03", "category": "ค่าจ้างเหมารถตู้ (ครั้งคราว)", "type": "ค่าใช้จ่าย", "group": "แปรผัน", "detail": "", "amount":29956, "borrower": "" },
+      { "month": "2569-03", "category": "ค่าน้ำดื่มถังใส", "type": "ค่าใช้จ่าย", "group": "แปรผัน", "detail": "", "amount":12820, "borrower": "" },
+      { "month": "2569-03", "category": "ค่าประเมินของนักชีววิทยา", "type": "ค่าใช้จ่าย", "group": "แปรผัน", "detail": "", "amount":14500, "borrower": "" },
+      { "month": "2569-03", "category": "งานจ้างเหมากำจัดสิ่งปฏิกูล", "type": "ค่าใช้จ่าย", "group": "แปรผัน", "detail": "", "amount":16000, "borrower": "" },
+      { "month": "2569-03", "category": "ค่าอาหารและเครื่องดื่ม - ค่าใช้จ่ายในการประชุม", "type": "ค่าใช้จ่าย", "group": "แปรผัน", "detail": "", "amount":39950, "borrower": "" },
+      { "month": "2569-03", "category": "ค่าของไหว้ตามประเพณี", "type": "ค่าใช้จ่าย", "group": "แปรผัน", "detail": "", "amount":30920, "borrower": "" },
+      { "month": "2569-03", "category": "ค่าจัดส่งเอกสารและพัสดุ ไปรษณีย์", "type": "ค่าใช้จ่าย", "group": "แปรผัน", "detail": "", "amount":946, "borrower": "" },
+      { "month": "2569-03", "category": "ค่าเหยื่อสด-Pest Control", "type": "ค่าใช้จ่าย", "group": "แปรผัน", "detail": "", "amount":811, "borrower": "" },
+      { "month": "2569-03", "category": "ค่าใบอนุญาต", "type": "ค่าใช้จ่าย", "group": "แปรผัน", "detail": "", "amount":1000, "borrower": "" },
+      { "month": "2569-03", "category": "ค่ากิจกรรมชุมชน", "type": "ค่าใช้จ่าย", "group": "แปรผัน", "detail": "", "amount":36404, "borrower": "" },
+      { "month": "2569-03", "category": "ค่าตรวจระบบ", "type": "ค่าใช้จ่าย", "group": "แปรผัน", "detail": "", "amount":27820, "borrower": "" },
+      { "month": "2569-03", "category": "ค่าภาษีป้าย", "type": "ค่าใช้จ่าย", "group": "แปรผัน", "detail": "", "amount":33805, "borrower": "" },
+      { "month": "2569-03", "category": "ค่าบริการ ซัก รีด", "type": "ค่าใช้จ่าย", "group": "แปรผัน", "detail": "", "amount":1550, "borrower": "" },
+      { "month": "2569-03", "category": "ค่าอบรม", "type": "ค่าใช้จ่าย", "group": "แปรผัน", "detail": "", "amount":14535, "borrower": "" },
+      { "month": "2569-03", "category": "ค่าแก๊สประกอบอาหาร", "type": "ค่าใช้จ่าย", "group": "แปรผัน", "detail": "", "amount":430, "borrower": "" },
+      { "month": "2569-03", "category": "ค่าอื่นๆ, เงินรางวัล, กิจกรรมชมรม", "type": "ค่าใช้จ่าย", "group": "แปรผัน", "detail": "", "amount":5986, "borrower": "" },
+      { "month": "2569-03", "category": "ค่าใช้จ่ายสำนักงาน (อุปกรณ์/ทำความสะอาด/อะไหล่ซ่อม)", "type": "ค่าใช้จ่าย", "group": "แปรผัน", "detail": "", "amount":117834, "borrower": "" },
+      { "month": "2569-03", "category": "เงินยืมทดรอง", "type": "เงินยืมทดรอง", "group": "", "detail": "", "amount":93200, "borrower": "" },
+      { "month": "2569-04", "category": "ค่าบริการจราจรและสายตรวจโรงงาน", "type": "ค่าใช้จ่าย", "group": "คงที่", "detail": "", "amount":1500, "borrower": "" },
+      { "month": "2569-04", "category": "ค่าจ้างเหมาดูแลสวน/ทำความสะอาดภายในโรงงาน", "type": "ค่าใช้จ่าย", "group": "คงที่", "detail": "", "amount":60800, "borrower": "" },
+      { "month": "2569-04", "category": "ค่าจ้างเหมาขนย้ายขยะภายในโรงงาน", "type": "ค่าใช้จ่าย", "group": "คงที่", "detail": "", "amount":20000, "borrower": "" },
+      { "month": "2569-04", "category": "ค่าซักชุดพนักงานขับรถไซโล", "type": "ค่าใช้จ่าย", "group": "คงที่", "detail": "", "amount":24000, "borrower": "" },
+      { "month": "2569-04", "category": "ค่าน้ำดื่มถังใส", "type": "ค่าใช้จ่าย", "group": "แปรผัน", "detail": "", "amount":15947, "borrower": "" },
+      { "month": "2569-04", "category": "ค่าบำรุงสมาชิกผู้ผลิตไก่เพื่อส่งออกไทย", "type": "ค่าใช้จ่าย", "group": "แปรผัน", "detail": "", "amount":128275, "borrower": "" },
+      { "month": "2569-04", "category": "งานจ้างเหมากำจัดสิ่งปฏิกูล", "type": "ค่าใช้จ่าย", "group": "แปรผัน", "detail": "", "amount":24000, "borrower": "" },
+      { "month": "2569-04", "category": "ค่าอาหารและเครื่องดื่ม - ค่าใช้จ่ายในการประชุม", "type": "ค่าใช้จ่าย", "group": "แปรผัน", "detail": "", "amount":4386, "borrower": "" },
+      { "month": "2569-04", "category": "ค่าของไหว้ตามประเพณี", "type": "ค่าใช้จ่าย", "group": "แปรผัน", "detail": "", "amount":25835, "borrower": "" },
+      { "month": "2569-04", "category": "ค่าจัดส่งเอกสารและพัสดุ ไปรษณีย์", "type": "ค่าใช้จ่าย", "group": "แปรผัน", "detail": "", "amount":310, "borrower": "" },
+      { "month": "2569-04", "category": "ค่าเหยื่อสด-Pest Control", "type": "ค่าใช้จ่าย", "group": "แปรผัน", "detail": "", "amount":200, "borrower": "" },
+      { "month": "2569-04", "category": "ค่าน้ำบาดาล", "type": "ค่าใช้จ่าย", "group": "แปรผัน", "detail": "", "amount":30548, "borrower": "" },
+      { "month": "2569-04", "category": "ค่าใบอนุญาต", "type": "ค่าใช้จ่าย", "group": "แปรผัน", "detail": "", "amount":731, "borrower": "" },
+      { "month": "2569-04", "category": "ค่ากิจกรรมชุมชน", "type": "ค่าใช้จ่าย", "group": "แปรผัน", "detail": "", "amount":51106, "borrower": "" },
+      { "month": "2569-04", "category": "ค่าบริการ ซัก รีด", "type": "ค่าใช้จ่าย", "group": "แปรผัน", "detail": "", "amount":2325, "borrower": "" },
+      { "month": "2569-04", "category": "ค่าเครื่องบิน", "type": "ค่าใช้จ่าย", "group": "แปรผัน", "detail": "", "amount":7200, "borrower": "" },
+      { "month": "2569-04", "category": "ค่าอื่นๆ, เงินรางวัล, กิจกรรมชมรม", "type": "ค่าใช้จ่าย", "group": "แปรผัน", "detail": "", "amount":8884, "borrower": "" },
+      { "month": "2569-04", "category": "ค่าใช้จ่ายสำนักงาน (อุปกรณ์/ทำความสะอาด/อะไหล่ซ่อม)", "type": "ค่าใช้จ่าย", "group": "แปรผัน", "detail": "", "amount":32124, "borrower": "" },
+      { "month": "2569-04", "category": "เงินยืมทดรอง", "type": "เงินยืมทดรอง", "group": "", "detail": "ค่าใช้จ่ายเบ็ดเตล็ด", "amount":20000, "borrower": "นายวิชัย พูนผล" },
+      { "month": "2569-04", "category": "เงินยืมทดรอง", "type": "เงินยืมทดรอง", "group": "", "detail": "ค่าทำบุญสงกรานต์", "amount":30000, "borrower": "นางสาวปิยะดา บุญมี" },
+      { "month": "2569-04", "category": "เงินยืมทดรอง", "type": "เงินยืมทดรอง", "group": "", "detail": "", "amount":54234, "borrower": "" },
+      { "month": "2569-05", "category": "ค่าบริการจราจรและสายตรวจโรงงาน", "type": "ค่าใช้จ่าย", "group": "คงที่", "detail": "", "amount":1500, "borrower": "" },
+      { "month": "2569-05", "category": "ค่าจ้างเหมาดูแลสวน/ทำความสะอาดภายในโรงงาน", "type": "ค่าใช้จ่าย", "group": "คงที่", "detail": "", "amount":60800, "borrower": "" },
+      { "month": "2569-05", "category": "ค่าจ้างเหมาขนย้ายขยะภายในโรงงาน", "type": "ค่าใช้จ่าย", "group": "คงที่", "detail": "", "amount":20000, "borrower": "" },
+      { "month": "2569-05", "category": "ค่าซักชุดพนักงานขับรถไซโล", "type": "ค่าใช้จ่าย", "group": "คงที่", "detail": "", "amount":24000, "borrower": "" },
+      { "month": "2569-05", "category": "ค่าน้ำดื่มถังใส", "type": "ค่าใช้จ่าย", "group": "แปรผัน", "detail": "", "amount":13760, "borrower": "" },
+      { "month": "2569-05", "category": "งานจ้างเหมากำจัดสิ่งปฏิกูล", "type": "ค่าใช้จ่าย", "group": "แปรผัน", "detail": "", "amount":40000, "borrower": "" },
+      { "month": "2569-05", "category": "ค่าอาหารและเครื่องดื่ม - ค่าใช้จ่ายในการประชุม", "type": "ค่าใช้จ่าย", "group": "แปรผัน", "detail": "", "amount":47634, "borrower": "" },
+      { "month": "2569-05", "category": "ค่าของไหว้ตามประเพณี", "type": "ค่าใช้จ่าย", "group": "แปรผัน", "detail": "", "amount":20400, "borrower": "" },
+      { "month": "2569-05", "category": "ค่าจัดส่งเอกสารและพัสดุ ไปรษณีย์", "type": "ค่าใช้จ่าย", "group": "แปรผัน", "detail": "", "amount":550, "borrower": "" },
+      { "month": "2569-05", "category": "ภาษีที่ดินและสิ่งปลูกสร้าง", "type": "ค่าใช้จ่าย", "group": "แปรผัน", "detail": "", "amount":707437, "borrower": "" },
+      { "month": "2569-05", "category": "ค่าใบอนุญาต", "type": "ค่าใช้จ่าย", "group": "แปรผัน", "detail": "", "amount":20, "borrower": "" },
+      { "month": "2569-05", "category": "ค่ากิจกรรมชุมชน", "type": "ค่าใช้จ่าย", "group": "แปรผัน", "detail": "", "amount":20125, "borrower": "" },
+      { "month": "2569-05", "category": "ค่าบริการ ซัก รีด", "type": "ค่าใช้จ่าย", "group": "แปรผัน", "detail": "", "amount":1395, "borrower": "" },
+      { "month": "2569-05", "category": "ค่าอื่นๆ, เงินรางวัล, กิจกรรมชมรม", "type": "ค่าใช้จ่าย", "group": "แปรผัน", "detail": "", "amount":15000, "borrower": "" },
+      { "month": "2569-05", "category": "ค่าใช้จ่ายสำนักงาน (อุปกรณ์/ทำความสะอาด/อะไหล่ซ่อม)", "type": "ค่าใช้จ่าย", "group": "แปรผัน", "detail": "", "amount":127074, "borrower": "" },
+      { "month": "2569-05", "category": "เงินยืมทดรอง", "type": "เงินยืมทดรอง", "group": "", "detail": "", "amount":26500, "borrower": "" },
+      { "month": "2569-06", "category": "ค่าบริการจราจรและสายตรวจโรงงาน", "type": "ค่าใช้จ่าย", "group": "คงที่", "detail": "", "amount":1500, "borrower": "" },
+      { "month": "2569-06", "category": "ค่าจ้างเหมาดูแลสวน/ทำความสะอาดภายในโรงงาน", "type": "ค่าใช้จ่าย", "group": "คงที่", "detail": "", "amount":60800, "borrower": "" },
+      { "month": "2569-06", "category": "ค่าจ้างเหมาขนย้ายขยะภายในโรงงาน", "type": "ค่าใช้จ่าย", "group": "คงที่", "detail": "", "amount":20000, "borrower": "" },
+      { "month": "2569-06", "category": "ค่าซักชุดพนักงานขับรถไซโล", "type": "ค่าใช้จ่าย", "group": "คงที่", "detail": "", "amount":24000, "borrower": "" },
+      { "month": "2569-06", "category": "ค่าจ้างเหมารถตู้ (ครั้งคราว)", "type": "ค่าใช้จ่าย", "group": "แปรผัน", "detail": "", "amount":13275, "borrower": "" },
+      { "month": "2569-06", "category": "ค่าน้ำดื่มถังใส", "type": "ค่าใช้จ่าย", "group": "แปรผัน", "detail": "", "amount":16715, "borrower": "" },
+      { "month": "2569-06", "category": "ค่าประเมินของนักชีววิทยา", "type": "ค่าใช้จ่าย", "group": "แปรผัน", "detail": "", "amount":14500, "borrower": "" },
+      { "month": "2569-06", "category": "งานจ้างเหมากำจัดสิ่งปฏิกูล", "type": "ค่าใช้จ่าย", "group": "แปรผัน", "detail": "", "amount":32000, "borrower": "" },
+      { "month": "2569-06", "category": "ค่าอาหารและเครื่องดื่ม - ค่าใช้จ่ายในการประชุม", "type": "ค่าใช้จ่าย", "group": "แปรผัน", "detail": "", "amount":35217, "borrower": "" },
+      { "month": "2569-06", "category": "ค่าของไหว้ตามประเพณี", "type": "ค่าใช้จ่าย", "group": "แปรผัน", "detail": "", "amount":16695, "borrower": "" },
+      { "month": "2569-06", "category": "ค่าจัดส่งเอกสารและพัสดุ ไปรษณีย์", "type": "ค่าใช้จ่าย", "group": "แปรผัน", "detail": "", "amount":206, "borrower": "" },
+      { "month": "2569-06", "category": "ค่าเหยื่อสด-Pest Control", "type": "ค่าใช้จ่าย", "group": "แปรผัน", "detail": "", "amount":1278, "borrower": "" },
+      { "month": "2569-06", "category": "ค่ากิจกรรมชุมชน", "type": "ค่าใช้จ่าย", "group": "แปรผัน", "detail": "", "amount":39573, "borrower": "" },
+      { "month": "2569-06", "category": "ค่าอื่นๆ, เงินรางวัล, กิจกรรมชมรม", "type": "ค่าใช้จ่าย", "group": "แปรผัน", "detail": "", "amount":42845, "borrower": "" },
+      { "month": "2569-06", "category": "ค่าใช้จ่ายสำนักงาน (อุปกรณ์/ทำความสะอาด/อะไหล่ซ่อม)", "type": "ค่าใช้จ่าย", "group": "แปรผัน", "detail": "", "amount":67767, "borrower": "" },
+      { "month": "2569-06", "category": "เงินยืมทดรอง", "type": "เงินยืมทดรอง", "group": "", "detail": "", "amount":112000, "borrower": "" },
+      { "month": "2569-07", "category": "ค่าบริการจราจรและสายตรวจโรงงาน", "type": "ค่าใช้จ่าย", "group": "คงที่", "detail": "", "amount":1500, "borrower": "" },
+      { "month": "2569-07", "category": "ค่าจ้างเหมาดูแลสวน/ทำความสะอาดภายในโรงงาน", "type": "ค่าใช้จ่าย", "group": "คงที่", "detail": "", "amount":60800, "borrower": "" },
+      { "month": "2569-07", "category": "ค่าจ้างเหมาขนย้ายขยะภายในโรงงาน", "type": "ค่าใช้จ่าย", "group": "คงที่", "detail": "", "amount":20000, "borrower": "" },
+      { "month": "2569-07", "category": "ค่าซักชุดพนักงานขับรถไซโล", "type": "ค่าใช้จ่าย", "group": "คงที่", "detail": "", "amount":24000, "borrower": "" },
+      { "month": "2569-07", "category": "ค่าบำรุงสมาชิกผู้ผลิตไก่เพื่อส่งออกไทย", "type": "ค่าใช้จ่าย", "group": "แปรผัน", "detail": "", "amount":172465, "borrower": "" },
+      { "month": "2569-07", "category": "งานจ้างเหมากำจัดสิ่งปฏิกูล", "type": "ค่าใช้จ่าย", "group": "แปรผัน", "detail": "", "amount":24000, "borrower": "" },
+      { "month": "2569-07", "category": "ค่าอาหารและเครื่องดื่ม - ค่าใช้จ่ายในการประชุม", "type": "ค่าใช้จ่าย", "group": "แปรผัน", "detail": "", "amount":62372, "borrower": "" },
+      { "month": "2569-07", "category": "ค่าของไหว้ตามประเพณี", "type": "ค่าใช้จ่าย", "group": "แปรผัน", "detail": "", "amount":23225, "borrower": "" },
+      { "month": "2569-07", "category": "ค่าจัดส่งเอกสารและพัสดุ ไปรษณีย์", "type": "ค่าใช้จ่าย", "group": "แปรผัน", "detail": "", "amount":240, "borrower": "" },
+      { "month": "2569-07", "category": "ค่าเหยื่อสด-Pest Control", "type": "ค่าใช้จ่าย", "group": "แปรผัน", "detail": "", "amount":1200, "borrower": "" },
+      { "month": "2569-07", "category": "ค่าน้ำบาดาล", "type": "ค่าใช้จ่าย", "group": "แปรผัน", "detail": "", "amount":28949, "borrower": "" },
+      { "month": "2569-07", "category": "ค่าใบอนุญาต", "type": "ค่าใช้จ่าย", "group": "แปรผัน", "detail": "", "amount":1000, "borrower": "" },
+      { "month": "2569-07", "category": "ค่ากิจกรรมชุมชน", "type": "ค่าใช้จ่าย", "group": "แปรผัน", "detail": "", "amount":24103, "borrower": "" },
+      { "month": "2569-07", "category": "ค่าอื่นๆ, เงินรางวัล, กิจกรรมชมรม", "type": "ค่าใช้จ่าย", "group": "แปรผัน", "detail": "", "amount":6400, "borrower": "" },
+      { "month": "2569-07", "category": "ค่าใช้จ่ายสำนักงาน (อุปกรณ์/ทำความสะอาด/อะไหล่ซ่อม)", "type": "ค่าใช้จ่าย", "group": "แปรผัน", "detail": "", "amount":80450, "borrower": "" },
+      { "month": "2569-07", "category": "เงินยืมทดรอง", "type": "เงินยืมทดรอง", "group": "", "detail": "", "amount":58800, "borrower": "" }
     ];
     _cache.oe = { records: recs, source: 'sample', count: recs.length };
     return JSON.parse(JSON.stringify(_cache.oe));

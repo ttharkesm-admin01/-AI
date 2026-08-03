@@ -612,6 +612,8 @@
       var typePairs = U.toSortedPairs(U.groupSum(allow, 'wtype', 'amount'));
       var medPeak = U.toSortedPairs(U.groupSum(med, 'month', 'amount'))[0];
       var allowPeak = U.toSortedPairs(U.groupSum(allow, 'month', 'amount'))[0];
+      // เดือนสวัสดิการสูงสุด = ยอดเงินรวมทุกประเภท (ไม่ใช่เฉพาะค่ารักษา) ให้ตรงกับการ์ด insight บนจอ
+      var moneyPeak = U.toSortedPairs(U.groupSum(money, 'month', 'amount'))[0];
       var ms = U.uniqSorted(filtered.map(function (r) { return r.month; }));
       var periodStr = !ms.length ? 'ปีงบประมาณ พ.ศ. 2569' :
         ms.length === 1 ? U.monthLabelFull(ms[0]) :
@@ -701,7 +703,7 @@
           var arr = [
             { num: 1, text: 'ค่ารักษาพยาบาล ' + U.pct(totalMed, grand) + '% ของสวัสดิการทั้งหมด' + (topMedEmp[0] ? ' • ' + topMedEmp[0].key + ' สูงสุด ' + U.fmt(topMedEmp[0].value) + ' ฿' : '') },
             { num: 2, text: 'เบี้ยเลี้ยงสูงสุด: ' + (topBaiLiang[0] ? topBaiLiang[0].key + ' ' + U.fmt(topBaiLiang[0].value) + ' บาท' : '–') },
-            { num: 3, text: 'เดือนจ่ายสวัสดิการสูงสุด: ' + (medPeak || allowPeak ? U.monthLabelFull((medPeak || allowPeak).key) : '–') },
+            { num: 3, text: 'เดือนจ่ายสวัสดิการสูงสุด: ' + (moneyPeak ? U.monthLabelFull(moneyPeak.key) + ' ' + U.fmt(moneyPeak.value) + ' บาท' : '–') },
             { num: 4, text: 'เฉลี่ยต่อคน ' + U.fmt(avg) + ' บาท  จาก ' + empCount + ' คน' + (otRecs.length ? '  •  OT รวม ' + U.fmtHours(U.sumBy(otRecs, 'amount')) + ' ชม.' : '') }
           ];
           var mom = U.momChange(U.groupSum(money, 'month', 'amount'));
