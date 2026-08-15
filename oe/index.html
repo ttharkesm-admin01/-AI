@@ -258,13 +258,25 @@
     if (!U.momChange) U.momChange = function () { return null; };
     if (!U.fmtHours) U.fmtHours = U.fmt;
     // ค่าประเภทมาตรฐาน — data.js แปลงตัวสะกดในชีตให้ตรงกับค่าพวกนี้ตั้งแต่ตอน parse
-    // (shim กันหน้าใหม่เจอ data.js เก่าจากแคช SW ช่วงรอยต่อ deploy)
     var T = DataSource.OE_TYPE || { EXPENSE: 'ค่าใช้จ่าย', ADVANCE: 'เงินยืมทดรอง', RETURN: 'คืนเงินยืมทดรอง' };
+    /* shim กันหน้าใหม่เจอ data.js เก่าจากแคช SW ช่วงรอยต่อ deploy (SWR ล้าหลัง 1 รีเฟรช)
+       เคยเจอจริง: หน้าใหม่โชว์ช่อง "ยอดคืน/คงค้าง" แล้ว แต่ data.js เก่ายังไม่มี canonOEType
+       → แถวคืนคงตัวสะกดดิบ ไม่ตรง T.RETURN → ยอดคืนขึ้น 0 เงียบ ๆ เหมือนไม่มีข้อมูล
+       ต้องเช็ค "คืน" ก่อน เพราะข้อความคืนมีคำว่า "ยืม" อยู่ด้วย */
+    var canonType = DataSource.canonOEType || function (v) {
+      var s = String(v == null ? '' : v).replace(/\s+/g, '');
+      if (!s) return '';
+      if (s.indexOf('ยืม') < 0 && s.indexOf('เยืม') < 0) return String(v).trim();
+      return s.indexOf('คืน') >= 0 ? T.RETURN : T.ADVANCE;
+    };
     var raw = [], filtered = [], charts = {}, _lastAgg = null;
     var debouncedRender = App.debounce(render, 120);
     var dash = App.dashboardSetup(KIND, {
       getRaw: function () { return raw; },
-      onRaw: function (r) { raw = r; },
+      onRaw: function (r) {
+        raw = r || [];
+        if (!DataSource.canonOEType) raw.forEach(function (x) { if (x && x.type) x.type = canonType(x.type); });
+      },
       buildFilters: buildFilters,
       render: render,
       debouncedRender: function () { debouncedRender(); }
