@@ -17,7 +17,7 @@
     oe: [
       { k: 'month', label: 'เดือน (พ.ศ.)', type: 'month', req: true },
       { k: 'category', label: 'หมวดหมู่', type: 'text', req: true },
-      { k: 'type', label: 'ประเภท', type: 'select', opts: ['ค่าใช้จ่าย', 'เงินยืมทดรอง'], req: true },
+      { k: 'type', label: 'ประเภท', type: 'select', opts: ['ค่าใช้จ่าย', 'เงินยืมทดรอง', 'คืนเงินยืมทดรอง'], req: true },
       { k: 'group', label: 'กลุ่ม', type: 'select', opts: ['', 'คงที่', 'แปรผัน'] },
       { k: 'detail', label: 'รายละเอียด', type: 'text' },
       { k: 'amount', label: 'จำนวนเงิน (บาท)', type: 'number', req: true },
@@ -152,7 +152,10 @@
       if (act === 'edit') { state.editIdx = idx; renderForm(); U.el('ed-form').scrollIntoView({ block: 'nearest' }); }
       else if (act === 'dup') {
         state.work.splice(idx + 1, 0, Object.assign({}, state.work[idx]));
-        state.selected = {}; state.dirty = true; renderList();
+        // แทรกแถวใหม่ทำให้ index หลังจุดแทรกเลื่อนไป 1 — ถ้ากำลังแก้ไขแถวที่อยู่หลังจุดนั้น
+        // ต้องเลื่อน editIdx ตาม ไม่งั้นกด "บันทึกการแก้ไข" จะไปทับคนละรายการ
+        if (state.editIdx > idx) state.editIdx++;
+        state.selected = {}; state.dirty = true; renderForm(); renderList();
         U.toast('ทำซ้ำรายการแล้ว — แก้ไขได้ตามต้องการ', 'ok');
       } else if (act === 'del') {
         if (confirm('ลบรายการนี้?')) {

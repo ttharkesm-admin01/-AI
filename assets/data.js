@@ -32,6 +32,26 @@
 
   var MONTH_RE = /^\s*(\d{4})\s*-\s*(\d{1,2})(?!\d)/;
 
+  /* ---- ประเภทของ OE (คอลัมน์ "ประเภท") ----
+     ผู้ใช้พิมพ์เองในชีตจริง จึงมีตัวสะกดหลายแบบปนกัน เช่น
+       "คืนเงินยืมทดลอง" / "คืนเงินเยืมทดรอง" / "คืนเงินยืมทดรอง"  (ทดรอง↔ทดลอง, ยืม↔เยืม)
+     ก่อนหน้านี้แถวคืนเงินไม่ตรงกับทั้ง "ค่าใช้จ่าย" และ "เงินยืมทดรอง"
+     → ถูกทิ้งเงียบ ๆ ทั้ง KPI/กราฟ/ตาราง · แปลงให้เป็นค่ามาตรฐานตั้งแต่ตอน parse
+     จุดเดียว ทุกส่วนปลายทาง (dashboard/editor/export) จึงเห็นค่าเดียวกันเสมอ */
+  var OE_TYPE = {
+    EXPENSE: 'ค่าใช้จ่าย',
+    ADVANCE: 'เงินยืมทดรอง',
+    RETURN: 'คืนเงินยืมทดรอง'
+  };
+  /** แปลงข้อความประเภทเป็นค่ามาตรฐาน — ต้องเช็ค "คืน" ก่อน เพราะ "คืนเงินยืมทดลอง" มีคำว่า "ยืม" อยู่ด้วย */
+  function canonOEType(v) {
+    var s = String(v == null ? '' : v).replace(/\s+/g, '');
+    if (!s) return '';
+    var isLoanWord = s.indexOf('ยืม') >= 0 || s.indexOf('เยืม') >= 0;
+    if (!isLoanWord) return s === OE_TYPE.EXPENSE ? OE_TYPE.EXPENSE : String(v).trim();
+    return s.indexOf('คืน') >= 0 ? OE_TYPE.RETURN : OE_TYPE.ADVANCE;
+  }
+
   /* ชื่อเดือนไทย (เต็ม/ย่อ) -> เลขเดือน 1–12 */
   var THAI_MONTHS = [
     ['มกราคม', 'ม.ค.'], ['กุมภาพันธ์', 'ก.พ.'], ['มีนาคม', 'มี.ค.'],
@@ -85,7 +105,11 @@
     try {
       var raw = localStorage.getItem(SCHEMA[kind].localKey);
       var arr = raw ? JSON.parse(raw) : [];
-      return Array.isArray(arr) ? arr : [];
+      if (!Array.isArray(arr)) return [];
+      // ข้อมูลที่บันทึกไว้ก่อนมีการรวมตัวสะกดประเภท อาจยังเก็บ "คืนเงินยืมทดลอง" ดิบไว้
+      // — แปลงตอนอ่านด้วย ไม่งั้นแถวคืนเงินของผู้ใช้เดิมยังหายเหมือนเดิม
+      if (kind === 'oe') arr.forEach(function (r) { if (r && r.type) r.type = canonOEType(r.type); });
+      return arr;
     } catch (e) { return []; }
   }
   function localSet(kind, records) {
@@ -162,6 +186,7 @@
       rec.month = fm[1] + '-' + (fm[2].length < 2 ? '0' + fm[2] : fm[2]);
       rec.amount = U.parseNumber(cells[sc.amountIndex]);
       if (rec.amount <= 0) continue; // ตัดแถวยอด 0
+      if (kind === 'oe') rec.type = canonOEType(rec.type); // รวมตัวสะกดของ "คืนเงินยืมทดรอง" ให้เป็นค่าเดียว
       out.push(rec);
     }
     return out;
@@ -401,6 +426,8 @@
       { "month": "2569-02", "category": "ค่าใช้จ่ายสำนักงาน (อุปกรณ์/ทำความสะอาด/อะไหล่ซ่อม)", "type": "ค่าใช้จ่าย", "group": "แปรผัน", "detail": "", "amount":53658, "borrower": "" },
       { "month": "2569-02", "category": "เงินยืมทดรอง", "type": "เงินยืมทดรอง", "group": "", "detail": "ค่าใช้จ่ายเบ็ดเตล็ด", "amount":40000, "borrower": "นายวิชัย พูนผล" },
       { "month": "2569-02", "category": "เงินยืมทดรอง", "type": "เงินยืมทดรอง", "group": "", "detail": "", "amount":75000, "borrower": "" },
+      { "month": "2569-02", "category": "คืนเงินยืมทดรอง", "type": "คืนเงินยืมทดรอง", "group": "", "detail": "ค่าอาหารและเครื่องดื่ม", "amount":30000, "borrower": "นางกาญจนา ศรีสุข" },
+      { "month": "2569-02", "category": "คืนเงินยืมทดรอง", "type": "คืนเงินยืมทดรอง", "group": "", "detail": "ค่าใช้จ่ายเบ็ดเตล็ด", "amount":10000, "borrower": "นายวิชัย พูนผล" },
       { "month": "2569-03", "category": "ค่าบริการจราจรและสายตรวจโรงงาน", "type": "ค่าใช้จ่าย", "group": "คงที่", "detail": "", "amount":1500, "borrower": "" },
       { "month": "2569-03", "category": "ค่าจ้างเหมาดูแลสวน/ทำความสะอาดภายในโรงงาน", "type": "ค่าใช้จ่าย", "group": "คงที่", "detail": "", "amount":60800, "borrower": "" },
       { "month": "2569-03", "category": "ค่าจ้างเหมาขนย้ายขยะภายในโรงงาน", "type": "ค่าใช้จ่าย", "group": "คงที่", "detail": "", "amount":20000, "borrower": "" },
@@ -423,6 +450,7 @@
       { "month": "2569-03", "category": "ค่าอื่นๆ, เงินรางวัล, กิจกรรมชมรม", "type": "ค่าใช้จ่าย", "group": "แปรผัน", "detail": "", "amount":5986, "borrower": "" },
       { "month": "2569-03", "category": "ค่าใช้จ่ายสำนักงาน (อุปกรณ์/ทำความสะอาด/อะไหล่ซ่อม)", "type": "ค่าใช้จ่าย", "group": "แปรผัน", "detail": "", "amount":117834, "borrower": "" },
       { "month": "2569-03", "category": "เงินยืมทดรอง", "type": "เงินยืมทดรอง", "group": "", "detail": "", "amount":93200, "borrower": "" },
+      { "month": "2569-03", "category": "คืนเงินยืมทดรอง", "type": "คืนเงินยืมทดรอง", "group": "", "detail": "ค่าใช้จ่ายเบ็ดเตล็ด", "amount":40000, "borrower": "นายวิชัย พูนผล" },
       { "month": "2569-04", "category": "ค่าบริการจราจรและสายตรวจโรงงาน", "type": "ค่าใช้จ่าย", "group": "คงที่", "detail": "", "amount":1500, "borrower": "" },
       { "month": "2569-04", "category": "ค่าจ้างเหมาดูแลสวน/ทำความสะอาดภายในโรงงาน", "type": "ค่าใช้จ่าย", "group": "คงที่", "detail": "", "amount":60800, "borrower": "" },
       { "month": "2569-04", "category": "ค่าจ้างเหมาขนย้ายขยะภายในโรงงาน", "type": "ค่าใช้จ่าย", "group": "คงที่", "detail": "", "amount":20000, "borrower": "" },
@@ -460,6 +488,7 @@
       { "month": "2569-05", "category": "ค่าอื่นๆ, เงินรางวัล, กิจกรรมชมรม", "type": "ค่าใช้จ่าย", "group": "แปรผัน", "detail": "", "amount":15000, "borrower": "" },
       { "month": "2569-05", "category": "ค่าใช้จ่ายสำนักงาน (อุปกรณ์/ทำความสะอาด/อะไหล่ซ่อม)", "type": "ค่าใช้จ่าย", "group": "แปรผัน", "detail": "", "amount":127074, "borrower": "" },
       { "month": "2569-05", "category": "เงินยืมทดรอง", "type": "เงินยืมทดรอง", "group": "", "detail": "", "amount":26500, "borrower": "" },
+      { "month": "2569-05", "category": "คืนเงินยืมทดรอง", "type": "คืนเงินยืมทดรอง", "group": "", "detail": "ค่าทำบุญสงกรานต์", "amount":30000, "borrower": "นางสาวปิยะดา บุญมี" },
       { "month": "2569-06", "category": "ค่าบริการจราจรและสายตรวจโรงงาน", "type": "ค่าใช้จ่าย", "group": "คงที่", "detail": "", "amount":1500, "borrower": "" },
       { "month": "2569-06", "category": "ค่าจ้างเหมาดูแลสวน/ทำความสะอาดภายในโรงงาน", "type": "ค่าใช้จ่าย", "group": "คงที่", "detail": "", "amount":60800, "borrower": "" },
       { "month": "2569-06", "category": "ค่าจ้างเหมาขนย้ายขยะภายในโรงงาน", "type": "ค่าใช้จ่าย", "group": "คงที่", "detail": "", "amount":20000, "borrower": "" },
@@ -638,6 +667,8 @@
 
   global.DataSource = {
     SCHEMA: SCHEMA,
+    OE_TYPE: OE_TYPE,
+    canonOEType: canonOEType,
     config: { get: cfgGet, set: cfgSet, clear: cfgClear },
     local: { get: localGet, set: localSet, clear: localClear, has: localHas },
     extractSheetId: extractSheetId,
