@@ -60,6 +60,7 @@
           <option value="">ทั้งหมด</option>
           <option value="ค่าใช้จ่าย">ค่าใช้จ่าย</option>
           <option value="เงินยืมทดรอง">เงินยืมทดรอง</option>
+          <option value="คืนเงินยืมทดรอง">คืนเงินยืมทดรอง</option>
         </select>
       </div>
       <div class="filter-spacer"></div>
@@ -126,12 +127,12 @@
         <div class="panel-head"><div class="p-icon"><span class="ic gi-wallet"></span></div><h2>เงินยืมทดรอง</h2></div>
         <div class="panel-body">
           <div class="mini-kpis">
-            <div class="mini"><div class="m-label">รวมเงินยืม</div><div class="m-value" id="m-adv-total">–</div></div>
-            <div class="mini"><div class="m-label">จำนวนรายการ</div><div class="m-value" id="m-adv-count">–</div></div>
-            <div class="mini"><div class="m-label">ผู้ยืมสูงสุด</div><div class="m-value" id="m-adv-top">–</div></div>
+            <div class="mini"><div class="m-label">ยอดยืม</div><div class="m-value" id="m-adv-total">–</div></div>
+            <div class="mini"><div class="m-label">ยอดคืน</div><div class="m-value" id="m-ret-total">–</div></div>
+            <div class="mini"><div class="m-label">คงค้าง</div><div class="m-value" id="m-adv-out">–</div></div>
           </div>
           <div class="chart-block">
-            <div class="cb-title">เงินยืมทดรองรายเดือน (สัดส่วน)</div>
+            <div class="cb-title">ยืม vs คืน รายเดือน</div>
             <div class="chart-wrap short"><canvas id="c-adv-donut"></canvas></div>
           </div>
           <div class="chart-block">
@@ -139,7 +140,14 @@
             <div class="chart-wrap"><canvas id="c-adv-bar"></canvas></div>
           </div>
           <div class="chart-block">
-            <div class="cb-title">รายการเงินยืมทดรอง</div>
+            <div class="cb-title">คงค้างตามผู้ยืม <span class="dq-note" id="adv-out-note"></span></div>
+            <div class="tbl-wrap" style="max-height:200px;overflow:auto">
+              <table class="data blue"><thead><tr><th>ผู้ยืม</th><th class="num">ยืม</th><th class="num">คืน</th><th class="num">คงค้าง</th></tr></thead>
+                <tbody id="tb-out"></tbody></table>
+            </div>
+          </div>
+          <div class="chart-block">
+            <div class="cb-title">รายการเงินยืม / คืนเงินยืม</div>
             <div class="tbl-wrap" style="max-height:260px;overflow:auto">
               <table class="data blue"><thead><tr><th>เดือน</th><th>รายการ / วัตถุประสงค์</th><th>ผู้ยืม</th><th class="num">จำนวนเงิน</th></tr></thead>
                 <tbody id="tb-adv"></tbody></table>
@@ -178,7 +186,9 @@
             <li>เปิด Google Sheets → <code>แชร์</code> → ตั้งเป็น <strong>"ทุกคนที่มีลิงก์ (ผู้อ่าน)"</strong></li>
             <li>ต้องมีแท็บชื่อ <code>RAW_DATA</code> เรียงคอลัมน์:<br />
               <code>เดือน | หมวดหมู่ | ประเภท | กลุ่ม | รายละเอียด | จำนวนเงิน | ผู้ยืม</code></li>
-            <li>รูปแบบเดือน <code>2569-01</code> · ประเภท = <code>ค่าใช้จ่าย</code> / <code>เงินยืมทดรอง</code></li>
+            <li>รูปแบบเดือน <code>2569-01</code> · ประเภท = <code>ค่าใช้จ่าย</code> / <code>เงินยืมทดรอง</code> / <code>คืนเงินยืมทดรอง</code></li>
+            <li>แถวคืนเงินยืม: ใส่ประเภท <code>คืนเงินยืมทดรอง</code> และกรอก <strong>ผู้ยืม</strong> คนเดิม<br />
+              (ระบบหักยอดคืนออกจากยอดยืมของคนนั้นให้เป็น "คงค้าง" อัตโนมัติ)</li>
           </ol>
         </div>
         <div style="margin-top:14px;border-top:1px dashed var(--line);padding-top:14px">
@@ -247,6 +257,9 @@
     // — ฟีเจอร์ที่พึ่งฟังก์ชันใหม่จะถูกซ่อนแทนที่จะ throw ทั้งหน้า
     if (!U.momChange) U.momChange = function () { return null; };
     if (!U.fmtHours) U.fmtHours = U.fmt;
+    // ค่าประเภทมาตรฐาน — data.js แปลงตัวสะกดในชีตให้ตรงกับค่าพวกนี้ตั้งแต่ตอน parse
+    // (shim กันหน้าใหม่เจอ data.js เก่าจากแคช SW ช่วงรอยต่อ deploy)
+    var T = DataSource.OE_TYPE || { EXPENSE: 'ค่าใช้จ่าย', ADVANCE: 'เงินยืมทดรอง', RETURN: 'คืนเงินยืมทดรอง' };
     var raw = [], filtered = [], charts = {}, _lastAgg = null;
     var debouncedRender = App.debounce(render, 120);
     var dash = App.dashboardSetup(KIND, {
@@ -285,9 +298,13 @@
     /* ---------- Render ---------- */
     function render() {
       applyFilters();
-      var exp = filtered.filter(function (r) { return r.type === 'ค่าใช้จ่าย'; });
-      var adv = filtered.filter(function (r) { return r.type === 'เงินยืมทดรอง'; });
+      var exp = filtered.filter(function (r) { return r.type === T.EXPENSE; });
+      var adv = filtered.filter(function (r) { return r.type === T.ADVANCE; });
+      var ret = filtered.filter(function (r) { return r.type === T.RETURN; });
       var totalExp = U.sumBy(exp, 'amount'), totalAdv = U.sumBy(adv, 'amount');
+      var totalRet = U.sumBy(ret, 'amount');
+      // คงค้าง = ยืม − คืน (การคืนไม่ใช่ค่าใช้จ่าย จึงไม่รวมใน "รวมทั้งสิ้น")
+      var outstanding = totalAdv - totalRet;
       var grand = totalExp + totalAdv;
       var cats = U.uniqSorted(exp.map(function (r) { return r.category; }));
       var agg = {
@@ -295,20 +312,21 @@
         byMonth: U.groupSum(exp, 'month', 'amount'),
         fixed: U.sumBy(exp.filter(function (r) { return r.group === 'คงที่'; }), 'amount')
       };
-      _lastAgg = { exp: exp, adv: adv, totalExp: totalExp, totalAdv: totalAdv, grand: grand, cats: cats, agg: agg };
+      _lastAgg = { exp: exp, adv: adv, ret: ret, totalExp: totalExp, totalAdv: totalAdv, totalRet: totalRet, outstanding: outstanding, grand: grand, cats: cats, agg: agg };
 
       U.el('kpi-exp').innerHTML = U.fmt(totalExp) + ' <span class="unit">฿</span>';
       U.el('kpi-exp-sub').textContent = U.fmtShort(totalExp) + ' บาท';
       U.el('kpi-adv').innerHTML = U.fmt(totalAdv) + ' <span class="unit">฿</span>';
-      U.el('kpi-adv-sub').textContent = adv.length + ' รายการ';
+      U.el('kpi-adv-sub').textContent = adv.length + ' รายการ' +
+        (totalRet > 0 ? ' • คืนแล้ว ' + U.fmtShort(totalRet) + ' • คงค้าง ' + U.fmtShort(outstanding) : '');
       U.el('kpi-total').innerHTML = U.fmt(grand) + ' <span class="unit">฿</span>';
       U.el('kpi-total-sub').textContent = 'OE ' + U.pct(totalExp, grand) + '% • ยืม ' + U.pct(totalAdv, grand) + '%';
       U.el('kpi-cats').textContent = cats.length;
       U.el('kpi-cats-sub').textContent = 'หมวดค่าใช้จ่าย';
 
       renderExpenses(exp, totalExp, agg);
-      renderAdvances(adv, totalAdv);
-      renderInsights(exp, adv, totalExp, totalAdv, agg);
+      renderAdvances(adv, ret, totalAdv, totalRet, outstanding);
+      renderInsights(exp, adv, totalExp, totalAdv, agg, totalRet, outstanding);
     }
 
     function renderExpenses(exp, totalExp, agg) {
@@ -346,27 +364,58 @@
       return U.toSortedPairs(m);
     }
 
-    function renderAdvances(adv, totalAdv) {
+    /* ยอดคงค้างรายผู้ยืม = ยืม − คืน (จับคู่ด้วย "ชื่อผู้ยืม" ไม่ใช่ข้อความรายละเอียด
+       เพราะข้อความฝั่งคืนมักพิมพ์ต่างจากฝั่งยืม จับคู่ตามข้อความจึงพลาดง่าย) */
+    function outstandingByBorrower(adv, ret) {
+      var loan = U.groupSum(adv, 'borrower', 'amount');
+      var back = U.groupSum(ret, 'borrower', 'amount');
+      var seen = {}, rows = [];
+      Object.keys(loan).concat(Object.keys(back)).forEach(function (k) {
+        if (seen[k]) return; seen[k] = true;
+        var l = loan[k] || 0, b = back[k] || 0;
+        if (!l && !b) return;
+        rows.push({ key: k || NO_BORROWER, name: k, loan: l, back: b, left: l - b });
+      });
+      return rows.sort(function (a, b) { return b.left - a.left || b.loan - a.loan; });
+    }
+
+    function renderAdvances(adv, ret, totalAdv, totalRet, outstanding) {
+      // กราฟแท่งคือ "ยอดยืมรายเดือน" จึงใช้เฉพาะเดือนที่มีการยืม
+      // (ถ้าเอาเดือนที่มีแต่รายการคืนมารวมด้วย จะได้แท่งค่า 0 โผล่มาโดยไม่มีความหมาย)
       var byMonth = U.groupSum(adv, 'month', 'amount');
       var monthsArr = Object.keys(byMonth).sort();
-      var byBorrower = borrowerPairs(adv);
 
       U.el('m-adv-total').textContent = U.fmtShort(totalAdv);
-      U.el('m-adv-count').textContent = adv.length;
-      U.el('m-adv-top').textContent = byBorrower[0] ? byBorrower[0].key : '–';
+      U.el('m-ret-total').textContent = U.fmtShort(totalRet);
+      U.el('m-adv-out').textContent = U.fmtShort(outstanding);
 
-      drawDoughnut('c-adv-donut', monthsArr.map(U.monthLabel), monthsArr.map(function (m) { return byMonth[m]; }), U.palette('blue', monthsArr.length));
+      // โดนัทเดิมเป็น "ยืมรายเดือน" — เปลี่ยนเป็น ยืม vs คืน ให้เห็นสัดส่วนที่คืนแล้วทันที
+      drawDoughnut('c-adv-donut', ['คงค้าง', 'คืนแล้ว'], [Math.max(outstanding, 0), totalRet], ['#1565C0', '#90CAF9']);
       drawBar('c-adv-bar', monthsArr.map(U.monthLabel), monthsArr.map(function (m) { return byMonth[m]; }), '#1565C0', 'เงินยืมทดรอง');
 
-      var rows = adv.slice().sort(function (a, b) { return U.cmpMonth(a.month, b.month) || b.amount - a.amount; });
+      var outRows = outstandingByBorrower(adv, ret);
+      U.el('adv-out-note').textContent = outstanding < 0 ? '• ยอดคืนมากกว่ายอดยืมในช่วงที่เลือก (อาจคืนของเดือนก่อนหน้า)' : '';
+      U.el('tb-out').innerHTML = outRows.length ? outRows.map(function (o) {
+        // แถว "(ไม่ระบุผู้ยืม)" ไม่มีชื่อให้ค้นหา จึงไม่ทำเป็นลิงก์เปิด editor
+        var link = o.name ? ' class="ed-rowlink" data-term="' + App.esc(o.name) + '" title="คลิกเพื่อแก้ไขรายการของผู้ยืมคนนี้"' : '';
+        return '<tr' + link + '><td>' + App.esc(o.key) +
+          '</td><td class="num">' + U.fmt(o.loan) + '</td><td class="num">' + U.fmt(o.back) +
+          '</td><td class="num"><strong>' + U.fmt(o.left) + '</strong></td></tr>';
+      }).join('') : App.emptyRow(4);
+
+      // ตารางรายการรวมทั้งฝั่งยืมและฝั่งคืน — ฝั่งคืนแสดงเป็นยอดติดลบให้เห็นทิศทางเงิน
+      var rows = adv.concat(ret).sort(function (a, b) { return U.cmpMonth(a.month, b.month) || b.amount - a.amount; });
       var tb = U.el('tb-adv');
       tb.innerHTML = rows.length ? rows.map(function (r) {
-        return '<tr class="ed-rowlink" data-raw-idx="' + raw.indexOf(r) + '" title="คลิกเพื่อแก้ไขรายการนี้"><td>' + U.monthLabel(r.month) + '</td><td>' + App.esc(r.detail || '-') +
-          '</td><td>' + App.esc(r.borrower || '-') + '</td><td class="num">' + U.fmt(r.amount) + '</td></tr>';
+        var isRet = r.type === T.RETURN;
+        return '<tr class="ed-rowlink" data-raw-idx="' + raw.indexOf(r) + '" title="คลิกเพื่อแก้ไขรายการนี้"><td>' + U.monthLabel(r.month) + '</td><td>' +
+          (isRet ? '<span class="tag-ret">คืน</span> ' : '') + App.esc(r.detail || '-') +
+          '</td><td>' + App.esc(r.borrower || '-') + '</td><td class="num">' +
+          (isRet ? '−' + U.fmt(r.amount) : U.fmt(r.amount)) + '</td></tr>';
       }).join('') : App.emptyRow(4);
     }
 
-    function renderInsights(exp, adv, totalExp, totalAdv, agg) {
+    function renderInsights(exp, adv, totalExp, totalAdv, agg, totalRet, outstanding) {
       var topCat = U.toSortedPairs(agg.byCat)[0];
       var fixed = agg.fixed;
       var variable = totalExp - fixed;
@@ -380,6 +429,15 @@
         { cls: 'teal', icon: 'gi-trending', title: 'เดือนใช้จ่ายสูงสุด', text: peak ? U.monthLabelFull(peak.key) : '–', sub: peak ? U.fmt(peak.value) + ' ฿' : '' },
         { cls: 'b', icon: 'gi-wallet', title: 'ผู้ยืมทดรองสูงสุด', text: topBorrower ? App.esc(topBorrower.key) : '–', sub: topBorrower ? U.fmt(topBorrower.value) + ' ฿' : 'ไม่มีรายการ' }
       ];
+      // คืนเงินยืม — แสดงเมื่อช่วงที่กรองมีรายการคืน
+      if (totalRet > 0) cards.push({
+        cls: 'teal', icon: 'gi-wallet', title: 'คืนเงินยืมแล้ว',
+        text: U.fmt(totalRet) + ' ฿',
+        // กรองจนเหลือแต่รายการคืน (ยอดยืม = 0) แล้วโชว์ "0% ของยอดยืม" จะทำให้เข้าใจผิด
+        sub: totalAdv > 0
+          ? 'คงค้าง ' + U.fmt(outstanding) + ' ฿ (' + U.pct(totalRet, totalAdv) + '% ของยอดยืม)'
+          : 'ช่วงที่เลือกไม่มีรายการยืม'
+      });
       // เทียบเดือนก่อน (MoM) — แสดงเมื่อช่วงที่กรองมี >= 2 เดือน
       if (mom) cards.push({
         cls: mom.pct >= 0 ? 'amber' : '', icon: 'gi-trending', title: 'ค่าใช้จ่ายเทียบเดือนก่อน',
@@ -400,10 +458,11 @@
     /* ---------- Export PPT ---------- */
     function doExport() {
       var d = _lastAgg; if (!d) return;
-      var exp = d.exp, adv = d.adv, totalExp = d.totalExp, totalAdv = d.totalAdv, grand = d.grand;
+      var exp = d.exp, adv = d.adv, ret = d.ret, totalExp = d.totalExp, totalAdv = d.totalAdv, grand = d.grand;
+      var totalRet = d.totalRet, outstanding = d.outstanding;
       var fixed = d.agg.fixed;
       var top5 = U.toSortedPairs(d.agg.byCat).slice(0, 5);
-      var advRows = adv.slice().sort(function (a, b) { return b.amount - a.amount; }).slice(0, 12);
+      var outRows = outstandingByBorrower(adv, ret);
       var period = dash.periodLabel(filtered);
       var src = dash.getLastSource();
 
@@ -416,7 +475,7 @@
             layout: 'kpi', title: 'สรุปภาพรวม (KPI)',
             items: [
               { label: 'ค่าใช้จ่าย OE รวม', value: U.fmt(totalExp) + ' ฿', color: '2E7D32' },
-              { label: 'เงินยืมทดรอง', value: U.fmt(totalAdv) + ' ฿', color: '1B5E20' },
+              { label: totalRet > 0 ? 'เงินยืมคงค้าง' : 'เงินยืมทดรอง', value: U.fmt(totalRet > 0 ? outstanding : totalAdv) + ' ฿', color: '1B5E20' },
               { label: 'รวมทั้งสิ้น', value: U.fmt(grand) + ' ฿', color: '43A047' },
               { label: 'จำนวนหมวดหมู่', value: String(d.cats.length), color: '2E7D32' }
             ],
@@ -428,10 +487,23 @@
             table: { head: ['หมวดหมู่', 'จำนวนเงิน (฿)'], align: ['left', 'right'], widths: [3.7, 2.3], rows: top5.map(function (p) { return [p.key, U.fmt(p.value)]; }) }
           },
           { layout: 'image', title: 'ค่าใช้จ่าย OE รายเดือน', image: pptBar(charts['c-exp-bar']), caption: 'หน่วย: บาท • ' + period },
-          {
+          // มีรายการคืนจึงค่อยสรุปเป็น ยืม/คืน/คงค้าง รายคน — ไม่มีการคืนเลยก็ลิสต์รายการเงินยืมตามเดิม
+          totalRet > 0 ? {
+            layout: 'imageTable', title: 'เงินยืมทดรอง — ยืม / คืน / คงค้าง',
+            image: pptBar(charts['c-adv-bar']),
+            table: {
+              head: ['ผู้ยืม', 'ยืม', 'คืน', 'คงค้าง'], align: ['left', 'right', 'right', 'right'], widths: [2.4, 1.2, 1.2, 1.2],
+              rows: outRows.slice(0, 12).map(function (o) { return [o.key, U.fmt(o.loan), U.fmt(o.back), U.fmt(o.left)]; })
+            },
+            note: 'ยืมรวม ' + U.fmt(totalAdv) + ' • คืนแล้ว ' + U.fmt(totalRet) + ' • คงค้าง ' + U.fmt(outstanding) + ' บาท'
+          } : {
             layout: 'imageTable', title: 'เงินยืมทดรอง',
             image: pptBar(charts['c-adv-bar']),
-            table: { head: ['เดือน', 'ผู้ยืม', 'จำนวนเงิน'], align: ['left', 'left', 'right'], widths: [1.2, 2.9, 1.9], rows: advRows.map(function (r) { return [U.monthLabel(r.month), r.borrower || '-', U.fmt(r.amount)]; }) }
+            table: {
+              head: ['เดือน', 'ผู้ยืม', 'จำนวนเงิน'], align: ['left', 'left', 'right'], widths: [1.2, 2.9, 1.9],
+              rows: adv.slice().sort(function (a, b) { return b.amount - a.amount; }).slice(0, 12)
+                .map(function (r) { return [U.monthLabel(r.month), r.borrower || '-', U.fmt(r.amount)]; })
+            }
           }
         ]
       };
@@ -458,13 +530,14 @@
 
     function collectExportData() {
       var d = _lastAgg; if (!d) return {};
-      var exp = d.exp, adv = d.adv, totalExp = d.totalExp, totalAdv = d.totalAdv, grand = d.grand;
+      var exp = d.exp, adv = d.adv, ret = d.ret, totalExp = d.totalExp, totalAdv = d.totalAdv, grand = d.grand;
+      var totalRet = d.totalRet, outstanding = d.outstanding;
       var fixed = d.agg.fixed, variable = totalExp - fixed;
       var noGroup = U.sumBy(exp.filter(function (r) { return r.group !== 'คงที่' && r.group !== 'แปรผัน'; }), 'amount');
       var top5 = U.toSortedPairs(d.agg.byCat).slice(0, 5);
       var peak = U.toSortedPairs(d.agg.byMonth)[0];
       var advByBorrower = borrowerPairs(adv);
-      var advPeak = U.toSortedPairs(U.groupSum(adv, 'month', 'amount'))[0];
+      var outRows = outstandingByBorrower(adv, ret);
       var ms = U.uniqSorted(filtered.map(function (r) { return r.month; }));
       var periodStr = !ms.length ? 'ปีงบประมาณ พ.ศ. 2569' :
         ms.length === 1 ? U.monthLabelFull(ms[0]) :
@@ -474,7 +547,7 @@
         subtitle: 'โรงงานผลิตอาหารสัตว์ธารเกษม (CPF)  |  ประจำปีงบประมาณ พ.ศ. 2569  (' + periodStr + ')',
         kpis: [
           { iconKey: 'coins', label: 'ค่าใช้จ่าย OE รวม', value: U.fmt(totalExp), unit: 'บาท', sub: U.fmtShort(totalExp) },
-          { iconKey: 'wallet', label: 'เงินยืมทดรองรวม', value: U.fmt(totalAdv), unit: 'บาท', sub: adv.length + ' รายการ' },
+          { iconKey: 'wallet', label: 'เงินยืมทดรองรวม', value: U.fmt(totalAdv), unit: 'บาท', sub: totalRet > 0 ? 'คืนแล้ว ' + U.fmt(totalRet) + ' • คงค้าง ' + U.fmt(outstanding) : adv.length + ' รายการ' },
           { iconKey: 'package', label: 'รวมทั้งสิ้น', value: U.fmt(grand), unit: 'บาท', sub: 'OE ' + U.pct(totalExp, grand) + '% • ยืม ' + U.pct(totalAdv, grand) + '%' },
           { iconKey: 'layers', label: 'จำนวนรายการ', value: String(exp.length + adv.length), unit: 'รายการ', sub: 'ค่าใช้จ่าย ' + exp.length + ' / เงินยืม ' + adv.length }
         ],
@@ -500,13 +573,20 @@
           title: 'เงินยืมทดรอง',
           color: '#2E7D32',
           miniKpis: [
-            { label: 'ยอดรวม', value: U.fmt(totalAdv) + ' บาท' },
-            { label: 'ผู้ยืม', value: advByBorrower.length + ' คน' },
-            { label: 'เดือนสูงสุด', value: advPeak ? U.monthLabel(advPeak.key) + '  ' + U.fmt(advPeak.value) + ' บาท' : '–' }
+            { label: 'ยอดยืม', value: U.fmt(totalAdv) + ' บาท' },
+            { label: 'ยอดคืน', value: U.fmt(totalRet) + ' บาท' },
+            { label: 'คงค้าง', value: U.fmt(outstanding) + ' บาท' }
           ],
-          sectionA: { title: 'A) สัดส่วนเงินยืมรายเดือน', chartImg: donutImg(charts['c-adv-donut']) },
+          sectionA: { title: 'A) สัดส่วน คงค้าง vs คืนแล้ว', chartImg: donutImg(charts['c-adv-donut'], ['#1B5E20', '#81C784']) },
           sectionB: { title: 'B) เงินยืมทดรองรายเดือน', chartImg: barImg(charts['c-adv-bar']) },
-          sectionC: {
+          // มีรายการคืนจึงค่อยแสดงมุมมองคงค้าง — ไม่มีการคืนเลย รายการเงินยืมรายตัวมีประโยชน์กว่า
+          sectionC: totalRet > 0 ? {
+            title: 'C) ยอดคงค้างตามผู้ยืม',
+            heads: ['ผู้ยืม', 'ยืม (บาท)', 'คืน (บาท)', 'คงค้าง (บาท)'],
+            rank: true,
+            foot: ['รวมคงค้าง', U.fmt(outstanding) + ' บาท'],
+            rows: outRows.slice(0, 8).map(function (o) { return [o.key, U.fmt(o.loan), U.fmt(o.back), U.fmt(o.left)]; })
+          } : {
             title: 'C) รายการเงินยืมทดรอง',
             heads: ['รายการ', 'จำนวนเงิน (บาท)', 'สัดส่วนของยอดรวม'],
             rank: true,
@@ -524,10 +604,12 @@
               'เงินยืมทดรองสูงกว่าค่าใช้จ่ายรวม ' + (totalAdv / totalExp).toFixed(1) + ' เท่า' },
             { num: 2, text: 'สัดส่วนคงที่ตามสัญญา ' + U.pct(fixed, totalExp) + '% ของค่าใช้จ่ายทั้งหมด' },
             { num: 3, text: 'เดือนค่าใช้จ่ายสูงสุด: ' + (peak ? U.monthLabelFull(peak.key) + ' ' + U.fmt(peak.value) + ' บาท' : '–') },
-            { num: 4, text: 'ผู้ยืมทดรองสูงสุด: ' + (advByBorrower[0] ? advByBorrower[0].key + ' ' + U.fmt(advByBorrower[0].value) + ' บาท' : 'ไม่มีรายการ') }
+            { num: 4, text: totalRet > 0
+              ? 'คืนเงินยืมแล้ว ' + U.fmt(totalRet) + ' บาท (' + U.pct(totalRet, totalAdv) + '% ของยอดยืม) คงค้าง ' + U.fmt(outstanding) + ' บาท'
+              : 'ผู้ยืมทดรองสูงสุด: ' + (advByBorrower[0] ? advByBorrower[0].key + ' ' + U.fmt(advByBorrower[0].value) + ' บาท' : 'ไม่มีรายการ') }
           ];
           var mom = U.momChange(d.agg.byMonth);
-          if (mom) arr.push({ num: 5, text: 'ค่าใช้จ่าย ' + U.monthLabel(mom.to) + ' ' + (mom.pct >= 0 ? 'เพิ่มขึ้น ' : 'ลดลง ') + Math.abs(mom.pct) + '% จาก ' + U.monthLabel(mom.from) + ' (' + U.fmt(mom.fromV) + ' → ' + U.fmt(mom.toV) + ' บาท)' });
+          if (mom) arr.push({ num: arr.length + 1, text: 'ค่าใช้จ่าย ' + U.monthLabel(mom.to) + ' ' + (mom.pct >= 0 ? 'เพิ่มขึ้น ' : 'ลดลง ') + Math.abs(mom.pct) + '% จาก ' + U.monthLabel(mom.from) + ' (' + U.fmt(mom.fromV) + ' → ' + U.fmt(mom.toV) + ' บาท)' });
           return arr;
         })(),
         footnote: '① หมายเหตุ: สรุปข้อมูลจากระบบ Dashboard CPF ธารเกษม  •  สร้างเมื่อ ' + new Date().toLocaleDateString('th-TH', { dateStyle: 'long' }) +
@@ -574,11 +656,13 @@
         var idx = parseInt(tr.getAttribute('data-raw-idx'), 10);
         if (idx >= 0) dash.openManage(idx);
       });
-      // คลิกแถวตารางยอดรวม (หมวด) → เปิด editor กรองเฉพาะหมวดนั้น
-      U.el('tb-top5').addEventListener('click', function (e) {
-        var tr = e.target.closest('tr[data-term]'); if (!tr) return;
-        var term = tr.getAttribute('data-term');
-        if (term) dash.openManage(-1, term);
+      // คลิกแถวตารางยอดรวม (หมวด / ผู้ยืม) → เปิด editor กรองเฉพาะรายการที่เกี่ยวข้อง
+      ['tb-top5', 'tb-out'].forEach(function (id) {
+        U.el(id).addEventListener('click', function (e) {
+          var tr = e.target.closest('tr[data-term]'); if (!tr) return;
+          var term = tr.getAttribute('data-term');
+          if (term) dash.openManage(-1, term);
+        });
       });
     }
 

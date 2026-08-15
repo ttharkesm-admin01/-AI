@@ -17,7 +17,7 @@
     oe: [
       { k: 'month', label: 'เดือน (พ.ศ.)', type: 'month', req: true },
       { k: 'category', label: 'หมวดหมู่', type: 'text', req: true },
-      { k: 'type', label: 'ประเภท', type: 'select', opts: ['ค่าใช้จ่าย', 'เงินยืมทดรอง'], req: true },
+      { k: 'type', label: 'ประเภท', type: 'select', opts: ['ค่าใช้จ่าย', 'เงินยืมทดรอง', 'คืนเงินยืมทดรอง'], req: true },
       { k: 'group', label: 'กลุ่ม', type: 'select', opts: ['', 'คงที่', 'แปรผัน'] },
       { k: 'detail', label: 'รายละเอียด', type: 'text' },
       { k: 'amount', label: 'จำนวนเงิน (บาท)', type: 'number', req: true },

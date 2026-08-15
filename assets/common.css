@@ -246,6 +246,11 @@ body {
 .chart-block .cb-title { font-size: .86rem; font-weight: 700; color: var(--ink-soft); margin-bottom: 8px; }
 /* หมายเหตุคุณภาพข้อมูลท้ายหัวข้อกราฟ (เช่น ยอดที่ยังไม่ระบุกลุ่ม) — โชว์เฉพาะตอนมีปัญหา */
 .chart-block .cb-title .dq-note { font-size: .78rem; font-weight: 500; color: var(--orange); }
+/* ป้ายกำกับแถว "คืนเงินยืมทดรอง" ในตารางรายการเงินยืม */
+.tag-ret {
+  display: inline-block; font-size: .7rem; font-weight: 700; line-height: 1;
+  padding: 3px 7px; border-radius: 20px; color: #0D47A1; background: #E3F2FD;
+}
 .chart-wrap { position: relative; height: 220px; }
 .chart-wrap.tall { height: 260px; }
 .chart-wrap.short { height: 180px; }
