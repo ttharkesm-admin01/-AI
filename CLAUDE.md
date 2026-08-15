@@ -21,7 +21,8 @@ assets/editor.js        # โมดอล "จัดการข้อมูล"
 assets/export-img.js    # Export infographic JPG/PDF: ExportImg.jpg() / ExportImg.pdf()
 assets/ppt.js           # Export PowerPoint (PptxGenJS โหลด on-demand)
 assets/common.css       # ธีมกลาง
-test/parse.test.js      # เทสต์ parser (รัน `node --test` — ไม่ต้องลง dependency)
+test/parse.test.js      # เทสต์ parser (รัน `node --test` ที่ราก repo — ไม่ต้องลง dependency)
+test/chart-label.test.js # เทสต์ตัวเลขบนยอดแท่งกราฟ (เงิน = ย่อ K/M · ชั่วโมง = คงทศนิยม)
 sample-data/*.csv       # ตัวอย่างข้อมูล RAW_DATA
 sw.js                   # Service Worker (PWA) — precache แอปเชลล์ + offline
 manifest.webmanifest    # PWA manifest (ติดตั้งบนมือถือได้) · assets/icon.svg = ไอคอน
@@ -35,7 +36,7 @@ manifest.webmanifest    # PWA manifest (ติดตั้งบนมือถ�
   - เรียลไทม/หลายคน = ใช้ Google Sheets (แก้ในชีต→รีเฟรช); localStorage = เฉพาะเบราว์เซอร์นั้น
 - **แคช Sheets ออฟไลน์:** ดึง Sheets สำเร็จ → เก็บที่ key `*_sheetcache`; เน็ตหลุด `fromSheetsCached()` คืนแคชล่าสุด (source='sheets-cache') ไม่มีแคชค่อยตกไปตัวอย่าง
 - **คลิกแก้จากตาราง:** ตารางรายการดิบ 1:1 (OE "เงินยืมทดรอง" `tb-adv`) คลิกแถว → `dash.openManage(focusIndex)` เปิด editor ที่รายการนั้น · **ตารางยอดรวม (aggregate)** — OE `tb-top5` (หมวด), Welfare `tb-med`/`tb-ot`/`tb-type`/`pivot-body` — คลิกแถว → `dash.openManage(-1, term)` เปิด editor **กรองด้วย `term`** (ชื่อหมวด/พนักงาน/ประเภท) เพราะ 1 แถว = หลาย record · กลไก: แถวใส่ `class="ed-rowlink" data-term="..."` + delegated click ที่ tbody · `openManage(focusIndex, search)` ส่งต่อ `search` → `DataEditor.open({search})` เติม `#ed-search`
-- **PWA:** sw.js (network-first สำหรับ navigation, SWR สำหรับ asset, ไม่แตะ docs.google.com) — แก้โค้ดแอปแล้วต้องเพิ่ม `CACHE_VERSION` ใน sw.js · ปัจจุบัน `cpf-v26` · navigation fallback ตอนออฟไลน์จะลองเติม `index.html` ให้คำขอแบบโฟลเดอร์ (เช่น `/oe/`) ก่อนตกไปหน้า landing
+- **PWA:** sw.js (network-first สำหรับ navigation, SWR สำหรับ asset, ไม่แตะ docs.google.com) — แก้โค้ดแอปแล้วต้องเพิ่ม `CACHE_VERSION` ใน sw.js · ปัจจุบัน `cpf-v27` · navigation fallback ตอนออฟไลน์จะลองเติม `index.html` ให้คำขอแบบโฟลเดอร์ (เช่น `/oe/`) ก่อนตกไปหน้า landing
 - โหลดอัตโนมัติ: มี config Google Sheets → ดึงสด, ไม่มี → ข้อมูลตัวอย่าง (demo ใน data.js)
   - demo สวัสดิการ = โครง/ยอดจากข้อมูลจริง (ม.ค.–พ.ค. 2569, 22 คน, 127 records) แต่ **ชื่อพนักงานเป็นนามสมมติทั้งหมด** (PR #52 — repo Public **ห้าม commit ชื่อจริง/ข้อมูลส่วนบุคคล** ทั้งใน demo/sample-data/เทสต์)
 - Fallback: อัปโหลด Excel (.xlsx) ผ่านปุ่ม "🔗 เชื่อม → 📁 อัปโหลด Excel"
@@ -49,6 +50,7 @@ manifest.webmanifest    # PWA manifest (ติดตั้งบนมือถ�
 - `normalizeWelfareWide()` ใน data.js อ่านตาราง **1 คน/แถว** (คอลัมน์แยกตามประเภท + OT 7 อัตรา)
 - OT กรอกเป็น **"จำนวนชั่วโมง"** (ไม่มีอัตราค่าจ้างเป็นบาท) → รวมทุกอัตราเป็น record `wtype='OT'`
 - **OT แยกจากยอดเงินทุกที่** (KPI/กราฟ/pivot/export) แสดงเป็น "ชั่วโมง" หน่วย "ชม." · แสดงจำนวนชั่วโมงด้วย `U.fmtHours()` (ทศนิยม ≤2 ตำแหน่ง) — `U.fmt` ปัดเป็นจำนวนเต็ม ใช้กับเงินเท่านั้น
+  - **ในกราฟแท่ง** ใช้ `App.drawBar(..., unit)` — ส่ง `unit='ชม.'` แล้วระบบสลับตัวจัดรูปแบบให้เองทั้งตัวเลขบนแท่ง/tooltip/แกน y (`isHourUnit()` → flag `options.plugins.barValueLabel.hours`) · `App.chartBarImage` สืบทอด flag นี้ต่อ กราฟ OT ในรายงาน export จึงคงทศนิยมด้วย (PR #57)
 - ฟอร์ม wide ต้องมีเซลล์ระบุเดือนในชีต — รับทั้งรูปแบบ `25xx-xx` และ**ชื่อเดือนไทย** (เต็ม/ย่อ เช่น "ประจำเดือน มกราคม 2569" / "ม.ค.69") ผ่าน `thaiMonthToCode()`
 - ไฟล์ wide ที่**แยกชีตตามเดือน** (ไม่มีแท็บ RAW_DATA): `fromExcel` อ่านรวมทุกชีต concat เป็น records ชุดเดียว
 - `normalizeAny()` เลือก parser: welfare ลอง wide ก่อน ไม่ใช่จึงใช้ long
@@ -114,7 +116,7 @@ manifest.webmanifest    # PWA manifest (ติดตั้งบนมือถ�
 - โค้ด UI ร่วม (Chart/modal/esc/debounce) อยู่ที่ `assets/app.js` (App.*) — oe/welfare เรียกผ่าน wrapper บาง ๆ; แก้ logic ร่วมแก้ที่ app.js ที่เดียว แต่ส่วน render/filter/export ยัง**แยกในแต่ละไฟล์**
 - localStorage keys: `cpf_oe_source`, `cpf_welfare_source` (เก็บ sheetId/sheetName)
 - **welfare field ชื่อพนักงาน = `r.employee`** (ไม่ใช่ `r.name`) — ระวังเวลาเขียน export handler
-- แก้โค้ดแล้วต้องเพิ่ม `CACHE_VERSION` ใน sw.js ทุกครั้ง (ปัจจุบัน `cpf-v26`)
+- แก้โค้ดแล้วต้องเพิ่ม `CACHE_VERSION` ใน sw.js ทุกครั้ง (ปัจจุบัน `cpf-v27`)
 - **เพิ่มฟังก์ชันใหม่ใน U.*/App.* ที่ถูกเรียกจากหน้า HTML → ต้องกัน "หน้าใหม่+asset เก่า" ช่วงรอยต่อ deploy** (SW ตัวเก่ายังเสิร์ฟ utils/app เก่า 1 รีเฟรช) — เคยพัง: `U.momChange is not a function` เด้ง toast "ดึง Google Sheets ไม่สำเร็จ" (PR #51) · pattern: shim ต้นสคริปต์ของหน้า (`if (!U.momChange) U.momChange = function(){return null;}`) หรือ guard ณ จุดเรียก (`App.chartBarImage ? ... : fallback`)
 - **ไอคอน UI = inline SVG (Lucide-style) ผ่าน CSS mask** (`common.css` คลาส `.ic` / `.btn[class*="gi-"]::before` + glyph `gi-*`) — ไอคอนรับ `currentColor` อัตโนมัติ · ใช้กับ toolbar/KPI/หัวข้อ/modal/editor · **ปุ่มที่ JS รีเซ็ต `textContent` ให้ไอคอนอยู่ที่ `::before` (ใส่ class `gi-*` ที่ปุ่ม) ห้ามฝัง emoji ในสตริง JS** · เพิ่มไอคอนใหม่ = เพิ่ม `.gi-xxx{--ic:url("data:image/svg+xml,...")}` (stroke='black' ห้ามใช้ `#`hex เลี่ยง encode) · **insight cards ใช้ CSS mask / export KPI+หัว insight ใน export-img.js ต้องเป็น inline `<svg>` ผ่าน `ICONS`+`iconSvg(key,color)` เท่านั้น** (html2canvas เรนเดอร์ CSS mask ไม่ได้) — ไม่มี emoji-as-icon เหลือแล้วทั้งบนจอและใน export (PR #44/#45/#47)
 
@@ -176,6 +178,12 @@ manifest.webmanifest    # PWA manifest (ติดตั้งบนมือถ�
   - **ข้อมูล demo OE:** เดิมมีเดือนเดียว (เม.ย. 69, 18 records) → ตอนนี้ **ม.ค.–ก.ค. 2569, 123 records** ยอดรวมรายเดือนตรงต้นฉบับทุกคอลัมน์ (รวม 4,275,307) · แถว "เงินยืมทดลอง" ในตารางค่าใช้จ่าย = ยอดรวมเงินยืมทดรอง/เดือน (685,084) ส่วนตารางผู้ยืมด้านล่างระบุได้แค่ 130,000 → ที่เหลือ 555,084 เป็นรายการ "(ไม่ระบุผู้ยืม)" · **ชื่อผู้ยืมเป็นนามสมมติ** (ไฟล์ RAW_DATA ชื่อจริงส่งทางแชต ไม่ commit) · ต้นฉบับมีคลาดเคลื่อนปัดเศษ 1 บาทที่ "ค่ากิจกรรมชุมชน" ก.ค. (24,104 → ใช้ 24,103 จึงตรงทั้งแถวและคอลัมน์)
   - bump SW `cpf-v26`
 - **PR #55:** ถอดกราฟเส้น "แนวโน้มรายเดือน" ออกทั้งหมดตามคำขอผู้ใช้ (เดิมเพิ่มใน #53 เฉพาะบนจอ ผู้ใช้ถามหาใน PPT แล้วตัดสินใจเอาออกแทน) — ลบ `#trend-block`/`renderTrend` ทั้ง oe/+welfare/ และ `App.drawLine` ใน app.js · bump SW `cpf-v25`
+- **PR #57 (ตรวจทั้งโปรเจกต์ต่อจาก #56 แล้วแก้ตามผลตรวจ):** ตรวจทุกไฟล์แล้วเจอ 4 จุดที่พังจริง แก้ + ยืนยันผลด้วยเบราว์เซอร์จริง (Playwright + chromium ในแซนด์บ็อกซ์)
+  - ① **แถว insight ล้นเป็น 2 แถว** — `.insights` ล็อกไว้ `repeat(4,1fr)` แต่จำนวนการ์ดจริงคือ 4–6 ใบ (พื้นฐาน 4 + OT เฉพาะสวัสดิการ + MoM เมื่อช่วงที่กรอง ≥ 2 เดือน) → OE 5 ใบ / สวัสดิการ 6 ใบ ตกไปอยู่แถวล่างลำพัง หน้าแหว่ง · แก้เป็น `repeat(auto-fit, minmax(200px,1fr))` (ยุบคอลัมน์ว่าง เต็มแถวเสมอทุกจำนวนการ์ด) · วัดจริงในเบราว์เซอร์: ก่อนแก้ OE 5 ใบ = 2 แถว / สวัสดิการ 6 ใบ = 2 แถว → หลังแก้เหลือ 1 แถวทั้งคู่ · **หมายเหตุ:** ฝั่ง export แก้ไปแล้วใน #56 (4→5 คอลัมน์) แต่ตกหล่นฝั่งจอ
+  - ② **กราฟ OT ปัดชั่วโมงทิ้ง** — `drawBar` ใช้ `U.fmtShort` (ตัวเลขบนแท่ง/แกน y) + `U.fmt` (tooltip) กับทุกกราฟรวมทั้งกราฟชั่วโมง → ก.พ. 69 607.65 ชม. แสดงเป็น "608" และถ้าเกิน 1,000 ชม. จะย่อเป็น "1.2K" · ขัดกฎ "OT ใช้ `U.fmtHours` ทุกจุด" ที่ตั้งไว้ตั้งแต่ #47 · แก้: `isHourUnit(unit)` → flag `options.plugins.barValueLabel.hours` คุมทั้ง 3 จุด และ `App.chartBarImage` สืบทอด flag ต่อ (กราฟ OT ในรายงาน export ก็ถูกต้องด้วย) · ยืนยันด้วยภาพจากเบราว์เซอร์: แท่งแสดง 607.65 / 753.5 แล้ว
+  - ③ **editor "ทำซ้ำรายการ" ทำให้บันทึกทับผิดแถว** — `dup` แทรกแถวใหม่ที่ `idx+1` แต่ไม่เลื่อน `state.editIdx` ที่อยู่หลังจุดแทรก → ถ้ากำลังแก้แถวหลังจุดนั้นแล้วกด "บันทึกการแก้ไข" จะเขียนทับคนละรายการ (ข้อมูลเพี้ยนเงียบ ๆ) · แก้: `if (state.editIdx > idx) state.editIdx++;` + เรียก `renderForm()` ให้เลข "#N" บนฟอร์มตรงความจริง
+  - ④ **สถิติหน้า landing ค้าง** — การ์ด OE โชว์ "17 หมวดหมู่" แต่ demo หลัง #56 มี **25 หมวด** (KPI ในแดชบอร์ดโชว์ 25 ขัดกันเอง) · แก้เป็น 25 + ใส่คอมเมนต์ HTML เตือนให้อัปเดตคู่กับชุด demo
+  - เพิ่ม `test/chart-label.test.js` (3 เทสต์) กันบั๊ก ② ย้อนกลับ · เทสต์ทั้งหมด 10/10 ผ่าน · bump SW `cpf-v27`
 
 ## ข้อมูลจริงของผู้ใช้ + การใช้งานจริง (Production data & setup)
 - **ฟอร์มสวัสดิการจริง = wide หลายชีต (ชีตละเดือน)** หัวตาราง **2 แถว**: R1-3 ชื่อเรื่อง+"ประจำเดือน X 2569", R4=ป้ายชื่อ, R5=หน่วย/อัตรา · คอลัมน์: ลำดับ|ชื่อ|ตำแหน่ง|ค่ารักษาพยาบาล|ค่าน้ำมัน|เบี้ยเลี้ยง|ค่าที่พัก|สวัสดิการอื่นๆ|รวม|**OT 7 อัตรา** (วันทำงานปกติ 1/1.25/1.5 + วันหยุด 1/2/2.5/3 เท่า) → `normalizeWelfareWide` อ่านได้ครบ (รวม OT เป็นชั่วโมง) · parser รองรับหัวทั้งแบบ 2 แถว (มีแถวหน่วย/อัตรา) และแบบแถวเดียว — ดูจากว่าแถวถัดจากหัวมีชื่อคนหรือยัง (PR นี้ เดิมหัวแถวเดียวทำพนักงานคนแรกหาย)

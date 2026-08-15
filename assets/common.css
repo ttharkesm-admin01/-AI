@@ -292,7 +292,9 @@ table.data tfoot td { padding: 9px 11px; border-top: 2px solid var(--cpf); font-
 .card-block .cardb-body.pad { padding: 14px 16px; }
 
 /* ---------- Insights ---------- */
-.insights { display: grid; grid-template-columns: repeat(4, 1fr); gap: 14px; margin-bottom: 18px; }
+/* จำนวนการ์ดไม่คงที่: 4 ใบพื้นฐาน + OT (สวัสดิการ) + MoM (เมื่อช่วงที่กรองมี >= 2 เดือน) = 4–6 ใบ
+   ล็อกไว้ 4 คอลัมน์จะทำให้ใบที่ 5-6 ตกไปอยู่แถวล่างลำพัง — auto-fit ยุบคอลัมน์ว่างให้เต็มแถวเสมอ */
+.insights { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 14px; margin-bottom: 18px; }
 .insight {
   background: var(--card); border: 1px solid var(--line); border-left: 5px solid var(--cpf);
   border-radius: var(--radius); padding: 14px 16px; box-shadow: var(--shadow);

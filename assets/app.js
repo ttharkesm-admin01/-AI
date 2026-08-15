@@ -12,12 +12,15 @@
   var U = global.U;
 
   /* ---- plugin วาดค่าตัวเลขไว้บนยอดแท่ง (อ่านได้ทันทีไม่ต้อง hover)
-         ฟอนต์ override ได้ผ่าน options.plugins.barValueLabel.font (ใช้ตอน export) ---- */
+         override ได้ผ่าน options.plugins.barValueLabel:
+         - font  : ฟอนต์ (ใช้ตอน export ให้ตัวเลขใหญ่ขึ้น)
+         - hours : true = ค่าเป็น "ชั่วโมง" ไม่ใช่เงิน -> ใช้ fmtHours (คงทศนิยม ไม่ย่อ K/M) ---- */
   var barValueLabel = {
     id: 'barValueLabel',
     afterDatasetsDraw: function (chart) {
       var ctx = chart.ctx;
       var opt = (chart.options.plugins && chart.options.plugins.barValueLabel) || {};
+      var f = opt.hours ? U.fmtHours : U.fmtShort;
       chart.data.datasets.forEach(function (ds, di) {
         var meta = chart.getDatasetMeta(di);
         meta.data.forEach(function (elm, i) {
@@ -28,12 +31,15 @@
           ctx.font = opt.font || '600 11px Sarabun';
           ctx.textAlign = 'center';
           ctx.textBaseline = 'bottom';
-          ctx.fillText(U.fmtShort(v), elm.x, elm.y - 4);
+          ctx.fillText(f(v), elm.x, elm.y - 4);
           ctx.restore();
         });
       });
     }
   };
+
+  /* ค่าในกราฟเป็นชั่วโมง OT หรือเงิน — ชั่วโมงต้องคงทศนิยม (U.fmt/U.fmtShort ปัดทิ้ง ใช้กับเงินเท่านั้น) */
+  function isHourUnit(unit) { return unit === 'ชม.'; }
 
   function applyChartDefaults() {
     if (!global.Chart) return;
@@ -62,6 +68,8 @@
   function drawBar(charts, id, labels, data, color, label, unit) {
     if (!global.Chart) return;
     unit = unit || '฿';
+    var hours = isHourUnit(unit);
+    var tickFmt = hours ? U.fmtHours : U.fmtShort;
     var ctx = U.el(id); if (!ctx) return;
     if (charts[id]) charts[id].destroy();
     charts[id] = new Chart(ctx, {
@@ -73,11 +81,12 @@
         layout: { padding: { top: 18 } },
         plugins: {
           legend: { display: false },
-          tooltip: { callbacks: { label: function (c) { return U.fmt(c.parsed.y) + ' ' + unit; } } }
+          barValueLabel: { hours: hours },
+          tooltip: { callbacks: { label: function (c) { return (hours ? U.fmtHours : U.fmt)(c.parsed.y) + ' ' + unit; } } }
         },
         scales: {
           x: { grid: { display: false } },
-          y: { beginAtZero: true, ticks: { callback: function (v) { return U.fmtShort(v); } } }
+          y: { beginAtZero: true, ticks: { callback: function (v) { return tickFmt(v); } } }
         }
       }
     });
@@ -189,6 +198,9 @@
     cv.width = w || 530; cv.height = h || 420;
     var data = JSON.parse(JSON.stringify(chart.config.data));
     if (color) data.datasets.forEach(function (ds) { ds.backgroundColor = color; });
+    // สืบทอดโหมด "ชั่วโมง" จากกราฟบนจอ — ไม่งั้นกราฟ OT ในรายงานจะปัดชั่วโมงเป็นจำนวนเต็ม
+    var hours = !!((chart.options.plugins || {}).barValueLabel || {}).hours;
+    var tickFmt = hours ? U.fmtHours : U.fmtShort;
     var tmp = new Chart(cv, {
       type: 'bar',
       plugins: [barValueLabel],
@@ -198,11 +210,11 @@
         layout: { padding: { top: 26 } },
         plugins: {
           legend: { display: false }, tooltip: { enabled: false },
-          barValueLabel: { font: '600 17px Sarabun' }
+          barValueLabel: { font: '600 17px Sarabun', hours: hours }
         },
         scales: {
           x: { grid: { display: false }, ticks: { font: { size: 14 } } },
-          y: { beginAtZero: true, ticks: { font: { size: 13 }, callback: function (v) { return U.fmtShort(v); } } }
+          y: { beginAtZero: true, ticks: { font: { size: 13 }, callback: function (v) { return tickFmt(v); } } }
         }
       }
     });
