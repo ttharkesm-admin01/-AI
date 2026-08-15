@@ -37,7 +37,7 @@ manifest.webmanifest    # PWA manifest (ติดตั้งบนมือถ�
   - เรียลไทม/หลายคน = ใช้ Google Sheets (แก้ในชีต→รีเฟรช); localStorage = เฉพาะเบราว์เซอร์นั้น
 - **แคช Sheets ออฟไลน์:** ดึง Sheets สำเร็จ → เก็บที่ key `*_sheetcache`; เน็ตหลุด `fromSheetsCached()` คืนแคชล่าสุด (source='sheets-cache') ไม่มีแคชค่อยตกไปตัวอย่าง
 - **คลิกแก้จากตาราง:** ตารางรายการดิบ 1:1 (OE "เงินยืมทดรอง" `tb-adv`) คลิกแถว → `dash.openManage(focusIndex)` เปิด editor ที่รายการนั้น · **ตารางยอดรวม (aggregate)** — OE `tb-top5` (หมวด), Welfare `tb-med`/`tb-ot`/`tb-type`/`pivot-body` — คลิกแถว → `dash.openManage(-1, term)` เปิด editor **กรองด้วย `term`** (ชื่อหมวด/พนักงาน/ประเภท) เพราะ 1 แถว = หลาย record · กลไก: แถวใส่ `class="ed-rowlink" data-term="..."` + delegated click ที่ tbody · `openManage(focusIndex, search)` ส่งต่อ `search` → `DataEditor.open({search})` เติม `#ed-search`
-- **PWA:** sw.js (network-first สำหรับ navigation, SWR สำหรับ asset, ไม่แตะ docs.google.com) — แก้โค้ดแอปแล้วต้องเพิ่ม `CACHE_VERSION` ใน sw.js · ปัจจุบัน `cpf-v28` · navigation fallback ตอนออฟไลน์จะลองเติม `index.html` ให้คำขอแบบโฟลเดอร์ (เช่น `/oe/`) ก่อนตกไปหน้า landing
+- **PWA:** sw.js (network-first สำหรับ navigation, SWR สำหรับ asset, ไม่แตะ docs.google.com) — แก้โค้ดแอปแล้วต้องเพิ่ม `CACHE_VERSION` ใน sw.js · ปัจจุบัน `cpf-v29` · navigation fallback ตอนออฟไลน์จะลองเติม `index.html` ให้คำขอแบบโฟลเดอร์ (เช่น `/oe/`) ก่อนตกไปหน้า landing
 - โหลดอัตโนมัติ: มี config Google Sheets → ดึงสด, ไม่มี → ข้อมูลตัวอย่าง (demo ใน data.js)
   - demo สวัสดิการ = โครง/ยอดจากข้อมูลจริง (ม.ค.–พ.ค. 2569, 22 คน, 127 records) แต่ **ชื่อพนักงานเป็นนามสมมติทั้งหมด** (PR #52 — repo Public **ห้าม commit ชื่อจริง/ข้อมูลส่วนบุคคล** ทั้งใน demo/sample-data/เทสต์)
 - Fallback: อัปโหลด Excel (.xlsx) ผ่านปุ่ม "🔗 เชื่อม → 📁 อัปโหลด Excel"
@@ -118,7 +118,7 @@ manifest.webmanifest    # PWA manifest (ติดตั้งบนมือถ�
 - โค้ด UI ร่วม (Chart/modal/esc/debounce) อยู่ที่ `assets/app.js` (App.*) — oe/welfare เรียกผ่าน wrapper บาง ๆ; แก้ logic ร่วมแก้ที่ app.js ที่เดียว แต่ส่วน render/filter/export ยัง**แยกในแต่ละไฟล์**
 - localStorage keys: `cpf_oe_source`, `cpf_welfare_source` (เก็บ sheetId/sheetName)
 - **welfare field ชื่อพนักงาน = `r.employee`** (ไม่ใช่ `r.name`) — ระวังเวลาเขียน export handler
-- แก้โค้ดแล้วต้องเพิ่ม `CACHE_VERSION` ใน sw.js ทุกครั้ง (ปัจจุบัน `cpf-v28`)
+- แก้โค้ดแล้วต้องเพิ่ม `CACHE_VERSION` ใน sw.js ทุกครั้ง (ปัจจุบัน `cpf-v29`)
 - **เพิ่มฟังก์ชันใหม่ใน U.*/App.* ที่ถูกเรียกจากหน้า HTML → ต้องกัน "หน้าใหม่+asset เก่า" ช่วงรอยต่อ deploy** (SW ตัวเก่ายังเสิร์ฟ utils/app เก่า 1 รีเฟรช) — เคยพัง: `U.momChange is not a function` เด้ง toast "ดึง Google Sheets ไม่สำเร็จ" (PR #51) · pattern: shim ต้นสคริปต์ของหน้า (`if (!U.momChange) U.momChange = function(){return null;}`) หรือ guard ณ จุดเรียก (`App.chartBarImage ? ... : fallback`)
 - **ไอคอน UI = inline SVG (Lucide-style) ผ่าน CSS mask** (`common.css` คลาส `.ic` / `.btn[class*="gi-"]::before` + glyph `gi-*`) — ไอคอนรับ `currentColor` อัตโนมัติ · ใช้กับ toolbar/KPI/หัวข้อ/modal/editor · **ปุ่มที่ JS รีเซ็ต `textContent` ให้ไอคอนอยู่ที่ `::before` (ใส่ class `gi-*` ที่ปุ่ม) ห้ามฝัง emoji ในสตริง JS** · เพิ่มไอคอนใหม่ = เพิ่ม `.gi-xxx{--ic:url("data:image/svg+xml,...")}` (stroke='black' ห้ามใช้ `#`hex เลี่ยง encode) · **insight cards ใช้ CSS mask / export KPI+หัว insight ใน export-img.js ต้องเป็น inline `<svg>` ผ่าน `ICONS`+`iconSvg(key,color)` เท่านั้น** (html2canvas เรนเดอร์ CSS mask ไม่ได้) — ไม่มี emoji-as-icon เหลือแล้วทั้งบนจอและใน export (PR #44/#45/#47)
 
