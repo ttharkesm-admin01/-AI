@@ -294,10 +294,20 @@
       if (lastSource === 'sheets') txt.textContent = 'เชื่อม Google Sheets';
       else if (lastSource === 'sheets-cache') { s.className = 'status err'; txt.textContent = 'Google Sheets (แคชออฟไลน์)'; }
       else if (lastSource === 'excel') txt.textContent = 'ไฟล์ Excel';
-      else if (lastSource === 'local') { s.className = 'status ok'; txt.textContent = 'แก้ไขในเครื่อง (เบราว์เซอร์นี้)'; }
+      // ใช้สีส้ม (เตือน) ไม่ใช่เขียว — local override บังชีตอยู่ ข้อมูลจะค้างที่สแนปช็อตเดิม
+      else if (lastSource === 'local') { s.className = 'status demo'; txt.textContent = 'แก้ไขในเครื่อง — ไม่ได้ดึงจากชีต'; }
       else if (res.fellBack) { s.className = 'status err'; txt.textContent = 'ต่อชีตไม่ได้ — แสดงข้อมูลตัวอย่าง'; }
       else txt.textContent = 'ข้อมูลตัวอย่าง (Demo)';
-      U.el('src-info').textContent = '• ' + (res.count || cfg.getRaw().length) + ' รายการ' + (res.fileName ? ' • ' + res.fileName : '');
+      // ช่วงเดือนของข้อมูลที่โหลดมาจริง — เห็นทันทีว่าเดือนล่าสุดที่กรอกในชีตเข้ามาแล้วหรือยัง
+      var ms = U.uniqSorted(cfg.getRaw().map(function (r) { return r.month; }));
+      var range = '';
+      if (ms.length) {
+        var a = ms[0], b = ms[ms.length - 1];
+        // ปีเดียวกันตัดปีของตัวแรกทิ้ง ("ม.ค.–พ.ค. 69") ต่างปีค่อยแสดงเต็มทั้งคู่
+        range = ' • ' + (a === b ? U.monthLabel(a)
+          : (U.yearOf(a) === U.yearOf(b) ? U.monthLabel(a).split(' ')[0] : U.monthLabel(a)) + '–' + U.monthLabel(b));
+      }
+      U.el('src-info').textContent = '• ' + (res.count || cfg.getRaw().length) + ' รายการ' + range + (res.fileName ? ' • ' + res.fileName : '');
       U.el('src-updated').textContent = res.cachedAt
         ? 'แคชเมื่อ: ' + new Date(res.cachedAt).toLocaleString('th-TH', { day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit' })
         : 'อัปเดต: ' + lastUpdated.toLocaleTimeString('th-TH', { hour: '2-digit', minute: '2-digit' });
