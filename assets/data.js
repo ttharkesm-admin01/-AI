@@ -285,7 +285,11 @@
     var cfg = cfgGet(kind);
     if (!cfg.sheetId) return Promise.reject(new Error('ยังไม่ได้ตั้งค่า Google Sheets'));
     var sheetName = cfg.sheetName || sc.sheetName;
-    var url = buildCsvUrl(cfg.sheetId, sheetName);
+    /* กัน gviz เสิร์ฟสำเนาที่แคชไว้ฝั่ง Google (เคยทำให้แถวที่เพิ่งกรอกในชีตไม่เข้ามาสักที
+       ทั้งที่แถบสถานะขึ้นเขียวว่าต่อชีตสำเร็จ) — cache:'no-store' คุมได้แค่แคชของเบราว์เซอร์
+       URL เดิมเป๊ะทุกครั้งจึงโดนแคชกลางเสิร์ฟซ้ำได้ ใส่พารามิเตอร์กันแคชให้ URL ต่างทุกครั้ง
+       (gviz ไม่สนพารามิเตอร์ที่ไม่รู้จัก) · buildCsvUrl ยังคืนลิงก์สะอาดไว้โชว์ในโมดอลเหมือนเดิม */
+    var url = buildCsvUrl(cfg.sheetId, sheetName) + '&_=' + Date.now();
     return fetch(url, { cache: 'no-store', redirect: 'follow' })
       .then(function (res) {
         if (!res.ok) {
