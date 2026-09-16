@@ -86,6 +86,29 @@ var ExportImg = (function () {
     return wrap;
   }
 
+  /* ข้อความยาวในเซลล์ตาราง: ตัดให้พอดีความกว้าง แล้วต่อท้ายด้วย …
+     ทำไมต้องตัดเองด้วย JS: ① text-overflow:ellipsis ไม่มีผลกับ display:table-cell (และ max-width บน <td>
+     ก็ไม่ถูกบังคับใช้ ตารางจึงกว้างเกินช่อง) ② html2canvas วาดข้อความเอง ไม่รองรับ text-overflow
+     → ถึงใส่ CSS ถูกแล้วก็ยังได้ข้อความถูกตัดกลางคำแบบไม่มี … ในรูปที่ export ออกไป
+     <div> ที่ครอบไว้เป็นกันชนอีกชั้น เผื่อฟอนต์ตอนวัดกับตอนวาดไม่ตรงกัน */
+  var _measureCtx = null;
+  function fitText(text, maxW, weight) {
+    if (!_measureCtx) {
+      var cv = document.createElement('canvas');
+      _measureCtx = cv.getContext && cv.getContext('2d');
+    }
+    if (!_measureCtx) return text;
+    _measureCtx.font = (weight ? weight + ' ' : '') + '10px ' + FONT;
+    if (_measureCtx.measureText(text).width <= maxW) return text;
+    var t = String(text);
+    while (t.length > 1 && _measureCtx.measureText(t + '…').width > maxW) t = t.slice(0, -1);
+    return t + '…';
+  }
+  function clamp(text, maxW, weight) {
+    return '<div style="max-width:' + maxW + 'px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">' +
+      esc(fitText(String(text), maxW, weight)) + '</div>';
+  }
+
   /* ตารางในแผง — opts (optional): { rank:true เพิ่มคอลัมน์ "ลำดับ", foot:[label, value] แถวรวมท้ายตาราง } */
   function tableCell(title, heads, rows, color, opts) {
     opts = opts || {};
@@ -107,9 +130,9 @@ var ExportImg = (function () {
       var cells = opts.rank ? [String(ri + 1)].concat(row) : row;
       tbl += '<tr style="background:' + (ri % 2 === 0 ? '#f9fafb' : '#fff') + '">' +
         cells.map(function (cell, ci) {
-          var extra = ci === labelCol ? 'max-width:150px;overflow:hidden;text-overflow:ellipsis;' : '';
           var weight = ci < labelCol ? 'font-weight:700;color:' + GD + ';' : '';
-          return '<td style="padding:4px 6px;border-bottom:1px solid #f3f4f6;text-align:' + alignOf(ci) + ';white-space:nowrap;' + extra + weight + '">' + esc(cell) + '</td>';
+          return '<td style="padding:4px 6px;border-bottom:1px solid #f3f4f6;text-align:' + alignOf(ci) + ';white-space:nowrap;' + weight + '">' +
+            (ci === labelCol ? clamp(cell, 220) : esc(cell)) + '</td>';
         }).join('') + '</tr>';
     });
     if (opts.foot) {
@@ -169,14 +192,20 @@ var ExportImg = (function () {
     }
 
     // Body: chart (if available) left + Top 3 table right
-    var body = mk('div', 'display:grid;grid-template-columns:' + (ot.chartImg ? '1.8fr 1fr' : '1fr') + ';gap:10px;padding:10px;align-items:start');
+    // ความกว้างตาราง Top 3 โตตามจำนวนเดือน (ทุกเซลล์ white-space:nowrap) — ล็อกคอลัมน์ไว้ 1fr
+    // ตารางจึงล้นออกนอกแผงและโดนตัดตอน capture (ตั้งแต่ ~6 เดือนขึ้นไป)
+    //  • ≤ 8 เดือน  : คอลัมน์ตาราง = max-content (กว้างพอดีเนื้อหา) กราฟกินที่เหลือ
+    //  • > 8 เดือน  : ตารางกว้างจนบีบกราฟเล็กเกินอ่าน → วางเป็นสองแถว (กราฟเต็มกว้าง / ตารางเต็มกว้าง)
+    var stackOT = ot.months.length > 8;
+    var body = mk('div', 'display:grid;grid-template-columns:' + (ot.chartImg && !stackOT ? '1fr max-content' : '1fr') + ';gap:10px;padding:10px;align-items:start');
 
     if (ot.chartImg) {
       var chartWrap = mk('div', 'min-width:0');
       chartWrap.appendChild(mk('div', 'font-size:10px;font-weight:700;color:#374151;margin-bottom:5px', 'OT รายเดือน (ชม.)'));
       var ci = document.createElement('img');
       ci.src = ot.chartImg;
-      ci.style.cssText = 'width:100%;height:180px;object-fit:contain;display:block;background:#fff;border:1px solid #eef0f2;border-radius:6px';
+      // แถวเดียวเต็มกว้าง (stackOT) ใช้กรอบสูงขึ้น ไม่งั้นภาพกราฟ (ratio ~4:1) ถูกบีบด้วยความสูง เหลือขอบขาวข้างละมาก
+      ci.style.cssText = 'width:100%;height:' + (stackOT ? 250 : 180) + 'px;object-fit:contain;display:block;background:#fff;border:1px solid #eef0f2;border-radius:6px';
       chartWrap.appendChild(ci);
       body.appendChild(chartWrap);
     }
@@ -194,7 +223,7 @@ var ExportImg = (function () {
     ot.rows.forEach(function (row, ri) {
       tbl += '<tr style="background:' + (ri % 2 === 0 ? '#f3e5f5' : '#fff') + '">' +
         '<td style="padding:4px 6px;text-align:center;font-weight:700;color:' + COLOR + '">' + (ri + 1) + '</td>' +
-        '<td style="padding:4px 6px;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:100px">' + esc(row.name) + '</td>' +
+        '<td style="padding:4px 6px;font-weight:600;white-space:nowrap">' + clamp(row.name, 130, 600) + '</td>' +
         ot.months.map(function (m) {
           var v = row.byMonth[m.code] || '';
           return '<td style="padding:4px 6px;text-align:right;color:' + (v ? INK : MUTED) + '">' + esc(v || '–') + '</td>';
