@@ -1,0 +1,339 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <!-- ประตูรหัสผ่าน — ต้องอยู่บนสุดก่อนเนื้อหา/CSS เพื่อให้เด้งออกก่อนหน้าจะวาด -->
+  <script src="assets/auth.js"></script>
+  <script>Auth.require('');</script>
+  <title>คู่มือส่งมอบงาน — Dashboard CPF ธารเกษม</title>
+  <meta name="description" content="คู่มือใช้งานและส่งมอบงาน Dashboard ค่าใช้จ่าย OE และสวัสดิการ โรงงานผลิตอาหารสัตว์ธารเกษม (CPF)" />
+  <meta name="robots" content="noindex, nofollow" />
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Sarabun:wght@300;400;500;600;700;800&display=swap" rel="stylesheet" />
+  <link rel="manifest" href="manifest.webmanifest" />
+  <meta name="theme-color" content="#2E7D32" />
+  <link rel="apple-touch-icon" href="assets/icon.svg" />
+  <style>
+    :root { --g: #2E7D32; --gd: #1B5E20; --gl: #E8F5E9; --gb: #C8E6C9; --ink: #16221C; --muted: #60706A; --line: #E2E8E4; }
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      font-family: 'Sarabun', system-ui, sans-serif; color: var(--ink);
+      background: #F4F6F3; line-height: 1.65; -webkit-font-smoothing: antialiased;
+    }
+    .page { max-width: 880px; margin: 0 auto; background: #fff; padding: 40px 46px 56px; min-height: 100vh; box-shadow: 0 0 40px rgba(0,0,0,.06); }
+
+    /* ── หัวเอกสาร ── */
+    .doc-head { text-align: center; border-bottom: 4px double var(--g); padding-bottom: 16px; margin-bottom: 26px; }
+    .doc-head .logo { width: 54px; height: 54px; border-radius: 14px; margin: 0 auto 12px; background: linear-gradient(135deg, #2E7D32, #66BB6A); color: #fff; font-weight: 800; font-size: 18px; display: flex; align-items: center; justify-content: center; }
+    .doc-head h1 { font-size: 25px; font-weight: 800; color: var(--gd); line-height: 1.25; }
+    .doc-head .sub { font-size: 13.5px; color: var(--muted); margin-top: 5px; }
+
+    /* ── ช่องกรอกตอนปรินต์ ── */
+    .signoff { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 14px; margin-bottom: 26px; }
+    .signoff div { border: 1.5px solid var(--gb); border-radius: 10px; padding: 10px 12px; }
+    .signoff .l { font-size: 11px; color: var(--muted); }
+    .signoff .blank { border-bottom: 1px dotted #9AA8A1; height: 24px; margin-top: 4px; }
+
+    h2 { font-size: 18px; font-weight: 800; color: #fff; background: var(--g); padding: 8px 14px; border-radius: 9px; margin: 30px 0 14px; }
+    h2 .n { opacity: .75; font-weight: 700; margin-right: 7px; }
+    h3 { font-size: 15px; font-weight: 700; color: var(--gd); margin: 18px 0 7px; }
+    p, li { font-size: 14px; }
+    ul, ol { margin: 8px 0 8px 22px; }
+    li { margin-bottom: 5px; }
+    strong { font-weight: 700; }
+    code { font-family: ui-monospace, 'Cascadia Code', Consolas, monospace; font-size: 12.5px; background: var(--gl); color: var(--gd); padding: 1px 6px; border-radius: 5px; }
+    a { color: var(--g); }
+
+    table { width: 100%; border-collapse: collapse; margin: 10px 0 14px; font-size: 13px; }
+    th { background: var(--g); color: #fff; font-weight: 600; text-align: left; padding: 7px 10px; }
+    td { padding: 7px 10px; border-bottom: 1px solid var(--line); vertical-align: top; }
+    tbody tr:nth-child(even) { background: #FAFCFA; }
+
+    .warn, .tip, .step {
+      border-radius: 10px; padding: 12px 15px; margin: 12px 0; font-size: 13.5px;
+      border-left: 5px solid var(--g); background: var(--gl);
+    }
+    .warn { border-left-color: #C62828; background: #FDECEA; }
+    .warn b { color: #B3261E; }
+    .tip { border-left-color: #F9A825; background: #FFF8E1; }
+    .step { border-left-color: var(--g); }
+
+    .check { list-style: none; margin-left: 0; }
+    .check li { display: flex; gap: 10px; align-items: flex-start; margin-bottom: 9px; }
+    .check li::before { content: ''; flex: none; width: 15px; height: 15px; border: 1.5px solid var(--g); border-radius: 3px; margin-top: 4px; }
+
+    .fill { border-bottom: 1px dotted #9AA8A1; display: inline-block; min-width: 190px; }
+
+    .toolbar { position: sticky; top: 0; background: #fff; border-bottom: 1px solid var(--line); padding: 10px 46px; display: flex; gap: 10px; align-items: center; z-index: 5; max-width: 880px; margin: 0 auto; }
+    .toolbar .sp { flex: 1; }
+    .btn { font-family: inherit; font-size: 13px; font-weight: 600; padding: 7px 14px; border-radius: 9px; border: 1.5px solid var(--gb); background: #fff; color: var(--gd); cursor: pointer; text-decoration: none; display: inline-block; }
+    .btn:hover { background: var(--gl); }
+    .btn.primary { background: var(--g); color: #fff; border-color: var(--g); }
+    .btn.primary:hover { background: var(--gd); }
+    .btn:focus-visible { outline: 2px solid var(--gd); outline-offset: 2px; }
+
+    .foot { margin-top: 34px; padding-top: 14px; border-top: 1px solid var(--line); font-size: 11.5px; color: #8A9891; text-align: center; }
+
+    @media (max-width: 720px) {
+      .page { padding: 26px 18px 40px; }
+      .toolbar { padding: 10px 18px; }
+      .signoff { grid-template-columns: 1fr; }
+      /* ข้อความไทยไม่มีช่องว่างระหว่างคำ เบราว์เซอร์จึงถือเป็นคำเดียวยาว ๆ ตัดบรรทัดไม่ได้
+         → ตารางกว้างเกินจอมือถือ ต้องอนุญาตให้ตัดกลางคำ + เผื่อ scroll ในตัวตารางเอง */
+      th, td { word-break: break-word; overflow-wrap: anywhere; }
+      table { display: block; overflow-x: auto; }
+      .fill { min-width: 120px !important; }
+    }
+    @media print {
+      body { background: #fff; }
+      .toolbar, .no-print { display: none !important; }
+      .page { max-width: none; box-shadow: none; padding: 0; }
+      h2 { break-after: avoid; -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+      th { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+      table, .warn, .tip, .step, .signoff { break-inside: avoid; }
+      a { color: var(--ink); text-decoration: none; }
+    }
+    @media (prefers-reduced-motion: reduce) { * { transition: none !important; } }
+  </style>
+</head>
+<body>
+  <div class="toolbar no-print">
+    <a class="btn" href="./">← กลับหน้าหลัก</a>
+    <span class="sp"></span>
+    <button class="btn primary" id="btn-print" type="button">พิมพ์ / บันทึกเป็น PDF</button>
+  </div>
+
+  <main class="page">
+    <div class="doc-head">
+      <div class="logo">CPF</div>
+      <h1>คู่มือใช้งานและส่งมอบงาน<br />Dashboard ค่าใช้จ่าย OE &amp; สวัสดิการพนักงาน</h1>
+      <div class="sub">โรงงานผลิตอาหารสัตว์ธารเกษม (CPF) · ปีงบประมาณ พ.ศ. 2569</div>
+    </div>
+
+    <div class="signoff">
+      <div><div class="l">ผู้ส่งมอบ</div><div class="blank"></div></div>
+      <div><div class="l">ผู้รับมอบ</div><div class="blank"></div></div>
+      <div><div class="l">วันที่ส่งมอบ</div><div class="blank"></div></div>
+    </div>
+
+    <!-- ═══ 1 ═══ -->
+    <h2><span class="n">1</span>ระบบนี้คืออะไร ประกอบด้วยอะไรบ้าง</h2>
+    <p>ระบบมี <strong>2 ส่วน</strong> ทำงานต่อกัน ถ้าส่วนใดส่วนหนึ่งหาย ระบบจะใช้ไม่ได้:</p>
+    <table>
+      <thead><tr><th style="width:26%">ส่วนประกอบ</th><th style="width:34%">คืออะไร</th><th>ใครเป็นเจ้าของ (กรอก)</th></tr></thead>
+      <tbody>
+        <tr>
+          <td><strong>① Google Sheet</strong></td>
+          <td>ที่เก็บข้อมูลจริง มี 2 แท็บ คือ <code>OE</code> และ <code>สวัสดิการ</code> — <strong>กรอกข้อมูลที่นี่ที่เดียว</strong></td>
+          <td>บัญชี Google: <span class="fill"></span></td>
+        </tr>
+        <tr>
+          <td><strong>② เว็บแดชบอร์ด</strong></td>
+          <td>หน้าเว็บที่ดึงข้อมูลจากชีตมาแสดงเป็นกราฟ/รายงาน — ไม่ได้เก็บข้อมูลเอง</td>
+          <td>บัญชี GitHub: <span class="fill"></span></td>
+        </tr>
+      </tbody>
+    </table>
+    <p><strong>ลิงก์เว็บ:</strong> <a href="https://ttharkesm-admin01.github.io/-AI/">https://ttharkesm-admin01.github.io/-AI/</a><br />
+      <strong>รหัสผ่านเข้าเว็บ:</strong> <span class="fill" style="min-width:250px"></span> <em>(ห้ามเขียนลงเอกสารที่เผยแพร่ ให้บอกปากเปล่า/ช่องทางส่วนตัว)</em></p>
+    <div class="tip"><strong>สรุปการทำงาน:</strong> กรอกข้อมูลในชีต → เปิดเว็บ → กดรีเฟรช → เว็บดึงข้อมูลล่าสุดมาแสดง · เว็บ<strong>อ่านอย่างเดียว</strong> ไม่เขียนกลับลงชีต</div>
+
+    <!-- ═══ 2 ═══ -->
+    <h2><span class="n">2</span>สิ่งที่ต้องทำทันทีเมื่อมีการโยกย้าย ⚠️</h2>
+    <div class="warn">
+      <b>ข้อที่พลาดไม่ได้:</b> Google Sheet ผูกอยู่กับ<strong>บัญชี Google ส่วนตัวของผู้ดูแลคนเดิม</strong>
+      ถ้าบัญชีนั้นถูกปิด/เลิกใช้โดยยังไม่โอนสิทธิ์ <strong>แดชบอร์ดจะดึงข้อมูลไม่ได้ทันที และข้อมูลย้อนหลังทั้งหมดอาจเข้าไม่ถึงอีกเลย</strong>
+      ให้ทำข้อ 2.1 ก่อนวันสุดท้ายเสมอ
+    </div>
+
+    <h3>2.1 โอนสิทธิ์เจ้าของ Google Sheet</h3>
+    <ol>
+      <li>เปิด Google Drive → คลิกขวาที่ไฟล์ชีต → <strong>แชร์</strong></li>
+      <li>เพิ่มอีเมลของผู้รับมอบ ตั้งเป็น <strong>ผู้แก้ไข</strong> → ส่ง</li>
+      <li>กด <strong>⋮</strong> (จุดสามจุด) ข้างชื่อผู้รับมอบ → <strong>โอนความเป็นเจ้าของ</strong> → ยืนยัน</li>
+      <li>ผู้รับมอบเปิดอีเมลแล้วกด <strong>ยอมรับ</strong> (ถ้าไม่กด การโอนจะไม่สมบูรณ์)</li>
+    </ol>
+    <div class="warn">
+      <b>ห้ามลืม:</b> หลังโอนแล้ว ตรงหัวข้อ "การเข้าถึงทั่วไป" ต้องยังเป็น
+      <strong>"ทุกคนที่มีลิงก์ = ผู้อ่าน"</strong> เสมอ — ถ้าเผลอตั้งเป็น <strong>"จำกัด"</strong>
+      เว็บจะดึงข้อมูลไม่ได้และตกไปแสดงข้อมูลตัวอย่างทันที
+    </div>
+
+    <h3>2.2 ส่งมอบสิทธิ์เว็บ (GitHub)</h3>
+    <p>เว็บถูกเก็บและเผยแพร่ด้วยบัญชี GitHub <code>ttharkesm-admin01</code> (repo ชื่อ <code>-AI</code>)</p>
+    <ul>
+      <li><strong>วิธีง่าย:</strong> เชิญผู้รับมอบเป็น Collaborator (Settings → Collaborators) — ลิงก์เว็บ<strong>ไม่เปลี่ยน</strong> แต่บัญชีเดิมยังเป็นเจ้าของอยู่</li>
+      <li><strong>วิธีถาวร:</strong> โอน repo ไปบัญชีใหม่ (Settings → Transfer ownership) — <strong>ลิงก์เว็บจะเปลี่ยนตามชื่อบัญชีใหม่</strong> ต้องแจ้งทุกคนที่บุ๊กมาร์กไว้</li>
+    </ul>
+    <p>ถ้าไม่มีใครดูแลฝั่งเว็บได้ อย่างน้อย<strong>ต้องมีคนเข้าบัญชี GitHub นี้ได้</strong> ไม่งั้นแก้ไขเว็บ/เปลี่ยนรหัสผ่านไม่ได้เลย</p>
+
+    <h3>2.3 รหัสผ่านเข้าเว็บ</h3>
+    <ul>
+      <li>บอกรหัสปัจจุบันให้ผู้รับมอบ แล้ว<strong>เปลี่ยนรหัสใหม่หลังส่งมอบเสร็จ</strong></li>
+      <li>การเปลี่ยนรหัสต้องแก้ไฟล์ในเว็บ (ดูข้อ 6) — ถ้าทำเองไม่ได้ ให้แจ้งผู้ดูแลฝั่งเว็บ</li>
+      <li>เปลี่ยนรหัสแล้ว <strong>ทุกคนจะหลุดจากระบบ</strong> ต้องแจ้งทีมล่วงหน้า</li>
+    </ul>
+
+    <h3>2.4 เช็กลิสต์ก่อนปิดงาน</h3>
+    <ul class="check">
+      <li>ผู้รับมอบ <strong>เปิดชีตแล้วแก้ไขได้จริง</strong> (ลองพิมพ์อะไรสักอย่างแล้วลบออก)</li>
+      <li>ผู้รับมอบ <strong>เข้าเว็บด้วยรหัสผ่านได้จริง</strong> และเห็นข้อมูลเดือนล่าสุด</li>
+      <li>ผู้รับมอบ <strong>กดส่งออก PNG / Excel ได้</strong></li>
+      <li>โอนสิทธิ์เจ้าของชีตเรียบร้อย และผู้รับมอบ<strong>กดยอมรับแล้ว</strong></li>
+      <li>ผู้รับมอบเข้าถึงบัญชี GitHub หรือมีคนที่เข้าได้</li>
+      <li>เปลี่ยนรหัสผ่านเว็บเป็นชุดใหม่</li>
+      <li>มอบคู่มือฉบับนี้ (พิมพ์หรือไฟล์ PDF) ให้ผู้รับมอบ</li>
+    </ul>
+
+    <!-- ═══ 3 ═══ -->
+    <h2><span class="n">3</span>งานประจำเดือน — วิธีกรอกข้อมูล</h2>
+    <p>เปิด Google Sheet แล้วกรอก<strong>ต่อท้ายแถวสุดท้าย</strong> ของแท็บที่เกี่ยวข้อง ห้ามแทรกหรือสลับคอลัมน์</p>
+
+    <h3>แท็บ <code>OE</code> — ค่าใช้จ่ายและเงินยืมทดรอง</h3>
+    <table>
+      <thead><tr><th>คอลัมน์</th><th>ใส่อะไร</th></tr></thead>
+      <tbody>
+        <tr><td><strong>เดือน</strong></td><td>รูปแบบ <code>2569-01</code> (ปี พ.ศ. ขีด เลขเดือน 2 หลัก)</td></tr>
+        <tr><td><strong>หมวดหมู่</strong></td><td>ชื่อหมวดค่าใช้จ่าย เช่น ค่าไฟฟ้า, ภาษีที่ดินและสิ่งปลูกสร้าง</td></tr>
+        <tr><td><strong>ประเภท</strong></td><td>เลือก 1 ใน 3: <code>ค่าใช้จ่าย</code> · <code>เงินยืมทดรอง</code> · <code>คืนเงินยืมทดรอง</code></td></tr>
+        <tr><td><strong>กลุ่ม</strong></td><td><code>คงที่</code> หรือ <code>แปรผัน</code> — <strong>ห้ามเว้นว่าง</strong> (เว้นแล้วระบบจะนับเป็น "แปรผัน" ให้เอง)</td></tr>
+        <tr><td><strong>รายละเอียด</strong></td><td>คำอธิบายเพิ่มเติม (เว้นว่างได้)</td></tr>
+        <tr><td><strong>จำนวนเงิน</strong></td><td>ตัวเลขบาท <strong>ต้องมากกว่า 0 เสมอ</strong></td></tr>
+        <tr><td><strong>ผู้ยืม</strong></td><td>ชื่อคนยืม (ใส่เฉพาะแถวเงินยืม/คืนเงินยืม) — เว้นว่างจะขึ้นว่า "(ไม่ระบุผู้ยืม)"</td></tr>
+      </tbody>
+    </table>
+    <div class="warn">
+      <b>ห้ามใส่ยอดติดลบเพื่อหักคืนเงินยืม</b> — แถวที่ยอด ≤ 0 จะถูกระบบตัดทิ้งเงียบ ๆ มองไม่เห็นเลย<br />
+      การคืนเงินยืมให้กรอกเป็น<strong>แถวใหม่</strong> ใส่ประเภท <code>คืนเงินยืมทดรอง</code> ยอด<strong>เป็นบวก</strong> และ<strong>ใส่ชื่อผู้ยืมให้ตรงกับตอนยืม</strong> (ระบบจับคู่ด้วยชื่อ ไม่ใช่ข้อความรายละเอียด)
+    </div>
+
+    <h3>แท็บ <code>สวัสดิการ</code></h3>
+    <table>
+      <thead><tr><th>คอลัมน์</th><th>ใส่อะไร</th></tr></thead>
+      <tbody>
+        <tr><td><strong>เดือน</strong></td><td><code>2569-01</code></td></tr>
+        <tr><td><strong>ชื่อพนักงาน</strong></td><td>ชื่อ-นามสกุล</td></tr>
+        <tr><td><strong>ตำแหน่ง</strong></td><td>ตำแหน่งงาน</td></tr>
+        <tr><td><strong>ประเภทสวัสดิการ</strong></td><td>ค่ารักษาพยาบาล · เบี้ยเลี้ยง · ค่าน้ำมัน · ค่าที่พัก · สวัสดิการอื่นๆ · <code>OT</code></td></tr>
+        <tr><td><strong>จำนวนเงิน</strong></td><td>เป็นบาท — <strong>ยกเว้นแถว OT ให้ใส่เป็น "จำนวนชั่วโมง"</strong></td></tr>
+        <tr><td><strong>หมายเหตุ</strong></td><td>เว้นว่างได้</td></tr>
+      </tbody>
+    </table>
+    <div class="tip"><strong>OT แยกจากยอดเงินทุกที่</strong> — ในแดชบอร์ดจะแสดงเป็น "ชั่วโมง (ชม.)" ไม่ถูกรวมเข้ากับยอดเงินสวัสดิการ</div>
+
+    <!-- ═══ 4 ═══ -->
+    <h2><span class="n">4</span>วิธีใช้แดชบอร์ด</h2>
+    <ol>
+      <li>เปิดเว็บ → ใส่รหัสผ่าน (ระบบจำไว้ <strong>8 ชั่วโมง</strong> · ใช้เครื่องร่วมกับคนอื่นให้กด <strong>ออกจากระบบ</strong> ทุกครั้ง)</li>
+      <li>เลือกแดชบอร์ด: <strong>OE ค่าใช้จ่าย</strong> หรือ <strong>สวัสดิการพนักงาน</strong></li>
+      <li>ดูแถบสถานะบนสุดให้เป็น 🟢 <strong>เชื่อม Google Sheets</strong> พร้อมช่วงเดือนที่โหลดมา (เช่น <code>171 รายการ • ม.ค.–ก.ค. 69</code>)</li>
+      <li>กรองด้วย ปี / เดือน / หมวดหมู่ / พนักงาน ตามต้องการ</li>
+      <li>กดส่งออกตามงานที่ใช้:</li>
+    </ol>
+    <table>
+      <thead><tr><th style="width:30%">ปุ่ม</th><th>ได้อะไร / ใช้ตอนไหน</th></tr></thead>
+      <tbody>
+        <tr><td><strong>ส่งออก PNG / PDF</strong></td><td>รายงานสรุปหน้าเดียว A4 แนวนอน — ส่งให้ผู้บริหาร/แนบไลน์</td></tr>
+        <tr><td><strong>Export PowerPoint</strong></td><td>ไฟล์ .pptx หลายสไลด์ — ใช้ในที่ประชุม</td></tr>
+        <tr><td><strong>ส่งออก Excel</strong></td><td>ไฟล์ .xlsx ข้อมูลดิบตามตัวกรอง — เอาไปคำนวณต่อ</td></tr>
+        <tr><td><strong>จัดการข้อมูล</strong></td><td>แก้ข้อมูลชั่วคราว<strong>เฉพาะในเครื่องนี้</strong> ไม่ได้เขียนกลับลงชีต — ใช้ลองดูตัวเลขเฉย ๆ <strong>ของจริงต้องแก้ในชีต</strong></td></tr>
+      </tbody>
+    </table>
+    <div class="tip">คนที่ไม่ต้องเข้าเว็บ (เช่น ผู้บริหาร หน่วยงานอื่น) <strong>ให้ส่งไฟล์ PNG/PDF/Excel ให้แทน</strong> ไม่ต้องบอกรหัสผ่าน</div>
+
+    <!-- ═══ 5 ═══ -->
+    <h2><span class="n">5</span>ปัญหาที่เจอบ่อย &amp; วิธีแก้</h2>
+    <table>
+      <thead><tr><th style="width:30%">อาการ</th><th style="width:34%">สาเหตุที่พบบ่อยที่สุด</th><th>วิธีแก้</th></tr></thead>
+      <tbody>
+        <tr>
+          <td><strong>กรอกข้อมูลเดือนใหม่ในชีตแล้ว แต่เว็บไม่ขึ้น</strong></td>
+          <td>แถบสถานะเขียนว่า <strong>"ข้อมูลตัวอย่าง (Demo)"</strong> = หน้านั้นยังไม่ได้ต่อชีต</td>
+          <td>กด <strong>เชื่อม Google Sheets</strong> → วางลิงก์ชีต → <strong>แก้ชื่อแท็บให้ตรง</strong> (<code>OE</code> หรือ <code>สวัสดิการ</code> ไม่ใช่ค่าเริ่มต้น <code>RAW_DATA</code>)</td>
+        </tr>
+        <tr>
+          <td>เหมือนข้างบน แต่สถานะเป็นสีส้ม <strong>"แก้ไขในเครื่อง"</strong></td>
+          <td>เคยกดแก้ข้อมูลในเครื่องไว้ ข้อมูลถูกแช่แข็งทับชีตอยู่</td>
+          <td>กด <strong>จัดการข้อมูล → ล้างข้อมูลที่แก้ไข</strong> แล้วรีเฟรช</td>
+        </tr>
+        <tr>
+          <td>สถานะสีแดง <strong>"ต่อชีตไม่ได้"</strong></td>
+          <td>ไฟล์ไม่ใช่ Google Sheets แท้ (เป็น .xlsx ที่อัปโหลดไว้) หรือการแชร์ถูกตั้งเป็น "จำกัด"</td>
+          <td>เปิดไฟล์ → <strong>ไฟล์ → บันทึกเป็น Google ชีต</strong> แล้วใช้ไฟล์ใหม่ · และตั้งแชร์เป็น <strong>ทุกคนที่มีลิงก์ = ผู้อ่าน</strong></td>
+        </tr>
+        <tr>
+          <td>แก้เว็บแล้วแต่ยังเห็นของเก่า</td>
+          <td>เบราว์เซอร์แคชไว้</td>
+          <td>กด <strong>Ctrl + Shift + R</strong> (Mac: Cmd + Shift + R) หรือรีเฟรช 2 ครั้ง</td>
+        </tr>
+        <tr>
+          <td>กราฟไม่ขึ้น / ส่งออกไม่ได้</td>
+          <td>อินเทอร์เน็ตมีปัญหา (กราฟและตัวส่งออกโหลดจากอินเทอร์เน็ต)</td>
+          <td>เช็กเน็ตแล้วลองใหม่</td>
+        </tr>
+        <tr>
+          <td>ยอดคืนเงินยืมไม่ขึ้น</td>
+          <td>สะกดประเภทไม่ตรง หรือใส่ยอดติดลบ</td>
+          <td>ใช้คำว่า <code>คืนเงินยืมทดรอง</code> และใส่ยอด<strong>เป็นบวก</strong></td>
+        </tr>
+        <tr>
+          <td>เข้าเว็บแล้วเด้งกลับหน้าใส่รหัสตลอด</td>
+          <td>เบราว์เซอร์ปิดการเก็บข้อมูลเว็บไซต์ / เปิดโหมดส่วนตัว</td>
+          <td>ปิดโหมดส่วนตัว หรืออนุญาตคุกกี้/ข้อมูลเว็บไซต์ แล้วลองใหม่</td>
+        </tr>
+      </tbody>
+    </table>
+
+    <!-- ═══ 6 ═══ -->
+    <h2><span class="n">6</span>งานที่ต้องใช้คนดูแลฝั่งเว็บ</h2>
+    <p>งานเหล่านี้ต้องแก้ไฟล์ในโค้ดเว็บ (บัญชี GitHub) ไม่สามารถกดจากหน้าเว็บได้:</p>
+    <table>
+      <thead><tr><th style="width:34%">ต้องการ</th><th>ทำอย่างไร</th></tr></thead>
+      <tbody>
+        <tr>
+          <td><strong>เปลี่ยนรหัสผ่านเข้าเว็บ</strong></td>
+          <td>เปิดเว็บ → กด <code>F12</code> → แท็บ Console → พิมพ์ <code>Auth.makeConfig('รหัสใหม่')</code> → คัดลอกบล็อกที่ได้ (ไม่มีรหัสอยู่ในนั้น) ไปวางแทน <code>CONFIG</code> ในไฟล์ <code>assets/auth.js</code> แล้วเพิ่มเลข <code>CACHE_VERSION</code> ในไฟล์ <code>sw.js</code></td>
+        </tr>
+        <tr><td><strong>เพิ่ม/แก้หัวข้อในแดชบอร์ด</strong></td><td>แก้ไฟล์ <code>oe/index.html</code> หรือ <code>welfare/index.html</code></td></tr>
+        <tr><td><strong>ดูบันทึกทั้งหมดของโปรเจกต์</strong></td><td>ไฟล์ <code>CLAUDE.md</code> ใน repo — รวมกติกา ข้อควรระวัง และประวัติการแก้ทุกครั้ง</td></tr>
+      </tbody>
+    </table>
+    <div class="warn"><b>ห้ามเขียนรหัสผ่านตัวจริงลงไฟล์ในโค้ด</b> — โค้ดเว็บนี้เปิดสาธารณะ ใครก็อ่านได้ ระบบจึงเก็บไว้เป็นรหัสที่เข้ารหัสแล้วเท่านั้น</div>
+
+    <!-- ═══ 7 ═══ -->
+    <h2><span class="n">7</span>ข้อห้าม 5 ข้อ</h2>
+    <ol>
+      <li><strong>ห้ามตั้งการแชร์ชีตเป็น "จำกัด"</strong> — เว็บจะดึงข้อมูลไม่ได้ทันที (ต้องเป็น "ทุกคนที่มีลิงก์ = ผู้อ่าน")</li>
+      <li><strong>ห้ามสลับ/แทรก/ลบคอลัมน์ในชีต</strong> — ระบบอ่านตามตำแหน่งคอลัมน์ ไม่ได้อ่านจากชื่อหัวตาราง</li>
+      <li><strong>ห้ามใส่จำนวนเงินติดลบหรือ 0</strong> — แถวนั้นจะหายไปจากทุกหน้าจอโดยไม่มีคำเตือน</li>
+      <li><strong>ห้ามเปลี่ยนชื่อแท็บ</strong> <code>OE</code> / <code>สวัสดิการ</code> โดยไม่ไปแก้การตั้งค่าในเว็บด้วย</li>
+      <li><strong>ห้ามเผยแพร่ลิงก์ชีตหรือรหัสผ่านให้คนนอก</strong> — ในชีตมีชื่อพนักงานคู่กับยอดค่ารักษาพยาบาล ซึ่งเป็นข้อมูลส่วนบุคคลที่อ่อนไหวตาม PDPA (คนนอกให้ส่งเป็นไฟล์ PNG/PDF แทน)</li>
+    </ol>
+
+    <!-- ═══ 8 ═══ -->
+    <h2><span class="n">8</span>ผู้ติดต่อ</h2>
+    <table>
+      <thead><tr><th style="width:34%">เรื่อง</th><th>ชื่อ / ช่องทางติดต่อ</th></tr></thead>
+      <tbody>
+        <tr><td>ข้อมูลในชีต (กรอก/แก้ไข)</td><td><span class="fill" style="min-width:320px"></span></td></tr>
+        <tr><td>เว็บ / รหัสผ่าน / แก้โค้ด</td><td><span class="fill" style="min-width:320px"></span></td></tr>
+        <tr><td>ผู้อนุมัติ / ผู้รับรายงาน</td><td><span class="fill" style="min-width:320px"></span></td></tr>
+      </tbody>
+    </table>
+
+    <div class="foot">
+      คู่มือฉบับนี้อยู่ในเว็บที่หน้า <code>/handover.html</code> (ต้องล็อกอินก่อน) · พิมพ์ได้จากปุ่มด้านบน<br />
+      ปรับปรุงล่าสุด: <span id="today"></span>
+    </div>
+  </main>
+
+  <script>
+    document.getElementById('btn-print').addEventListener('click', function () { window.print(); });
+    document.getElementById('today').textContent =
+      new Date().toLocaleDateString('th-TH', { year: 'numeric', month: 'long', day: 'numeric' });
+  </script>
+  <script>if ('serviceWorker' in navigator) { addEventListener('load', function () { navigator.serviceWorker.register('sw.js').catch(function () {}); }); }</script>
+</body>
+</html>
