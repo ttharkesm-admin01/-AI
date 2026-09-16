@@ -378,6 +378,11 @@
       U.el('btn-refresh').addEventListener('click', function () { loadData(!!DataSource.config.get(kind).sheetId); });
       U.el('btn-connect').addEventListener('click', openConnect);
       U.el('btn-manage').addEventListener('click', openManage);
+      // ออกจากระบบ — guard ที่ <head> จะเด้งไปหน้า login เองในการโหลดครั้งถัดไป
+      // (guard ใช้ได้เฉพาะเมื่อ auth.js โหลดแล้ว — กันหน้าใหม่+asset เก่าช่วงรอยต่อ deploy)
+      var btnOut = U.el('btn-logout');
+      if (btnOut && window.Auth) btnOut.addEventListener('click', function () { Auth.logout('../'); });
+      else if (btnOut) btnOut.style.display = 'none';
       U.el('btn-save-src').addEventListener('click', function () {
         var id = DataSource.extractSheetId(U.el('in-sheet').value);
         var tab = U.el('in-tab').value.trim() || 'RAW_DATA';
