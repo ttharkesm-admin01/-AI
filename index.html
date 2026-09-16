@@ -3,6 +3,9 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <!-- ประตูรหัสผ่าน — ต้องอยู่บนสุดก่อนเนื้อหา/CSS เพื่อให้เด้งออกก่อนหน้าจะวาด (ไม่เห็นข้อมูลแวบ ๆ) -->
+  <script src="assets/auth.js"></script>
+  <script>Auth.require('');</script>
   <title>CPF ธารเกษม — Dashboard ค่าใช้จ่าย & สวัสดิการ</title>
   <meta name="description" content="แดชบอร์ดสรุปค่าใช้จ่าย OE และสวัสดิการพนักงาน โรงงานผลิตอาหารสัตว์ธารเกษม (CPF)" />
   <link rel="preconnect" href="https://fonts.googleapis.com" />
@@ -157,6 +160,12 @@
       </a>
     </div>
 
+    <div style="text-align:center;margin-top:22px">
+      <button type="button" id="btn-logout" style="font-family:inherit;font-size:13px;font-weight:600;color:#2E7D32;background:none;border:0;cursor:pointer;padding:8px 14px;border-radius:9px">
+        ออกจากระบบ
+      </button>
+    </div>
+
     <div class="note">
       <span class="dot"></span>
       <div>
@@ -165,6 +174,13 @@
       </div>
     </div>
   </div>
+  <script>
+    (function () {
+      var b = document.getElementById('btn-logout');
+      if (b && window.Auth) b.addEventListener('click', function () { Auth.logout(''); });
+      else if (b) b.style.display = 'none';
+    })();
+  </script>
   <script>if ('serviceWorker' in navigator) { addEventListener('load', function () { navigator.serviceWorker.register('sw.js').catch(function () {}); }); }</script>
 </body>
 </html>

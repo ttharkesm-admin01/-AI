@@ -3,6 +3,9 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <!-- ประตูรหัสผ่าน — ต้องอยู่บนสุดก่อนเนื้อหา/CSS เพื่อให้เด้งออกก่อนหน้าจะวาด (ไม่เห็นข้อมูลแวบ ๆ) -->
+  <script src="../assets/auth.js"></script>
+  <script>Auth.require('../');</script>
   <title>Dashboard OE — CPF ธารเกษม</title>
   <meta name="description" content="แดชบอร์ดค่าใช้จ่าย OE และเงินยืมทดรอง โรงงานธารเกษม (CPF) ปีงบประมาณ 2569" />
   <link rel="preconnect" href="https://fonts.googleapis.com" />
@@ -32,6 +35,7 @@
       <button class="btn btn-ppt gi-ppt" id="btn-export">Export PowerPoint</button>
       <button class="btn btn-light btn-sm gi-image" id="btn-export-img">ส่งออก PNG/PDF</button>
       <button class="btn btn-light btn-sm gi-table" id="btn-export-data">ส่งออก Excel</button>
+      <button class="btn btn-ghost btn-sm gi-logout" id="btn-logout" title="ออกจากระบบ">ออกจากระบบ</button>
     </div>
   </header>
 
