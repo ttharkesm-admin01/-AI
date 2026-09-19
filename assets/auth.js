@@ -15,9 +15,9 @@ var Auth = (function () {
 
   /* hash ของรหัสผ่าน (ไม่ใช่ตัวรหัส) — สร้างด้วย Auth.makeConfig() */
   var CONFIG = {
-    salt: 'qEQxGYK6S2xEQlym',
+    salt: 'S8yTJb1ZWGL3pzf6',
     iter: 120000,
-    hash: '47b489aaa8d7793db8aedca6c4aca5367f2a77fee8f93733c12a7ab8ac0e8822'
+    hash: 'd68cc8b39d9ab606a859b84fab01cb41a9a3ba84414ed8f91e1fa88a962401b4'
   };
 
   var SESSION_KEY = 'cpf_auth';
